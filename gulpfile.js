@@ -10,9 +10,9 @@ const gulp = require('gulp'),
 
 /* ALTER THIS WHEN BUILDING GAMES */
 let buildGame = {
-  mainFile: 'test.ts',
+  mainFile: 'gameTemplate.ts',
   requiredFiles: ['src/exports/controller.ts', 'src/exports/audio.ts'],
-  exportTo: ''
+  exportTo: '../phaser/boilerplate'
 }
 
 
@@ -38,12 +38,12 @@ gulp.task('build', () => {
       removeComments: true,
       noLib: false
     }))
-    .pipe(gulp.dest('build'))
+    .pipe(gulp.dest(buildGame.exportTo || 'build'))
     .pipe(minify({
       ext:{
           min:'.min.js'
       },
     }))
-    .pipe(gulp.dest('build'))
+    .pipe(gulp.dest(buildGame.exportTo || 'build'))
     .pipe(notify({message: `${buildGame.mainFile} task has been completed.`, onLast: true}));
 });
