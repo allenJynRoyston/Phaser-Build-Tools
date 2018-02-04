@@ -1,4 +1,5 @@
 ### Phaser BuildTool
+This will drastically help you build Phaser games by allowing an easy way to import multiple files into your phaser build.  
 
 ### What am I?
 There's no good solution for converting a Typescript (or ES6/ES7 files) that have multiple imports/export requirements into a single use .js file thats completly bundled correctly.  I mean, there are other solutions (Webpack/Browserify) but those won't work for this specific case.  Imagine for example, that you have your main game file, game.ts, that you want to import a controller and audio class from which are in external sources.  This can be helpful if you want to split up your game into several smaller parts but want to be able to reuse sections of code.  
