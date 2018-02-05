@@ -1,6 +1,6 @@
 declare var Phaser:any;
 
-export class IO_CONTROLS {
+export class PHASER_CONTROLS {
 
   /* HOW TO USE */
   // 1.) In your games init(), after game is declared, insert the following code:
@@ -8,7 +8,7 @@ export class IO_CONTROLS {
   /*
        init(el:any, parent:any, options:any){
          const game = new Phaser.Game(options.width, options.height, Phaser.WEBGL, el, { preload: preload, create: create, update: update});
-         const _IO_CONTROLS = new IO_CONTROLS();
+         const phaserControls = new IO_CONTROLS();
          let IO:any;
          ...
        }
@@ -18,7 +18,7 @@ export class IO_CONTROLS {
   //      --------------------------------------
   /*
        function create(){
-         IO = _IO_CONTROLS.assignButtons(game)  // must be called at the create() function to set everything up
+         phaserControls.assign(game)  // must be called at the create() function to set everything up
          ...
        }
   */
@@ -26,27 +26,36 @@ export class IO_CONTROLS {
 
   // 2.) anywhere after create(), all the public methods will be available
   //      --------------------------------------
-  //      _IO_CONTROLS.isReady()                            | returns boolean   | returns a [true/false] if all the controls have been mapped and the class is ready
-  //      _IO_CONTROLS.isDebuggerEnabled()                  | returns boolean   | retuns if a [true/false] based off if the debugger is visible
-  //      _IO_CONTROLS.updateDebugger()                     |                   | if the debugger is visible, will update the values.  Best to place in the update() function
-  //      _IO_CONTROLS.disableAllInput()                    |                   | will disable all controller inputs
-  //      _IO_CONTROLS.enableAllInput()                     |                   | will enable all controller inputs
-  //      _IO_CONTROLS.disableAllDirectionalButtons()       |                   | will enable all directional inputs (UP/DOWN/LEFT/RIGHT)
-  //      _IO_CONTROLS.disableAllTriggerButtons()           |                   | will enable all trigger inputs (L1/R1/L2/R2)
-  //      _IO_CONTROLS.enableAllTriggerButtons()            |                   | will enable all trigger inputs (L1/R1/L2/R2)
-  //      _IO_CONTROLS.disableAllActionButtons()            |                   | will enable all trigger inputs (A/B/X/Y)
-  //      _IO_CONTROLS.enableAllActionButtons()             |                   | will enable all trigger inputs (A/B/X/Y)
-  //      _IO_CONTROLS.disableAllSystemButtons()            |                   | will enable all trigger inputs (START/BACK)
-  //      _IO_CONTROLS.enableAllSystemButtons()             |                   | will enable all trigger inputs (START/BACK)
-  //      _IO_CONTROLS.setDisableKeyProperty('A', true)     |                   | pass the button name ['UP/B/L1/START'] and the boolean value [true/false] to enable/disable the button)
-  //      _IO_CONTROLS.getKeyDisabledValue('A')             | return boolean    | pass the button name ['UP/B/L1/START'] and it will return the value
-  //      _IO_CONTROLS.clearAllControlIntervals()           |                   | clear all setInterval timers involved with controls.  Useful in cases where a key is disabled programatically
-  //      _IO_CONTROLS.read('A')                            | return object     | returns the current state of the button: {active: [boolean], duration: [number], state: [number], type: [text], disabled: [boolean]}
-  //      _IO_CONTROLS.readMulti(['A', 'X'], 'OBJECT')      | return object     | returns as an object with multiple button states:
+  //      phaserControls.isReady()                            | returns boolean   | returns a [true/false] if all the controls have been mapped and the class is ready
+  //      phaserControls.isDebuggerEnabled()                  | returns boolean   | retuns if a [true/false] based off if the debugger is visible
+  //      phaserControls.updateDebugger()                     |                   | if the debugger is visible, will update the values.  Best to place in the update() function
+  //      phaserControls.disableAllInput()                    |                   | will disable all controller inputs
+  //      phaserControls.enableAllInput()                     |                   | will enable all controller inputs
+  //      phaserControls.disableAllDirectionalButtons()       |                   | will enable all directional inputs (UP/DOWN/LEFT/RIGHT)
+  //      phaserControls.disableAllTriggerButtons()           |                   | will enable all trigger inputs (L1/R1/L2/R2)
+  //      phaserControls.enableAllTriggerButtons()            |                   | will enable all trigger inputs (L1/R1/L2/R2)
+  //      phaserControls.disableAllActionButtons()            |                   | will enable all trigger inputs (A/B/X/Y)
+  //      phaserControls.enableAllActionButtons()             |                   | will enable all trigger inputs (A/B/X/Y)
+  //      phaserControls.disableAllSystemButtons()            |                   | will enable all trigger inputs (START/BACK)
+  //      phaserControls.enableAllSystemButtons()             |                   | will enable all trigger inputs (START/BACK)
+  //      phaserControls.setDisableKeyProperty('A', true)     |                   | pass the button name ['UP/B/L1/START'] and the boolean value [true/false] to enable/disable the button)
+  //      phaserControls.getKeyDisabledValue('A')             | return boolean    | pass the button name ['UP/B/L1/START'] and it will return the value
+  //      phaserControls.clearAllControlIntervals()           |                   | clear all setInterval timers involved with controls.  Useful in cases where a key is disabled programatically
+  //      phaserControls.read('A')                            | return object     | returns the current state of the button: {active: [boolean], duration: [number], state: [number], type: [text], disabled: [boolean]}
+  //      phaserControls.readMulti(['A', 'X'], 'OBJECT')      | return object     | returns as an object with multiple button states:
+  //      phaserControls.checkWithDelay({isActive: true, key: 'A', delay: 10})
+  //                                                          | return boolean    | returns a true if the button is active/inactive every X miliseconds.  (See example below)
+  /*
+          if(phaserControls.checkWithDelay({isActive: true, key: 'A', delay: 250})){
+            /* DO SOMETHING EVERY 250 miliseconds
+          }
+  */
+  //
+  //      phaserControls.getKeyId('A')                        | return number     | return a number with the key id (1-16)
   //                                                                              {X: {active: [boolean], duration: [number], state: [number], type: [text], disabled: [boolean]}, A: {active: [boolean], duration: [number], state: [number], type: [text], disabled: [boolean]}}
-  //      _IO_CONTROLS.readMulti(['A', 'X'], 'ARRAY')       | return array      | returns an an array with multiple button states:
+  //      phaserControls.readMulti(['A', 'X'], 'ARRAY')       | return array      | returns an an array with multiple button states:
   //                                                                              [{key: 'X', active: [boolean], duration: [number], state: [number], type: [text], disabled: [boolean]}, {key: 'A', active: [boolean], duration: [number], state: [number], type: [text], disabled: [boolean]}]
-  //      _IO_CONTROLS.mapKeys(keyMappings)                 |                   | see example below
+  //      phaserControls.mapKeys(keyMappings)                 |                   | see example below
   /*
           let keyMappings = {
               UP: {name: 'UP', code: 'ArrowUp'},
@@ -66,7 +75,7 @@ export class IO_CONTROLS {
               START: {name: 'ENTER', code: 'Enter'},
               BACK: {name: 'BACKSPACE', code: 'Backspace'}
             }
-          _IO_CONTROLS.mapKeys(keyMappings)
+          phaserControls.mapKeys(keyMappings)
   */
   //      --------------------------------------
 
@@ -79,18 +88,12 @@ export class IO_CONTROLS {
   /*
       function update() {
 
-          // CREATE DELAY BETWEN INPUT PRESSES
-          if(_IO_CONTROLS.getInput('A').active && checkButtonDelay()){
-              console.log()
-              updateButtonDelay();
-          }
-
           // READ ONE KEY
-          let theOutput = _IO_CONTROLS.read('A');
+          let theOutput = phaserControls.read('A');
           console.log(theOutput)
 
           // READ MANY KEYS
-          let theOutput = _IO_CONTROLS.readMulti(['A', 'UP'])
+          let theOutput = phaserControls.readMulti(['A', 'UP'])
           console.log(theOutput)
 
 
@@ -113,8 +116,10 @@ export class IO_CONTROLS {
   triggerButtons:any;
   systemButtons:any;
   buttonArray:any;
+  buttonMapId:any;
   debugger:any;
   disabledButtons:any;
+  inputDelay:any;
 
   constructor(){
     this.IO = null;
@@ -157,6 +162,25 @@ export class IO_CONTROLS {
       BACK: {name: 'BACKSPACE', code: 'Backspace'},
     }
 
+    this.buttonMapId = {
+      UP: 1,
+      DOWN: 2,
+      LEFT: 3,
+      RIGHT: 4,
+      A: 5,
+      B: 6,
+      X: 7,
+      Y: 8,
+      L1: 9,
+      L2: 10,
+      R1: 11,
+      R2: 12,
+      L3: 13,
+      R3: 14,
+      START: 15,
+      BACK: 16,
+    }
+
     this.disabledButtons = {
       ALL: false,
       DIRECTIONAL: false,
@@ -171,17 +195,22 @@ export class IO_CONTROLS {
       text: {}
     }
 
+    // set default input properties
+    this.inputDelay = {
+      delay: Array.apply(null, Array(20)).map(function() { return 0 })
+    }
+
   }
 
-  public assignButtons(game){
+  public assign(construct){
     // stored for future reference
-    this.game = game;
+    this.game = construct.game;
 
     // setup debugger and disabled states
     let style = { font: "12px Courier New", fill: "#fff", align: "left" }
     this.buttonArray.forEach((btn, index) => {
       this.debugger.text[btn] = null; // must be null first since the property name doesn't exists yet
-      this.debugger.text[btn] = game.add.text(10, 10 + (index * 15), "", style); // then add initial text
+      this.debugger.text[btn] = construct.game.add.text(10, 10 + (index * 15), "", style); // then add initial text
       this.disabledButtons[btn] = false; // set disabled as false
     })
 
@@ -198,7 +227,7 @@ export class IO_CONTROLS {
 
     // set default values for IO object
     for (let btn of this.buttonArray) {
-      IO.buttons[btn] = game.input.keyboard.addKey(Phaser.Keyboard[this.buttonMap[btn].name]);
+      IO.buttons[btn] = construct.game.input.keyboard.addKey(Phaser.Keyboard[this.buttonMap[btn].name]);
       IO.sensitivityPress[btn] = null; // stores the setInterval function
       IO.sensitivityBuffer[btn] = 0;   // value
       IO.state[btn] = () => {
@@ -257,7 +286,7 @@ export class IO_CONTROLS {
     }
 
     // add button release behavior
-    game.input.keyboard.onUpCallback = (e) => {
+    construct.game.input.keyboard.onUpCallback = (e) => {
         for (let btn of this.buttonArray) {
           if(e.code === this.buttonMap[btn].code){
               // clear intervals
@@ -284,12 +313,33 @@ export class IO_CONTROLS {
     setTimeout(() => {
       this.buttonMap = map
       this.properties.isReady = true;
-      this.assignButtons(this.game);
+      this.assign(this.game);
     }, 1)
   }
 
   public isReady(){
     return this.properties.isReady;
+  }
+
+  public getInputDelay(){
+    return this.inputDelay;
+  }
+
+  public testDelay(val:number){
+    return this.game.time.now > this.inputDelay.delay[val];
+  }
+
+  public checkWithDelay(params){
+    if(this.read(params.key).active === params.isActive){
+      if(this.game.time.now > this.inputDelay.delay[this.getKeyId(params.key)]){
+        this.inputDelay.delay[this.getKeyId(params.key)] = params.delay + this.game.time.now;
+        return true;
+      }
+      else{
+        return false;
+      }
+    }
+    return false;
   }
 
   public isDebuggerEnabled(){
@@ -371,10 +421,14 @@ export class IO_CONTROLS {
     }
   }
 
+  public getKeyId(key:string){
+    return this.buttonMapId[key.toUpperCase()]
+  }
+
   public read(key:string){
     if(this.properties.isReady){
       let _return = {}
-      return _return[key] = {active: this.IO.state[key.toUpperCase()]().val > 0 ? true: false, duration: this.IO.state[key.toUpperCase()]().val, state: this.IO.state[key.toUpperCase()]().state, type: this.IO.state[key.toUpperCase()]().type, disabled: this.disabledButtons[key.toUpperCase()]}
+      return _return[key] = {id: this.buttonMapId[key.toUpperCase()], active: this.IO.state[key.toUpperCase()]().val > 0 ? true: false, duration: this.IO.state[key.toUpperCase()]().val, state: this.IO.state[key.toUpperCase()]().state, type: this.IO.state[key.toUpperCase()]().type, disabled: this.disabledButtons[key.toUpperCase()]}
     }
     return {};
   }
@@ -385,14 +439,14 @@ export class IO_CONTROLS {
       if(returnAs === 'OBJECT'){
         let _return = {}
         for(let key of keys){
-          _return[key] = {active: this.IO.state[key.toUpperCase()]().val > 0 ? true: false, duration: this.IO.state[key.toUpperCase()]().val, state: this.IO.state[key.toUpperCase()]().state, type: this.IO.state[key.toUpperCase()]().type, disabled: this.disabledButtons[key.toUpperCase()]}
+          _return[key] = {id: this.buttonMapId[key.toUpperCase()], active: this.IO.state[key.toUpperCase()]().val > 0 ? true: false, duration: this.IO.state[key.toUpperCase()]().val, state: this.IO.state[key.toUpperCase()]().state, type: this.IO.state[key.toUpperCase()]().type, disabled: this.disabledButtons[key.toUpperCase()]}
         }
         return _return;
       }
       if(returnAs === 'ARRAY'){
         let _return = []
         for(let key of keys){
-          _return.push({key: key, active: this.IO.state[key.toUpperCase()]().val > 0 ? true: false, duration: this.IO.state[key.toUpperCase()]().val, state: this.IO.state[key.toUpperCase()]().state, type: this.IO.state[key.toUpperCase()]().type, disabled: this.disabledButtons[key.toUpperCase()]})
+          _return.push({id: this.buttonMapId[key.toUpperCase()], key: key, active: this.IO.state[key.toUpperCase()]().val > 0 ? true: false, duration: this.IO.state[key.toUpperCase()]().val, state: this.IO.state[key.toUpperCase()]().state, type: this.IO.state[key.toUpperCase()]().type, disabled: this.disabledButtons[key.toUpperCase()]})
         }
         return _return;
       }
@@ -401,7 +455,7 @@ export class IO_CONTROLS {
   }
 
   private debuggerString(key:string){
-    return `${key.toUpperCase()} (${this.buttonMap[key.toUpperCase()].name}/${this.buttonMap[key.toUpperCase()].code}) | duration: ${this.IO.state[key.toUpperCase()]().val} | state: ${this.IO.state[key.toUpperCase()]().state} | type: ${this.IO.state[key.toUpperCase()]().type} | disabled: ${this.disabledButtons[key.toUpperCase()]}`
+    return `${key.toUpperCase()} (${this.buttonMap[key.toUpperCase()].name}/${this.buttonMap[key.toUpperCase()].code}) | id: ${this.buttonMapId[key.toUpperCase()]} duration: ${this.IO.state[key.toUpperCase()]().val} | state: ${this.IO.state[key.toUpperCase()]().state} | type: ${this.IO.state[key.toUpperCase()]().type} | disabled: ${this.disabledButtons[key.toUpperCase()]}`
   }
 
   private getBtnPressType(val:number){

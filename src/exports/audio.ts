@@ -1,5 +1,5 @@
 declare var Phaser:any;
 
-export class IO_AUDIO {
+export class PHASER_AUDIO {
 
 }
