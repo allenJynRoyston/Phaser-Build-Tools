@@ -46,7 +46,32 @@ export class IO_CONTROLS {
   //                                                                              {X: {active: [boolean], duration: [number], state: [number], type: [text], disabled: [boolean]}, A: {active: [boolean], duration: [number], state: [number], type: [text], disabled: [boolean]}}
   //      _IO_CONTROLS.readMulti(['A', 'X'], 'ARRAY')       | return array      | returns an an array with multiple button states:
   //                                                                              [{key: 'X', active: [boolean], duration: [number], state: [number], type: [text], disabled: [boolean]}, {key: 'A', active: [boolean], duration: [number], state: [number], type: [text], disabled: [boolean]}]
+  //      _IO_CONTROLS.mapKeys(keyMappings)                 |                   | see example below
+  /*
+          let keyMappings = {
+              UP: {name: 'UP', code: 'ArrowUp'},
+              DOWN: {name: 'DOWN', code: 'ArrowDown'},
+              LEFT: {name: 'LEFT', code: 'ArrowLeft'},
+              RIGHT: {name: 'RIGHT', code: 'ArrowRight'},
+              A: {name: 'T', code: 'KeyT'},
+              B: {name: 'S', code: 'KeyS'},
+              X: {name: 'D', code: 'KeyD'},
+              Y: {name: 'F', code: 'KeyF'},
+              L1: {name: 'Q', code: 'KeyQ'},
+              L2: {name: 'W', code: 'KeyW'},
+              R1: {name: 'E', code: 'KeyE'},
+              R2: {name: 'R', code: 'KeyR'},
+              L3:{name: 'O', code: 'KeyO'},
+              R3:{name: 'P', code: 'KeyP'},
+              START: {name: 'ENTER', code: 'Enter'},
+              BACK: {name: 'BACKSPACE', code: 'Backspace'}
+            }
+          _IO_CONTROLS.mapKeys(keyMappings)
+  */
   //      --------------------------------------
+
+
+
 
   // ***** GETTING FEEDBACK: ************
   // In your update() loop
@@ -79,6 +104,7 @@ export class IO_CONTROLS {
   //
 
   IO:any;
+  game:any;
   buttonSensitivity:any;
   buttonMap:any;
   properties:any;
@@ -92,6 +118,8 @@ export class IO_CONTROLS {
 
   constructor(){
     this.IO = null;
+    this.game = null;
+
     /* BUTTON SENSITIVTY can be changed to whatever you want */
     this.buttonSensitivity = {TAP: 1, SHORT: 50, LONG: 150, SUPERLONG: 300}
 
@@ -146,6 +174,9 @@ export class IO_CONTROLS {
   }
 
   public assignButtons(game){
+    // stored for future reference
+    this.game = game;
+
     // setup debugger and disabled states
     let style = { font: "12px Courier New", fill: "#fff", align: "left" }
     this.buttonArray.forEach((btn, index) => {
@@ -246,6 +277,17 @@ export class IO_CONTROLS {
     return IO;
   }
 
+  public mapKeys(map:any){
+    this.properties.isReady = false;
+    this.destroyAll();
+
+    setTimeout(() => {
+      this.buttonMap = map
+      this.properties.isReady = true;
+      this.assignButtons(this.game);
+    }, 1)
+  }
+
   public isReady(){
     return this.properties.isReady;
   }
@@ -334,6 +376,7 @@ export class IO_CONTROLS {
       let _return = {}
       return _return[key] = {active: this.IO.state[key.toUpperCase()]().val > 0 ? true: false, duration: this.IO.state[key.toUpperCase()]().val, state: this.IO.state[key.toUpperCase()]().state, type: this.IO.state[key.toUpperCase()]().type, disabled: this.disabledButtons[key.toUpperCase()]}
     }
+    return {};
   }
 
   public readMulti(keys:string[], returnAs:string = 'OBJECT'){
@@ -372,4 +415,12 @@ export class IO_CONTROLS {
     });
     return {val: val, type: _type, state: _state}
   }
+
+  private destroyAll(){
+    this.clearAllControlIntervals()
+    Object.keys(this.debugger.text).forEach((key) => {
+      this.debugger.text[key].destroy();
+    })
+  }
+
 }

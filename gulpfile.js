@@ -11,14 +11,14 @@ const gulp = require('gulp'),
 /* ALTER THIS WHEN BUILDING GAMES */
 let buildGame = {
   mainFile: 'gameTemplate.ts',
-  requiredFiles: ['src/exports/controller.ts', 'src/exports/audio.ts'],
+  requiredFiles: ['src/exports/controller.ts', 'src/exports/audio.ts', 'src/exports/preloader.ts'],
   exportTo: '../phaser/boilerplate'
 }
 
 
 gulp.task('default', function () {
   var queue = sequence(1);  // SMALL DELAY SO CLEARHTML DOESN'T BREAK
-  watch('src/*.ts', {
+  watch('src/**/*.ts', {
     emitOnGlob: false
   }, queue.getHandler('build'));
 });
