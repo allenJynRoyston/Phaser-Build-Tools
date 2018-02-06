@@ -186,7 +186,7 @@ export class PHASER_CONTROLS {
       DIRECTIONAL: false,
       TRIGGER: false,
       ACTION: false,
-      SYSTEM: true
+      SYSTEM: false
       /* LEFT, RIGHT, UP, DOWN, A, B, X, Y, L1, L2, R1, R2, START and BACK added dynamically */
     }
 
@@ -238,7 +238,6 @@ export class PHASER_CONTROLS {
       IO.buttons[btn].onDown.add((e) => {
         // clear any intervals
         clearInterval(IO.sensitivityPress[btn]);
-
         // get type of button pressed
         let btnType, btnName;
         let buttonTypes = ['DIRECTIONAL', 'ACTION', 'TRIGGER', 'SYSTEM']
@@ -304,7 +303,7 @@ export class PHASER_CONTROLS {
   }
 
   public mapKeys(map:any){
-    this.properties.isReady = false;
+    this.properties.isReady = false
     this.destroyAll();
 
     setTimeout(() => {

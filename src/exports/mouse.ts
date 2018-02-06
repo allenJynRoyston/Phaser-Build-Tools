@@ -36,7 +36,7 @@ export class PHASER_MOUSE {
       }
 
       this.debugger = {
-        enabled: construct.showDebugger || true,
+        enabled: construct.showDebugger === undefined ? false : construct.showDebugger,
         text: {},
         pointer: null
       }
@@ -104,7 +104,7 @@ export class PHASER_MOUSE {
     this.debugger.enabled = state;
   }
 
-  public updateDebugger(){
+  public updateDebugger(){    
     for (let btn of this.mouseMapping) {
       this.debugger.text[btn].setText(this.debugger.enabled ? this.debuggerString(btn) : '').bringToTop()
     }

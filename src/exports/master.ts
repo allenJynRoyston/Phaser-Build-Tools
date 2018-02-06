@@ -31,6 +31,10 @@ export class PHASER_MASTER {
     return {created: create, state: this.currentState};
   }
 
+  public getCurrentState(){
+    return this.currentState;
+  }
+
   public getStates(){
     return this.states;
   }

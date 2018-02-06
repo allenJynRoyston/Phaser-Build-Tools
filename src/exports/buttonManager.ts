@@ -1,11 +1,12 @@
 declare var Phaser:any;
 
-export class PHASER_SPRITE_MANAGER {
+export class PHASER_BUTTON_MANAGER {
   game:any;
   resources:any;
 
   constructor(){
     this.game = null;
+
     this.resources = {
       array:[],
       object:{}
@@ -16,19 +17,14 @@ export class PHASER_SPRITE_MANAGER {
     this.game = construct.game;
   }
 
-  public addSprite(data:any){
-
+  public add(data:any){
     let duplicateCheck = this.resources.array.filter(( sprite ) => {
       return sprite.key === data.key;
     });
     if(duplicateCheck.length === 0){
-      let newSprite = this.game.add.sprite(data.x, data.y, data.reference);
-          // add custom properties
+      let newSprite = this.game.add.button(data.x, data.y, data.reference, data.onclick);
           newSprite.key = data.key;
           newSprite.groupKey = data.groupKey || null;
-          newSprite.defaultPosition = {x: data.x, y: data.y}
-          newSprite.setDefaultPositions = function(x,y){this.defaultPosition.x = x, this.defaultPosition.y = y};
-          newSprite.getDefaultPositions = function(){return this.defaultPosition};
       this.resources.array.push(newSprite)
       this.resources.object[data.key] = newSprite;
       return newSprite;
@@ -93,7 +89,6 @@ export class PHASER_SPRITE_MANAGER {
       return sprite.groupKey === groupKey;
     });
   }
-
 
   public getAll(type:string = 'BOTH'){
     if(type === 'ARRAY'){
