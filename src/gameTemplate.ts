@@ -4,6 +4,7 @@ declare var Phaser:any;
 //removeIf(gameBuild)
 import {PHASER_MASTER} from './exports/master'
 import {PHASER_CONTROLS} from './exports/controller'
+import {PHASER_MOUSE} from './exports/mouse'
 import {PHASER_AUDIO} from './exports/audio'
 import {PHASER_PRELOADER} from './exports/preloader'
 import {PHASER_SPRITE_MANAGER} from './exports/spriteManager'
@@ -33,6 +34,7 @@ class PhaserGameObject {
       // initiate control class
       const phaserMaster = new PHASER_MASTER({game: new Phaser.Game(options.width, options.height, Phaser.WEBGL, el, { preload: preload, update: update}), resolution: {width: options.width, height: options.height}}),
             phaserControls = new PHASER_CONTROLS(),
+            phaserMouse = new PHASER_MOUSE({showDebugger: true}),
             phaserSprites = new PHASER_SPRITE_MANAGER(),
             phaserTexts = new PHASER_TEXT_MANAGER();
 
@@ -51,13 +53,13 @@ class PhaserGameObject {
 
         // images
         game.load.image('gameTitle', 'src/assets/game/demo1/titles/100x100.jpg')
+        game.load.image('ships', 'src/assets/game/demo1/images/ships.png')
 
         // load music and sound effects into buffer
         game.load.audio('intro-music', ['src/assets/game/demo1/music/far-sight.ogg']);
         game.load.audio('select', ['src/assets/game/demo1/sound/Pickup_Coin.ogg']);
 
         // scripts (loaded fonts will not be available for the preloader, but will be available after onLoadComplete)
-        /*
         game.load.script('webfont', '//ajax.googleapis.com/ajax/libs/webfont/1.4.7/webfont.js');
         (<any>window).WebFontConfig = {
             active(){ },
@@ -65,7 +67,7 @@ class PhaserGameObject {
               families: ['Press Start 2P']
             }
         };
-        */
+
         game.load.bitmapFont('gem', 'src/assets/fonts/gem.png', 'src/assets/fonts/gem.xml');
 
         // change state
@@ -84,13 +86,14 @@ class PhaserGameObject {
 
           // assign game to classes
           phaserControls.assign({game: game})
+          phaserMouse.assign({game: game})
           phaserSprites.assign({game: game})
           phaserTexts.assign({game: game})
 
           // sprites examples
-          phaserSprites.addSprite({x: game.world.centerX - 150, y: game.world.centerY,  key: 'sprite1', groupKey: 'group1', reference: 'gameTitle'})
-          phaserSprites.addSprite({x: game.world.centerX , y: game.world.centerY,  key: 'sprite2', groupKey: 'group1', reference: 'gameTitle'})
-          phaserSprites.addSprite({x: game.world.centerX + 150, y: game.world.centerY,  key: 'sprite3', groupKey: 'group1', reference: 'gameTitle'})
+          phaserSprites.addSprite({x: game.world.centerX - 150, y: game.world.centerY + 100,  key: 'sprite1', groupKey: 'group1', reference: 'gameTitle'})
+          phaserSprites.addSprite({x: game.world.centerX , y: game.world.centerY + 100,  key: 'sprite2', groupKey: 'group1', reference: 'gameTitle'})
+          phaserSprites.addSprite({x: game.world.centerX + 150, y: game.world.centerY + 100,  key: 'sprite3', groupKey: 'group1', reference: 'gameTitle'})
           phaserSprites.getSprite('sprite1').anchor.set(0.5)
           phaserSprites.getSprite('sprite2').anchor.set(0.5)
           phaserSprites.getSprite('sprite3').anchor.set(0.5)
@@ -98,7 +101,6 @@ class PhaserGameObject {
           // texts examples
           phaserTexts.addText({key: 'test1', groupKey: 'group1', font: 'gem', x: 10, y: 10, size: 16, default: 'I am the best in the whole world and the whole world should know it!' })
           phaserTexts.addText({key: 'test2', groupKey: 'group1', font: 'gem', x: 10, y: 50, size: 16, default: 'I am the second in the whole world and the whole world should know it!' })
-
 
           // change state to ready
           phaserMaster.setState('READY')
@@ -111,6 +113,7 @@ class PhaserGameObject {
         if(phaserControls.isDebuggerEnabled()){
           phaserControls.updateDebugger();
         }
+        phaserMouse.updateDebugger();
 
         //-----------------
         if(phaserMaster.checkState('PRELOAD') && !__phaser.global.pause){
@@ -134,8 +137,14 @@ class PhaserGameObject {
             }
           }
 
+          if(phaserMouse.checkWithDelay({isActive: true, key: 'LEFT', delay: 400})){
+            console.log( phaserMouse.read('LEFT') )
+          }
+
           if(phaserControls.checkWithDelay({isActive: true, key: 'R1', delay: 100})){
-            phaserTexts.getText('test2').text = 'CHANGE ONE'
+            phaserTexts.getText('test2').text = 'CHANGE ONE BLAH BLAH BLAH BLAH BLAH BLAH'
+            phaserTexts.getText('test2').maxWidth = 150
+            //console.log( phaserTexts.getText('test2').height )
           }
           if(phaserControls.checkWithDelay({isActive: true, key: 'R2', delay: 100})){
             for(let text of phaserTexts.getGroup('group1')){

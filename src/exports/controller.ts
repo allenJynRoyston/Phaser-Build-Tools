@@ -126,7 +126,7 @@ export class PHASER_CONTROLS {
     this.game = null;
 
     /* BUTTON SENSITIVTY can be changed to whatever you want */
-    this.buttonSensitivity = {TAP: 1, SHORT: 50, LONG: 150, SUPERLONG: 300}
+    this.buttonSensitivity = {QUICK: 1, SHORT: 50, LONG: 150, SUPERLONG: 300}
 
     /* CLASS PROPERTIES */
     this.properties = {
@@ -218,10 +218,7 @@ export class PHASER_CONTROLS {
     const IO = {
       buttons:{},
       sensitivityPress:{},
-      sensitivityBuffer: {},
-      timedPress:{},
-      timedBuffer:{},
-      timedTrigger:{},
+      sensitivityBuffer:{},
       state: {}
     }
 
@@ -321,14 +318,6 @@ export class PHASER_CONTROLS {
     return this.properties.isReady;
   }
 
-  public getInputDelay(){
-    return this.inputDelay;
-  }
-
-  public testDelay(val:number){
-    return this.game.time.now > this.inputDelay.delay[val];
-  }
-
   public checkWithDelay(params){
     if(this.read(params.key).active === params.isActive){
       if(this.game.time.now > this.inputDelay.delay[this.getKeyId(params.key)]){
@@ -415,7 +404,6 @@ export class PHASER_CONTROLS {
   public clearAllControlIntervals(){
     if(this.properties.isReady){
       for (let btn of this.buttonArray) {
-        clearInterval(this.IO.timedPress[btn]);
         clearInterval(this.IO.sensitivityPress[btn]);
       }
     }

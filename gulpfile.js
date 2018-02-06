@@ -11,7 +11,7 @@ const gulp = require('gulp'),
 /* ALTER THIS WHEN BUILDING GAMES */
 let buildGame = {
   mainFile: 'gameTemplate.ts',
-  requiredFiles: ['src/exports/controller.ts', 'src/exports/audio.ts', 'src/exports/preloader.ts', 'src/exports/spriteManager.ts', 'src/exports/master.ts', 'src/exports/textManager.ts'],
+  requiredFiles: ['src/exports/*.ts'],
   exportTo: '../phaser/boilerplate'
 }
 
