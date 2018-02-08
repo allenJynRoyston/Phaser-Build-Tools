@@ -17,20 +17,20 @@ export class PHASER_BUTTON_MANAGER {
     this.game = construct.game;
   }
 
-  public add(data:any){
+  public add(construct:any){
     let duplicateCheck = this.resources.array.filter(( sprite ) => {
-      return sprite.key === data.key;
+      return sprite.name === construct.name;
     });
     if(duplicateCheck.length === 0){
-      let newSprite = this.game.add.button(data.x, data.y, data.reference, data.onclick);
-          newSprite.key = data.key;
-          newSprite.groupKey = data.groupKey || null;
+      let newSprite = this.game.add.button(construct.x, construct.y, construct.reference, construct.onclick);
+          newSprite.name = construct.name;
+          newSprite.group = construct.group || null;
       this.resources.array.push(newSprite)
-      this.resources.object[data.key] = newSprite;
+      this.resources.object[construct.name] = newSprite;
       return newSprite;
     }
     else{
-      console.log(`Duplicate key name not allowed: ${data.key}`)
+      console.log(`Duplicate key name not allowed: ${construct.name}`)
     }
   }
 
@@ -57,11 +57,11 @@ export class PHASER_BUTTON_MANAGER {
     return keys;
   }
 
-  public destroyGroup(groupKey:string){
+  public destroyGroup(group:string){
     let keys = [];
     // remove from array
     let deleteSpriteArray = this.resources.array.filter(( sprite ) => {
-      return sprite.groupKey === groupKey;
+      return sprite.group === group;
     });
     for(let sprite of deleteSpriteArray){
       keys.push(sprite.key)
@@ -69,11 +69,11 @@ export class PHASER_BUTTON_MANAGER {
     }
 
     // remove from object
-    delete this.resources.object[groupKey];
+    delete this.resources.object[group];
 
     // save as new array
     this.resources.array = this.resources.array.filter(( sprite ) => {
-      return sprite.groupKey !== groupKey;
+      return sprite.group !== group;
     });
 
     // returns a list of destroyed sprites
@@ -84,9 +84,9 @@ export class PHASER_BUTTON_MANAGER {
     return this.resources.object[key]
   }
 
-  public getGroup(groupKey:string){
+  public getGroup(key:string){
     return this.resources.array.filter(( sprite ) => {
-      return sprite.groupKey === groupKey;
+      return sprite.group === key;
     });
   }
 

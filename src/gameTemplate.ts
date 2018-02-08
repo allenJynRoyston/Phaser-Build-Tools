@@ -10,7 +10,7 @@ import {PHASER_PRELOADER} from './exports/preloader'
 import {PHASER_SPRITE_MANAGER} from './exports/spriteManager'
 import {PHASER_TEXT_MANAGER} from './exports/textManager'
 import {PHASER_BUTTON_MANAGER} from './exports/buttonManager'
-
+import {PHASER_BITMAPDATA_MANAGER} from './exports/bitmapdataManager'
 //endRemoveIf(gameBuild)
 
 class PhaserGameObject {
@@ -38,6 +38,7 @@ class PhaserGameObject {
             phaserControls = new PHASER_CONTROLS(),
             phaserMouse = new PHASER_MOUSE({showDebugger: false}),
             phaserSprites = new PHASER_SPRITE_MANAGER(),
+            phaserBmd = new PHASER_BITMAPDATA_MANAGER(),
             phaserTexts = new PHASER_TEXT_MANAGER(),
             phaserButtons = new PHASER_BUTTON_MANAGER();
 
@@ -55,24 +56,9 @@ class PhaserGameObject {
         game.stage.backgroundColor = '#2f2f2f';
 
         // images
-        game.load.image('gameTitle', 'src/assets/game/demo1/titles/100x100.jpg')
         game.load.image('ship', 'src/assets/game/demo1/images/ship.png')
-        game.load.image('orangeBtn', 'src/assets/game/demo1/images/orangeBtn.png')
-
-        // load music and sound effects into buffer
-        game.load.audio('intro-music', ['src/assets/game/demo1/music/far-sight.ogg']);
-        game.load.audio('select', ['src/assets/game/demo1/sound/Pickup_Coin.ogg']);
 
         // scripts (loaded fonts will not be available for the preloader, but will be available after onLoadComplete)
-        // webfonts
-        game.load.script('webfont', '//ajax.googleapis.com/ajax/libs/webfont/1.4.7/webfont.js');
-        (<any>window).WebFontConfig = {
-            active(){ },
-            google: {
-              families: ['Press Start 2P']
-            }
-        };
-        // font bitmap
         game.load.bitmapFont('gem', 'src/assets/fonts/gem.png', 'src/assets/fonts/gem.xml');
 
         // change state
@@ -93,66 +79,58 @@ class PhaserGameObject {
           phaserControls.assign({game: game})
           phaserMouse.assign({game: game})
           phaserSprites.assign({game: game})
+          phaserBmd.assign({game: game})
           phaserTexts.assign({game: game})
           phaserButtons.assign({game: game})
 
-          // sprites examples
-          phaserSprites.addSprite({x: game.world.centerX - 150, y: game.world.centerY + 50,  key: 'sprite1', groupKey: 'group1', reference: 'ship'})
-          phaserSprites.addSprite({x: game.world.centerX , y: game.world.centerY + 50,  key: 'sprite2', groupKey: 'group1', reference: 'ship'})
-          phaserSprites.addSprite({x: game.world.centerX + 150, y: game.world.centerY + 50,  key: 'sprite3', groupKey: 'group1', reference: 'ship'})
-          phaserSprites.getGroup('group1').forEach((sprite, index) => {
-            sprite.anchor.set(0.5)
-            sprite.scale.setTo(1, 1)
-            sprite.alpha = 1
-          });
+          // EXAMPLES OF BITMAPDATA STUFF:
+          // 1.) CREATE A BITMAP AND USE THE cacheBitmapData to update all sprites built from it, in this case the background
+          // create a gradient bmp -> turn it into a sprite -> manipulate the sprite width/height to fill screen
+          phaserBmd.addGradient({name: 'bgGradient', start: generateHexColor(), end: generateHexColor(), width: game.canvas.width/2, height: game.canvas.height, render: true})
+          phaserSprites.addSprite({x: 0, y: 0, name: `spriteBg1`, reference: phaserBmd.get('bgGradient').cacheBitmapData})
+          phaserSprites.get('spriteBg1').width = game.canvas.width/2
+          phaserSprites.get('spriteBg1').height = game.canvas.height
+          phaserSprites.get('spriteBg1').x =  game.canvas.width/2
 
-          // demo functions
-          let setToRotate = () => {
-            phaserMaster.setState('ROTATE');
-            phaserTexts.get('state').text = `Current state: ${phaserMaster.getCurrentState()}`
-            phaserTexts.get('instructions').maxWidth = game.canvas.width - 10
-            phaserTexts.get('instructions').text = 'Rotate ships individually with A, S, D or use the directional arrows to move them all.  Pressing ENTER will reset them to their starting location.'
-            phaserTexts.get('instructions').y = game.canvas.height - (phaserTexts.get('instructions').height + 15);
+
+          // 2.) CREATE A BITMAP AND USE THE cacheBitmapData to update all sprites built from it, in this case the floating sprites
+          // create gradient bitmapData -> turn into multiple sprites -> get group of new sprites and add physics to it
+          phaserBmd.addGradient({name: 'blockBmp', group: 'blockBmpGroup', start: generateHexColor(), end: generateHexColor(), width: 10, height: 10, render: false})
+          for(let i = 0; i < 10; i++){
+            phaserSprites.addSprite({x: 200, y: 0, name: `blockSprites${i}`, group: 'blockSpritesGroup', reference: phaserBmd.get('blockBmp').cacheBitmapData})
+          }
+          phaserSprites.getGroup('blockSpritesGroup').forEach((sprite, index) => {
+            game.physics.arcade.enable(sprite);
+            sprite.body.collideWorldBounds = true;
+            sprite.body.bounce.set(1);
+          	sprite.body.velocity.x = game.rnd.realInRange(-200, 200);
+          	sprite.body.velocity.y = game.rnd.realInRange(-200, 200);
+          })
+
+          // 3.)  CREATEA  BITMAP from a loaded image and manipulate their color range (manipulates the object directly, not their cachedBitmapData)
+          // add bitmap objects via image
+          for(let i = 0; i < 5; i++){
+            phaserBmd.addImage({name: `bmd${i}`, group: 'shipGroups', reference: 'ship', x:  50 + (i * 111), y: 250, render: true})
           }
 
-          let setToScale = () => {
-            phaserMaster.setState('SCALE');
-            phaserTexts.get('state').text = `Current state: ${phaserMaster.getCurrentState()}`
-            phaserTexts.get('instructions').maxWidth = game.canvas.width - 10
-            phaserTexts.get('instructions').text = 'Scale ships individually with A, S, D or use the directional arrows to scale them all.  Pressing ENTER will reset them to their original size.'
-            phaserTexts.get('instructions').y = game.canvas.height - (phaserTexts.get('instructions').height + 15);
-          }
 
-          let setToMove = () => {
-            phaserMaster.setState('MOVE');
-            phaserTexts.get('state').text = `Current state: ${phaserMaster.getCurrentState()}`
-            phaserTexts.get('instructions').maxWidth = game.canvas.width - 10
-            phaserTexts.get('instructions').text = 'Move each ship individually by holding A, S, D and a directional arrow or move all of them by using just the directional arrows.'
-            phaserTexts.get('instructions').y = game.canvas.height - (phaserTexts.get('instructions').height + 15);
-          }
+          // texts
+          phaserTexts.add({name: 'header', font: 'gem', x:  10, y: 10,  size: 14, default: 'Bitmapdata Examples'})
+          phaserTexts.center({name: 'header', x: game.world.centerX, y: 20})
 
-          // create buttons and behavior
-          phaserButtons.add({key: 'btn1', groupKey: 'group1', x:  game.world.centerX - 175, y: 100, reference:'orangeBtn', onclick:() => { setToRotate(); }})
-          phaserButtons.add({key: 'btn2', groupKey: 'group1', x:  game.world.centerX, y: 100, reference:'orangeBtn', onclick:() => { setToScale(); }})
-          phaserButtons.add({key: 'btn3', groupKey: 'group1', x:  game.world.centerX + 175, y: 100, reference:'orangeBtn', onclick:() => { setToMove(); }})
-          phaserButtons.getGroup('group1').forEach((btn, index) => {
-            btn.anchor.set(0.5)
-            btn.scale.setTo(.5, .5)
-          });
+          phaserTexts.add({name: 'instructions', font: 'gem', x:  10, y: 10,  size: 14, default: 'Press A to change the background gradient with BitmapDataCache property.\rPress S to shift the Bitmap object HSL.\rPress D to change the floating tiles gradient with BitmapDataCache.\rPress F to change the ships HSL.\rPress Enter to mainpulate pixel data directly'})
+          phaserTexts.get('instructions').maxWidth = game.canvas.width - 10
+          phaserTexts.center({name: 'instructions', x: game.world.centerX, y: 400})
 
-          // texts examples
-          phaserTexts.add({key: 'label1', groupKey: 'instructions', font: 'gem', x:  game.world.centerX - 225, y: 85,  size: 32, default: 'ROTATE' })
-          phaserTexts.add({key: 'label2', groupKey: 'instructions', font: 'gem', x:  game.world.centerX - 40, y: 85, size: 32, default: 'SCALE' })
-          phaserTexts.add({key: 'label3', groupKey: 'instructions', font: 'gem', x:  game.world.centerX + 145, y: 85, size: 32, default: 'MOVE' })
-
-          phaserTexts.add({key: 'status', groupKey: 'instructions', font: 'gem', x: 10, y: 10, size: 16, default: 'Click on a button to change the action:' })
-          phaserTexts.add({key: 'state', groupKey: 'instructions', font: 'gem', x: 10, y: 30, size: 16, default: '' })
-          phaserTexts.add({key: 'instructions', groupKey: 'instructions', font: 'gem', x: 10, y: game.canvas.height - 80, size: 16, default: '' })
 
           // change state
-          setToMove();
+          phaserMaster.changeState('READY');
       }
       /******************/
+
+      function generateHexColor() {
+      	return '#' + ((0.5 + 0.5 * Math.random()) * 0xFFFFFF << 0).toString(16);
+      }
 
       /******************/
       function update() {
@@ -162,182 +140,65 @@ class PhaserGameObject {
         }
         phaserMouse.updateDebugger();
 
-        //-----------------
-        if(phaserMaster.checkState('PRELOAD') && !__phaser.global.pause){
-          /* DO SOMETHING */
-        }
-        //-----------------
 
-        //-----------------
-        if(phaserMaster.checkState('ROTATE') && !__phaser.global.pause){
-          rotateLoop();
-        }
-        if(phaserMaster.checkState('SCALE') && !__phaser.global.pause){
-          scaleLoop();
-        }
-        if(phaserMaster.checkState('MOVE') && !__phaser.global.pause){
-          moveLoop();
+        phaserSprites.getGroup('group1').forEach((sprite, index) => {
+          sprite.angle += 5
+        })
+
+
+        if(phaserControls.checkWithDelay({isActive: true, key: 'A', delay: 500})){
+            phaserBmd.get('bgGradient').shiftHSL(0.3)
         }
 
-      }
-      /******************/
-
-      /******************/
-      function rotateLoop(){
-        if(phaserControls.read('A').active){
-           phaserSprites.get('sprite1').angle += 5
-        }
-        if(phaserControls.read('B').active){
-           phaserSprites.get('sprite2').angle += 5
-        }
-        if(phaserControls.read('X').active){
-           phaserSprites.get('sprite3').angle += 5
+        if(phaserControls.checkWithDelay({isActive: true, key: 'B', delay: 500})){
+          let cbd = phaserBmd.get('bgGradient').cacheBitmapData
+          var grd = cbd.context.createLinearGradient(0, 0, 0, cbd.height);
+              grd.addColorStop(0, generateHexColor());
+              grd.addColorStop(1, generateHexColor());
+          cbd.context.fillStyle = grd;
+          cbd.context.fillRect(0, 0, cbd.width, cbd.height);
+          cbd.dirty = true;
         }
 
-        if(phaserControls.read('LEFT').active){
-           for(let sprite of phaserSprites.getGroup('group1')){
-             sprite.angle -= 5
-           }
+        if(phaserControls.checkWithDelay({isActive: true, key: 'X', delay: 100})){
+            let cbd = phaserBmd.get('blockBmp').cacheBitmapData
+            var grd = cbd.context.createLinearGradient(0, 0, 0, cbd.height);
+                grd.addColorStop(0, generateHexColor());
+                grd.addColorStop(1, generateHexColor());
+            cbd.context.fillStyle = grd;
+            cbd.context.fillRect(0, 0, cbd.width, cbd.height);
+            cbd.dirty = true;
         }
-        if(phaserControls.read('RIGHT').active){
-           for(let sprite of phaserSprites.getGroup('group1')){
-             sprite.angle += 5
-           }
+
+        if(phaserControls.checkWithDelay({isActive: true, key: 'Y', delay: 10})){
+            phaserBmd.getGroup('shipGroups').forEach((item, index) => {
+              item.shiftHSL(0.05 + (index * .05))
+            })
         }
-        if(phaserControls.read('UP').active){
-           for(let sprite of phaserSprites.getGroup('group1')){
-             sprite.angle -= 10
-           }
-        }
-        if(phaserControls.read('DOWN').active){
-           for(let sprite of phaserSprites.getGroup('group1')){
-             sprite.angle += 10
-           }
-        }
+
 
         if(phaserControls.checkWithDelay({isActive: true, key: 'START', delay: 500})){
-          let game = phaserMaster.game();
-          for(let sprite of phaserSprites.getGroup('group1')){
-            game.add.tween(sprite).to( { angle: 0 }, 500, Phaser.Easing.Bounce.Out, true);
-            game.add.tween(sprite.scale).to( { y:1, x:1 }, 500, Phaser.Easing.Bounce.Out, true);
-            game.add.tween(sprite).to( { y:  sprite.getDefaultPositions().y, x:  sprite.getDefaultPositions().x }, 500, Phaser.Easing.Bounce.Out, true);
-          }
+
+          phaserBmd.getGroup('shipGroups').forEach((item, index) => {
+            item.processPixelRGB((pixel) => {
+              pixel.r = 255 - pixel.r;
+              pixel.g = 255 - pixel.g;
+              pixel.b = 255 - pixel.b;
+              return pixel;
+            })
+          })
+
+          phaserBmd.get('bgGradient').processPixelRGB((pixel) => {
+            pixel.r = 255 - pixel.r;
+            pixel.g = 255 - pixel.g;
+            pixel.b = 255 - pixel.b;
+            return pixel;
+          })
         }
+
       }
       /******************/
 
-      /******************/
-      function scaleLoop(){
-        if(phaserControls.read('A').active){
-           phaserSprites.get('sprite1').scale.setTo( phaserSprites.get('sprite1').scale.x += .025 , phaserSprites.get('sprite1').scale.y += .025)
-        }
-        if(phaserControls.read('B').active){
-           phaserSprites.get('sprite2').scale.setTo( phaserSprites.get('sprite2').scale.x += .025 , phaserSprites.get('sprite2').scale.y += .025)
-        }
-        if(phaserControls.read('X').active){
-           phaserSprites.get('sprite3').scale.setTo( phaserSprites.get('sprite3').scale.x += .025 , phaserSprites.get('sprite3').scale.y += .025)
-        }
-
-        if(phaserControls.read('UP').active){
-           for(let sprite of phaserSprites.getGroup('group1')){
-             sprite.scale.setTo( sprite.scale.x += .05 , sprite.scale.y += .05)
-           }
-        }
-        if(phaserControls.read('DOWN').active){
-           for(let sprite of phaserSprites.getGroup('group1')){
-             sprite.scale.setTo( sprite.scale.x -= .05 , sprite.scale.y -= .05)
-           }
-        }
-
-        if(phaserControls.checkWithDelay({isActive: true, key: 'START', delay: 500})){
-          let game = phaserMaster.game();
-          for(let sprite of phaserSprites.getGroup('group1')){
-            game.add.tween(sprite).to( { angle: 0 }, 500, Phaser.Easing.Bounce.Out, true);
-            game.add.tween(sprite.scale).to( { y:1, x:1 }, 500, Phaser.Easing.Bounce.Out, true);
-            game.add.tween(sprite).to( { y:  sprite.getDefaultPositions().y, x:  sprite.getDefaultPositions().x }, 500, Phaser.Easing.Bounce.Out, true);
-          }
-        }
-      }
-      /******************/
-
-      /******************/
-      function moveLoop(){
-        if(phaserControls.read('A').active){
-           if(phaserControls.read('UP').active){
-             phaserSprites.get('sprite1').y -= 5
-           }
-           if(phaserControls.read('DOWN').active){
-             phaserSprites.get('sprite1').y += 5
-           }
-           if(phaserControls.read('LEFT').active){
-             phaserSprites.get('sprite1').x -= 5
-           }
-           if(phaserControls.read('RIGHT').active){
-             phaserSprites.get('sprite1').x += 5
-           }
-        }
-        if(phaserControls.read('B').active){
-          if(phaserControls.read('UP').active){
-            phaserSprites.get('sprite2').y -= 5
-          }
-          if(phaserControls.read('DOWN').active){
-            phaserSprites.get('sprite2').y += 5
-          }
-          if(phaserControls.read('LEFT').active){
-            phaserSprites.get('sprite2').x -= 5
-          }
-          if(phaserControls.read('RIGHT').active){
-            phaserSprites.get('sprite2').x += 5
-          }
-        }
-        if(phaserControls.read('X').active){
-          if(phaserControls.read('UP').active){
-            phaserSprites.get('sprite3').y -= 5
-          }
-          if(phaserControls.read('DOWN').active){
-            phaserSprites.get('sprite3').y += 5
-          }
-          if(phaserControls.read('LEFT').active){
-            phaserSprites.get('sprite3').x -= 5
-          }
-          if(phaserControls.read('RIGHT').active){
-            phaserSprites.get('sprite3').x += 5
-          }
-        }
-
-        if(!phaserControls.read('A').active && !phaserControls.read('B').active && !phaserControls.read('X').active){
-          if(phaserControls.read('UP').active){
-             for(let sprite of phaserSprites.getGroup('group1')){
-               sprite.y -= 5
-             }
-          }
-          if(phaserControls.read('DOWN').active){
-             for(let sprite of phaserSprites.getGroup('group1')){
-               sprite.y += 5
-             }
-          }
-          if(phaserControls.read('LEFT').active){
-             for(let sprite of phaserSprites.getGroup('group1')){
-               sprite.x -= 5
-             }
-          }
-          if(phaserControls.read('RIGHT').active){
-             for(let sprite of phaserSprites.getGroup('group1')){
-               sprite.x += 5
-             }
-          }
-        }
-
-        if(phaserControls.checkWithDelay({isActive: true, key: 'START', delay: 500})){
-          let game = phaserMaster.game();
-          for(let sprite of phaserSprites.getGroup('group1')){
-            game.add.tween(sprite).to( { angle: 0 }, 500, Phaser.Easing.Bounce.Out, true);
-            game.add.tween(sprite.scale).to( { y:1, x:1 }, 500, Phaser.Easing.Bounce.Out, true);
-            game.add.tween(sprite).to( { y:  sprite.getDefaultPositions().y, x:  sprite.getDefaultPositions().x }, 500, Phaser.Easing.Bounce.Out, true);
-          }
-        }
-      }
-      /******************/
 
       /******************/
       /*  DO NOT TOUCH */
