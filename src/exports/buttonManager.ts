@@ -13,24 +13,24 @@ export class PHASER_BUTTON_MANAGER {
     }
   }
 
-  public assign(construct:any){
-    this.game = construct.game;
+  public assign(game:any){
+    this.game = game.game;
   }
 
-  public add(construct:any){
+  public add(params:any){
     let duplicateCheck = this.resources.array.filter(( sprite ) => {
-      return sprite.name === construct.name;
+      return sprite.name === params.name;
     });
     if(duplicateCheck.length === 0){
-      let newSprite = this.game.add.button(construct.x, construct.y, construct.reference, construct.onclick);
-          newSprite.name = construct.name;
-          newSprite.group = construct.group || null;
+      let newSprite = this.game.add.button(params.x, params.y, params.reference, params.onclick);
+          newSprite.name = params.name;
+          newSprite.group = params.group || null;
       this.resources.array.push(newSprite)
-      this.resources.object[construct.name] = newSprite;
+      this.resources.object[params.name] = newSprite;
       return newSprite;
     }
     else{
-      console.log(`Duplicate key name not allowed: ${construct.name}`)
+      console.log(`Duplicate key name not allowed: ${params.name}`)
     }
   }
 

@@ -11,7 +11,7 @@ export class PHASER_MOUSE {
   inputDelay:any;
   debugger:any;
 
-  constructor(construct){
+  constructor(params:any){
       this.game = null;
       this.clickSensitvity = {QUICK: 1, SHORT: 50, LONG: 150, SUPERLONG: 300}
       this.mouseMapping = [0, 1, 2]
@@ -36,14 +36,14 @@ export class PHASER_MOUSE {
       }
 
       this.debugger = {
-        enabled: construct.showDebugger === undefined ? false : construct.showDebugger,
+        enabled: params.showDebugger === undefined ? false : params.showDebugger,
         text: {},
         pointer: null
       }
   }
 
-  public assign(construct:any){
-    this.game = construct.game;
+  public assign(game){
+    this.game = game;
 
     // 0,1,2 is for left, middle, right mouse buttons
     for (let key of this.mouseMapping) {
@@ -80,6 +80,9 @@ export class PHASER_MOUSE {
     })
     this.debugger.pointer = this.game.add.text(5, this.game.height - 20, "", style); // then add initial text
 
+    // disable right click menu
+    game.canvas.oncontextmenu = function (e) { e.preventDefault(); }
+
   }
 
   private checkMouseClick(){
@@ -104,7 +107,7 @@ export class PHASER_MOUSE {
     this.debugger.enabled = state;
   }
 
-  public updateDebugger(){    
+  public updateDebugger(){
     for (let btn of this.mouseMapping) {
       this.debugger.text[btn].setText(this.debugger.enabled ? this.debuggerString(btn) : '').bringToTop()
     }

@@ -202,15 +202,15 @@ export class PHASER_CONTROLS {
 
   }
 
-  public assign(construct){
+  public assign(game:any){
     // stored for future reference
-    this.game = construct.game;
+    this.game = game;
 
     // setup debugger and disabled states
     let style = { font: "12px Courier New", fill: "#fff", align: "left" }
     this.buttonArray.forEach((btn, index) => {
       this.debugger.text[btn] = null; // must be null first since the property name doesn't exists yet
-      this.debugger.text[btn] = construct.game.add.text(10, 10 + (index * 15), "", style); // then add initial text
+      this.debugger.text[btn] = game.add.text(10, 10 + (index * 15), "", style); // then add initial text
       this.disabledButtons[btn] = false; // set disabled as false
     })
 
@@ -224,7 +224,7 @@ export class PHASER_CONTROLS {
 
     // set default values for IO object
     for (let btn of this.buttonArray) {
-      IO.buttons[btn] = construct.game.input.keyboard.addKey(Phaser.Keyboard[this.buttonMap[btn].name]);
+      IO.buttons[btn] = game.input.keyboard.addKey(Phaser.Keyboard[this.buttonMap[btn].name]);
       IO.sensitivityPress[btn] = null; // stores the setInterval function
       IO.sensitivityBuffer[btn] = 0;   // value
       IO.state[btn] = () => {
@@ -282,7 +282,7 @@ export class PHASER_CONTROLS {
     }
 
     // add button release behavior
-    construct.game.input.keyboard.onUpCallback = (e) => {
+    game.input.keyboard.onUpCallback = (e) => {
         for (let btn of this.buttonArray) {
           if(e.code === this.buttonMap[btn].code){
               // clear intervals

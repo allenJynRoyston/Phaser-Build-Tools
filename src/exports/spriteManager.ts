@@ -1,8 +1,47 @@
 declare var Phaser:any;
 
 export class PHASER_SPRITE_MANAGER {
+
+
+  /* HOW TO USE */
+  // 1.) Create a new instance of the PHASER_SPRITE_MANAGER in the init()
+  //      --------------------------------------
+  /*
+       init(el:any, parent:any, options:any){
+         const phaserSprites = new PHASER_SPRITE_MANAGER(),
+               ...
+       }
+  */
+  //      --------------------------------------
+  // 2.) assign the game in the create()
+  //      --------------------------------------
+  /*
+       function create(){
+         ...
+         phaserSprites.assign(game)  // must be called at the create() function to set everything up
+         ...
+       }
+  */
+  //      --------------------------------------
+
+  // 3.) afterwhich, all public methods will be available:
+  // AVAILABLE METHODS:
+  /*
+    phaserSprites.add({name: <string>, group: <string>(optional), reference: <string|object>, x: <number>, y: <number>})
+    phaserSprites.destroy(name: <string>)
+    phaserSprites.destroyGroup(name: <string>)
+    phaserSprites.get(name: <string>)
+    phaserSprites.getGroup(name: <string>)
+    phaserSprites.getAll(type: <string | 'ARRAY', 'OBJECT', 'BOTH'(default)>(optional))
+    phasersprites.centerWorld(name: <string>)
+    phaserSprites.centerOnPoint(name:<string>, x: <number>, y:<number>)
+  */
+  //      --------------------------------------
+
+
   game:any;
   sprites:any;
+  spriteCount:number;
 
   constructor(){
     this.game = null;
@@ -10,91 +49,96 @@ export class PHASER_SPRITE_MANAGER {
       array:[],
       object:{}
     }
+    this.spriteCount = 0;
   }
 
-  public assign(construct:any){
-    this.game = construct.game;
+  public assign(game:any){
+    this.game = game;
   }
 
-
-  public addSprite(construct:any){
+  public add(params:any){
 
     let duplicateCheck = this.sprites.array.filter(( obj ) => {
-      return obj.name === construct.name;
+      return obj.name === params.name;
     });
     if(duplicateCheck.length === 0){
-      let newSprite = this.game.add.sprite(construct.x, construct.y, construct.reference);
+      let newSprite = this.game.add.sprite(params.x, params.y, params.reference);
           // add custom properties
-          newSprite.name = construct.name;
-          newSprite.group = construct.group || null;
-          newSprite.defaultPosition = {x: construct.x, y: construct.y}
+          newSprite.name = params.name;
+          newSprite.group = params.group || null;
+          newSprite.defaultPosition = {x: params.x, y: params.y}
           newSprite.setDefaultPositions = function(x,y){this.defaultPosition.x = x, this.defaultPosition.y = y};
           newSprite.getDefaultPositions = function(){return this.defaultPosition};
       this.sprites.array.push(newSprite)
-      this.sprites.object[construct.name] = newSprite;
+      this.sprites.object[params.name] = newSprite;
       return newSprite;
     }
     else{
-      console.log(`Duplicate key name not allowed: ${construct.name}`)
+      console.log(`Duplicate key name not allowed: ${params.name}`)
     }
   }
 
-  public destroy(key:string){
-    let keys = [];
-    // remove from array
-    let deleteArray = this.sprites.array.filter(( sprite ) => {
-      return sprite.name === name;
-    });
-    for(let obj of deleteArray){
-      keys.push(obj.name)
-      obj.destroy()
+  public destroy(name:string){
+    if(this.sprites.object[name] !== undefined){
+      let destroyed = [];
+      // remove from array
+      let deleteArray = this.sprites.array.filter(( obj ) => {
+        return obj.name === name;
+      });
+
+      for(let obj of deleteArray){
+        destroyed.push(obj.name)
+        obj.destroy()
+      }
+
+      // remove from object
+      delete this.sprites.object[name];
+
+      // save as new array
+      this.sprites.array = this.sprites.array.filter(( obj ) => {
+        return obj.name !== name;
+      });
+
+      // returns a list of destroyed sprites
+      return destroyed;
+    } else{
+      console.log(`Cannot delete ${name} because it does not exist.`)
+      return null
     }
-
-    // remove from object
-    delete this.sprites.object[key];
-
-    // save as new array
-    this.sprites.array = this.sprites.array.filter(( obj ) => {
-      return obj.name !== key;
-    });
-
-    // returns a list of destroyed sprites
-    return keys;
   }
 
-  public destroyGroup(key:string){
-    let keys = [];
+  public destroyGroup(name:string){
+    let destroyed = [];
     // remove from array
     let deleteArray = this.sprites.array.filter(( obj ) => {
-      return obj.group === key;
+      return obj.group === name;
     });
     for(let sprite of deleteArray){
-      keys.push(sprite.key)
+      destroyed.push(sprite.name)
       sprite.destroy()
     }
 
     // remove from object
-    delete this.sprites.object[key];
+    delete this.sprites.object[name];
 
     // save as new array
     this.sprites.array = this.sprites.array.filter(( obj ) => {
-      return obj.group !== key;
+      return obj.group !== name;
     });
 
     // returns a list of destroyed sprites
-    return keys;
+    return destroyed;
   }
 
-  public get(key:string){
-    return this.sprites.object[key]
+  public get(name:string){
+    return this.sprites.object[name]
   }
 
-  public getGroup(key:string){
+  public getGroup(name:string){
     return this.sprites.array.filter(( obj ) => {
-      return obj.group === key;
+      return obj.group === name;
     });
   }
-
 
   public getAll(type:string = 'BOTH'){
     if(type === 'ARRAY'){
@@ -106,16 +150,30 @@ export class PHASER_SPRITE_MANAGER {
     return {object: this.sprites.object, array: this.sprites.array};
   }
 
+  public count(){
+    this.spriteCount++;
+    return {total: this.sprites.array.length, unique: this.spriteCount};
+  }
 
-  public center(construct){
-    if(this.sprites.object[construct.name] === undefined){
+  public centerWorld(name:string){
+    if(this.sprites.object[name] === undefined){
       console.log('Error centering sprite:  key does not exists.')
       return null;
     }
-    let sprite = this.sprites.object[construct.name];
-    sprite.x = construct.x - (sprite.width/2);
-    sprite.y = construct.y - (sprite.height/2);
-    return sprite;
+    let obj = this.sprites.object[name];
+    obj.alignIn(this.game.world.bounds, Phaser.CENTER);
+    return obj;
+  }
+
+  public centerOnPoint(name:string, x:number, y:number){
+    if(this.sprites.object[name] === undefined){
+      console.log('Error centering sprite:  key does not exists.')
+      return null;
+    }
+    let obj = this.sprites.object[name];
+    obj.x = x - (obj.width/2);
+    obj.y = y - (obj.height/2);
+    return obj;
   }
 
 }

@@ -3,9 +3,9 @@ declare var Phaser:any;
 export class PHASER_PRELOADER {
   game:any;
 
-  constructor(construct:any){
-    this.game = construct.game;
-    this.init(construct.delayInSeconds, construct.done);
+  constructor(params:any){
+    this.game = params.game;
+    this.init(params.delayInSeconds, params.done);
   }
 
   private init(delay:number, done:any){

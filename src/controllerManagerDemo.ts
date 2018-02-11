@@ -11,6 +11,7 @@ import {PHASER_SPRITE_MANAGER} from './exports/spriteManager'
 import {PHASER_TEXT_MANAGER} from './exports/textManager'
 import {PHASER_BUTTON_MANAGER} from './exports/buttonManager'
 import {PHASER_BITMAPDATA_MANAGER} from './exports/bitmapdataManager'
+import {PHASER_GROUP_MANAGER} from './exports/groupManager'
 //endRemoveIf(gameBuild)
 
 class PhaserGameObject {
@@ -34,15 +35,14 @@ class PhaserGameObject {
       /******************/
       // declare variables BOILERPLATE
       // initiate control class
-      const phaserMaster = new PHASER_MASTER({game: new Phaser.Game(options.width, options.height, Phaser.WEBGL, el, { preload: preload, update: update}), resolution: {width: options.width, height: options.height}}),
+      const phaserMaster = new PHASER_MASTER({game: new Phaser.Game(options.width, options.height, Phaser.WEBGL, el, { preload: preload, create: create, update: update}), resolution: {width: options.width, height: options.height}}),
             phaserControls = new PHASER_CONTROLS(),
-            phaserMouse = new PHASER_MOUSE({showDebugger: false}),
+            phaserMouse = new PHASER_MOUSE({showDebugger: true}),
             phaserSprites = new PHASER_SPRITE_MANAGER(),
             phaserBmd = new PHASER_BITMAPDATA_MANAGER(),
             phaserTexts = new PHASER_TEXT_MANAGER(),
-            phaserButtons = new PHASER_BUTTON_MANAGER();
-
-      let button;
+            phaserButtons = new PHASER_BUTTON_MANAGER(),
+            phaserGroup = new PHASER_GROUP_MANAGER();
       /******************/
 
 
@@ -55,19 +55,27 @@ class PhaserGameObject {
         // set canvas color
         game.stage.backgroundColor = '#2f2f2f';
 
-        // images
-        game.load.image('ship', 'src/assets/game/demo1/images/ship.png')
-
-        // scripts (loaded fonts will not be available for the preloader, but will be available after onLoadComplete)
         game.load.bitmapFont('gem', 'src/assets/fonts/gem.png', 'src/assets/fonts/gem.xml');
 
         // change state
-        phaserMaster.setState('PRELOAD')
+        phaserMaster.changeState('PRELOAD')
 
         // send to preloader class
         new PHASER_PRELOADER({game: game, delayInSeconds: 0, done: () => {preloadComplete()}})
       }
       /******************/
+
+      function create(){
+        let game = phaserMaster.game();
+        // assign game to classes
+        phaserControls.assign(game)
+        phaserMouse.assign(game)
+        phaserSprites.assign(game)
+        phaserBmd.assign(game)
+        phaserTexts.assign(game)
+        phaserButtons.assign(game)
+        phaserGroup.assign(game)
+      }
 
       /******************/
       function preloadComplete(){
@@ -75,33 +83,32 @@ class PhaserGameObject {
           // enable physics
           //game.physics.startSystem(Phaser.Physics.ARCADE);
 
-          // assign game to classes
-          phaserControls.assign({game: game})
-          phaserMouse.assign({game: game})
-          phaserSprites.assign({game: game})
-          phaserBmd.assign({game: game})
-          phaserTexts.assign({game: game})
-          phaserButtons.assign({game: game})
-
-
-          // sprites
-          phaserSprites.addSprite({x: game.world.centerX, y: game.world.centerY,  name: 'ship1', group: 'group1', reference: 'ship'})
-          phaserSprites.center({name: 'ship1', x: game.world.centerX, y: game.world.centerY - 150})
-
-          // add bitmap objects
-          for(let i = 0; i < 5; i++){
-            phaserBmd.addImage({name: `bmd${i}`, group: 'bmdGrp1', reference: 'ship', x:  50 + (i * 109), y: 250})
-          }
-
+          let padding = 15;
           // texts
-          phaserTexts.add({name: 'label1', group: 'instructions', font: 'gem', x:  10, y: 20,  size: 14, default: 'Original Sprite' })
-          phaserTexts.center({name: 'label1', x: game.world.centerX, y: 20})
+          let header1 = phaserTexts.add({name: 'header', font: 'gem', size: 18, default: 'Control Manager Debugger'})
+          phaserTexts.alignToTopCenter('header', 10)
+          phaserGroup.layer(10).add(header1)
 
-          phaserTexts.add({name: 'label2', group: 'instructions', font: 'gem', x:  10, y: 10,  size: 14, default: 'Bitmap Data Clones' })
-          phaserTexts.center({name: 'label2', x: game.world.centerX, y: 220})
+          let instructions = phaserTexts.add({name: 'instructions', size: 14, font: 'gem', default:
+`Press [\`] to open input debugger.
+Press [ENTER] to hide dialog box.
+`
+          })
+          phaserTexts.get('instructions').maxWidth = game.canvas.width - padding
+          phaserTexts.center('instructions', 0, 100)
+          phaserGroup.layer(10).add(instructions)
 
-          phaserTexts.add({name: 'label3', group: 'instructions', font: 'gem', x:  10, y: 10,  size: 14, default: 'Press ENTER to change HSL' })
-          phaserTexts.center({name: 'label3', x: game.world.centerX, y: 450})
+          // create a gradient bmp -> turn it into a sprite -> manipulate the sprite width/height to fill screen
+          phaserBmd.addGradient({name: 'bgGradient', start: '#0000FF', end: '#00008b', width: padding, height: padding, render: false})
+          let instructionbox =  phaserSprites.add({x: instructions.x - padding, y: instructions.y - padding, name: `spriteBg1`, reference: phaserBmd.get('bgGradient').cacheBitmapData})
+              instructionbox.width = instructions.width + padding*2;
+              instructionbox.height = instructions.height + padding*2;
+          let headerbox =  phaserSprites.add({x: 0, y: 0, name: `spriteBg2`, reference: phaserBmd.get('bgGradient').cacheBitmapData})
+              headerbox.width = game.canvas.width;
+              headerbox.height = header1.height + padding*2;
+
+          phaserGroup.layer(9).add(instructionbox)
+          phaserGroup.layer(9).add(headerbox)
 
           // change state
           phaserMaster.changeState('READY');
@@ -116,20 +123,15 @@ class PhaserGameObject {
         }
         phaserMouse.updateDebugger();
 
-        //-----------------
-        if(phaserControls.checkWithDelay({isActive: true, key: 'START', delay: 100})){
-            phaserBmd.get('bmd0').shiftHSL(0.1)
-            phaserBmd.get('bmd1').shiftHSL(0.2)
-            phaserBmd.get('bmd2').shiftHSL(0.3)
-            phaserBmd.get('bmd3').shiftHSL(0.4)
-            phaserBmd.get('bmd4').shiftHSL(0.5)
+        if(phaserControls.checkWithDelay({isActive: true, key: 'START', delay: 250})){
+            phaserSprites.get('spriteBg1').visible = !phaserSprites.get('spriteBg1').visible
+            phaserSprites.get('spriteBg2').visible = !phaserSprites.get('spriteBg2').visible
+            phaserTexts.get('header').visible = !phaserTexts.get('header').visible
+            phaserTexts.get('instructions').visible = !phaserTexts.get('instructions').visible
         }
-        //-----------------
-
 
       }
       /******************/
-
 
       /******************/
       /*  DO NOT TOUCH */

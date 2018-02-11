@@ -56,9 +56,10 @@ class PhaserGameObject {
         game.stage.backgroundColor = '#2f2f2f';
 
         // images
-        game.load.image('demoImage', 'src/assets/game/demo1/images/starfield.png')
+        game.load.image('demoImage', 'src/assets/game/demo1/images/star.png')
+        game.load.image('demoImage2', 'src/assets/game/demo1/images/ship.png')
 
-
+        // scripts (loaded fonts will not be available for the preloader, but will be available after onLoadComplete)
         game.load.bitmapFont('gem', 'src/assets/fonts/gem.png', 'src/assets/fonts/gem.xml');
 
         // change state
@@ -69,6 +70,7 @@ class PhaserGameObject {
       }
       /******************/
 
+      /******************/
       function create(){
         let game = phaserMaster.game();
         // assign game to classes
@@ -80,39 +82,35 @@ class PhaserGameObject {
         phaserButtons.assign(game)
         phaserGroup.assign(game)
       }
+      /******************/
 
       /******************/
       function preloadComplete(){
           let game = phaserMaster.game();
-          // enable physics
-          //game.physics.startSystem(Phaser.Physics.ARCADE);
-
-
-          // EXAMPLES OF BITMAPDATA STUFF:
-          // 1.) CREATE A BITMAP AND USE THE cacheBitmapData to update all sprites built from it, in this case the background
-          // create a gradient bmp -> turn it into a sprite -> manipulate the sprite width/height to fill screen
-          phaserBmd.addImage({name: `bmdDemoImg`, group: 'bmd1', reference: 'demoImage', x:  65, y: 0, render: false})
-          phaserMaster.let('shape', new Phaser.Rectangle(0, phaserBmd.get('bmdDemoImg').height, phaserBmd.get('bmdDemoImg').width, 1))
-          phaserMaster.let('dropTime', game.time.now + 250);
-          phaserMaster.let('beginFill', false);
-
-
           let padding = 15;
           // texts
-          let header1 = phaserTexts.add({name: 'header', font: 'gem', size: 18, default: 'Control Manager Debugger'})
+          let header1 = phaserTexts.add({name: 'header', font: 'gem', size: 18, default: 'Sprite Class Manager Debugger'})
           phaserTexts.alignToTopCenter('header', 10)
           phaserGroup.layer(10).add(header1)
 
           let instructions = phaserTexts.add({name: 'instructions', size: 14, font: 'gem', default:
-`Press [ENTER] to begin fill.`
+`Press [A] to create a sprite in group 1.
+Press [S] to create a sprite in group 2.
+Press [D] to delete a sprite in group 1.
+Press [F] to delete a sprite in group 2.
+Press [Q] to delete all sprites in group 1.
+Press [W] to delete all sprites in group 2.
+Press [BACKSPACE] to toggle visiblity of all sprites.
+Press [W] to delete all sprites in group 2.
+`
           })
           phaserTexts.get('instructions').maxWidth = game.canvas.width - padding
-          phaserTexts.center('instructions', 0, 100)
+          phaserTexts.alignToBottomLeftCorner('instructions', 10)
           phaserGroup.layer(10).add(instructions)
 
           // create a gradient bmp -> turn it into a sprite -> manipulate the sprite width/height to fill screen
           phaserBmd.addGradient({name: 'bgGradient', start: '#0000FF', end: '#00008b', width: padding, height: padding, render: false})
-          let instructionbox =  phaserSprites.add({x: instructions.x - padding, y: instructions.y - padding, name: `spriteBg1`, reference: phaserBmd.get('bgGradient').cacheBitmapData})
+          let instructionbox =  phaserSprites.add({x: 0, y: game.canvas.height - instructions.height - padding, name: `spriteBg1`, reference: phaserBmd.get('bgGradient').cacheBitmapData})
               instructionbox.width = instructions.width + padding*2;
               instructionbox.height = instructions.height + padding*2;
           let headerbox =  phaserSprites.add({x: 0, y: 0, name: `spriteBg2`, reference: phaserBmd.get('bgGradient').cacheBitmapData})
@@ -122,17 +120,12 @@ class PhaserGameObject {
           phaserGroup.layer(9).add(instructionbox)
           phaserGroup.layer(9).add(headerbox)
 
-
           // change state
           phaserMaster.changeState('READY');
       }
       /******************/
 
-      /******************/
-      function generateHexColor() {
-      	return '#' + ((0.5 + 0.5 * Math.random()) * 0xFFFFFF << 0).toString(16);
-      }
-      /******************/
+
 
       /******************/
       function update() {
@@ -142,32 +135,61 @@ class PhaserGameObject {
         }
         phaserMouse.updateDebugger();
 
-        let beginFill = phaserMaster.get('beginFill');
-        if(beginFill){
-          let shape = phaserMaster.get('shape'),
-              dropTime = phaserMaster.get('dropTime');
+        let game = phaserMaster.game();
 
-          if (shape.y > 0 && phaserMaster.game().time.now > dropTime)
-          {
-            for (let y = 0; y < shape.y; y++){
-                phaserBmd.get('bmdDemoImg').copyRect('demoImage', shape, 0, y);
-            }
-            shape.y--;
-            dropTime = phaserMaster.game().time.now + 10;
+        // ADD SPRITE 1
+        if(phaserControls.checkWithDelay({isActive: true, key: 'A', delay: 100})){
+          let newSprite = phaserSprites.add({name: `sprite_${phaserSprites.count().unique}`, group: 'spriteGroup1', reference: 'demoImage', x: game.world.randomX, y: game.world.randomY})
+          phaserGroup.layer(0).add(newSprite)
+        }
+
+        // ADD SPRITE 2
+        if(phaserControls.checkWithDelay({isActive: true, key: 'B', delay: 100})){
+          let newSprite = phaserSprites.add({name: `sprite_${phaserSprites.count().unique}`, group: 'spriteGroup2', reference: 'demoImage2', x: game.world.randomX, y: game.world.randomY})
+          phaserGroup.layer(1).add(newSprite)
+        }
+
+        // DELETE SPRITE 1
+        if(phaserControls.checkWithDelay({isActive: true, key: 'X', delay: 100})){
+          if(phaserSprites.getGroup('spriteGroup1').length > 0){
+            phaserSprites.destroy(`${ phaserSprites.getGroup('spriteGroup1')[0].name }`)
           }
         }
 
-        if(phaserControls.read('START').active){
-          phaserMaster.forceLet('beginFill', true);
-          phaserSprites.get('spriteBg1').visible = !phaserSprites.get('spriteBg1').visible
-          phaserSprites.get('spriteBg2').visible = !phaserSprites.get('spriteBg2').visible
-          phaserTexts.get('header').visible = false
-          phaserTexts.get('instructions').visible = false
+        // DELETE SPRITE 2
+        if(phaserControls.checkWithDelay({isActive: true, key: 'Y', delay: 100})){
+          if(phaserSprites.getGroup('spriteGroup2').length > 0){
+            phaserSprites.destroy(`${ phaserSprites.getGroup('spriteGroup2')[0].name }`)
+          }
+        }
+
+        // DELETE IN ALL
+        if(phaserControls.checkWithDelay({isActive: true, key: 'R1', delay: 100})){
+          if(phaserSprites.count().total > 0){
+            phaserSprites.destroy(`${phaserSprites.getAll('ARRAY')[0].name }`)
+          }
+        }
+
+        // DELETE SPRITE GROUP 1
+        if(phaserControls.checkWithDelay({isActive: true, key: 'L1', delay: 100})){
+          phaserSprites.destroyGroup(`spriteGroup1`)
+        }
+
+        // DELETE SPRITE GROUP 2
+        if(phaserControls.checkWithDelay({isActive: true, key: 'L2', delay: 100})){
+          phaserSprites.destroyGroup(`spriteGroup2`)
+        }
+
+        // HIDE/SHOW SPRITES
+        if(phaserControls.checkWithDelay({isActive: true, key: 'BACK', delay: 100})){
+          let all = [...phaserSprites.getGroup('spriteGroup1'), ...phaserSprites.getGroup('spriteGroup2')]
+          for(let sprite of all){
+            phaserSprites.get(sprite.name).visible = !phaserSprites.get(sprite.name).visible;
+          }
         }
 
       }
       /******************/
-
 
 
       /******************/

@@ -10,124 +10,142 @@ export class PHASER_BITMAPDATA_MANAGER {
       array:[],
       object:{}
     }
-
-    this.bmd = {
-      array:[],
-      object:{}
-    }
   }
 
-  public assign(construct:any){
-    this.game = construct.game;
+  public assign(game:any){
+    this.game = game;
   }
 
-  public addGradient(construct:any){
+  public addGradient(params:any){
     let duplicateCheck = this.bmd.array.filter(( obj ) => {
-      return obj.key === construct.key;
+      return obj.name === params.name;
     });
     if(duplicateCheck.length === 0){
-      let tempBmd = this.game.make.bitmapData(construct.width, construct.height);
-      let grd = tempBmd.context.createLinearGradient(0, 0, 0, construct.height);
-          grd.addColorStop(0, construct.start);
-          grd.addColorStop(1, construct.end);
+      let tempBmd = this.game.make.bitmapData(params.width, params.height);
+      let grd = tempBmd.context.createLinearGradient(0, 0, 0, params.height);
+          grd.addColorStop(0, params.start);
+          grd.addColorStop(1, params.end);
 
       tempBmd.context.fillStyle = grd;
-      tempBmd.context.fillRect(0, 0, construct.width, construct.height);
+      tempBmd.context.fillRect(0, 0, params.width, params.height);
 
-      let cacheRef = this.game.cache.addBitmapData(construct.name, tempBmd);
+      let cacheRef = this.game.cache.addBitmapData(params.name, tempBmd);
 
       let newBmd = this.game.make.bitmapData();
-          newBmd.load(this.game.cache.getBitmapData(construct.name));
-          if(construct.render){newBmd.addToWorld(construct.x, construct.y)}
-          newBmd.name = construct.name
-          newBmd.group = construct.group
+          newBmd.load(this.game.cache.getBitmapData(params.name));
+          if(params.render){newBmd.addToWorld(params.x, params.y)}
+          newBmd.name = params.name
+          newBmd.group = params.group
           newBmd.cacheBitmapData = cacheRef;
 
       this.bmd.array.push(newBmd)
-      this.bmd.object[construct.name] = newBmd;
+      this.bmd.object[params.name] = newBmd;
       return newBmd;
     }
     else{
-      console.log(`Duplicate key name not allowed: ${construct.name}`)
+      console.log(`Duplicate key name not allowed: ${params.name}`)
     }
   }
 
-  public addImage(construct:any){
+  public addImage(params:any){
 
     let duplicateCheck = this.bmd.array.filter(( obj ) => {
-      return obj.key === construct.key;
+      return obj.name === params.name;
     });
     if(duplicateCheck.length === 0){
       let newBmd = this.game.make.bitmapData();
-          newBmd.load(construct.reference);
+          newBmd.load(params.reference);
+          newBmd.addToWorld(params.x, params.y)
 
-          if(construct.render){newBmd.addToWorld(construct.x, construct.y)}
-          newBmd.name = construct.name
-          newBmd.group = construct.group
-          newBmd.cacheBitmapData = construct.reference;
+          if(!params.render){newBmd.cls()}
+          newBmd.name = params.name
+          newBmd.group = params.group
+          newBmd.cacheBitmapData = params.reference;
 
       this.bmd.array.push(newBmd)
-      this.bmd.object[construct.name] = newBmd;
+      this.bmd.object[params.name] = newBmd;
       return newBmd;
     }
     else{
-      console.log(`Duplicate key name not allowed: ${construct.name}`)
+      console.log(`Duplicate key name not allowed: ${params.name}`)
     }
   }
 
-  public destroy(key:string){
-    let keys = [];
+
+  public addEmpty(params:any){
+
+    let duplicateCheck = this.bmd.array.filter(( obj ) => {
+      return obj.name === params.name;
+    });
+    if(duplicateCheck.length === 0){
+      let newBmd = this.game.make.bitmapData(params.width, params.height);
+          newBmd.addToWorld(params.x, params.y)
+          if(!params.render){newBmd.cls()}
+          newBmd.name = params.name
+          newBmd.group = params.group
+
+      this.bmd.array.push(newBmd)
+      this.bmd.object[params.name] = newBmd;
+      return newBmd;
+    }
+    else{
+      console.log(`Duplicate key name not allowed: ${params.name}`)
+    }
+  }
+
+  public destroy(name:string){
+    let deleted = [];
     // remove from array
     let destroyArray = this.bmd.array.filter(( obj ) => {
-      return obj.key === key;
+      return obj.key === name;
     });
     for(let obj of destroyArray){
-      keys.push(obj.key)
+      deleted.push(obj.name)
       obj.destroy()
     }
 
     // remove from object
-    delete this.bmd.object[key];
+    delete this.bmd.object[name];
 
     // save as new array
     this.bmd.array = this.bmd.array.filter(( sprite ) => {
-      return sprite.key !== key;
+      return sprite.key !== name;
     });
 
     // returns a list of destroyed sprites
-    return keys;
+    return deleted;
   }
 
   public destroyGroup(key:string){
-    let keys = [];
+    let deleted = [];
     // remove from array
     let destroyArray = this.bmd.array.filter(( obj ) => {
-      return obj.group === key;
+      return obj.group === name;
     });
     for(let obj of destroyArray){
-      keys.push(obj.key)
+      deleted.push(obj.name)
       obj.destroy()
     }
 
     // remove from object
-    delete this.bmd.object[key];
+    delete this.bmd.object[name];
 
     // save as new array
     this.bmd.array = this.bmd.array.filter(( sprite ) => {
-      return sprite.group !== key;
+      return sprite.group !== name;
     });
 
     // returns a list of destroyed sprites
-    return keys;
+    return deleted;
   }
 
-  public get(key:string){
-    return this.bmd.object[key]
+  public get(name:string){
+    return this.bmd.object[name]
   }
 
-  public getGroup(key:string){
+  public getGroup(name:string){
     return this.bmd.array.filter(( obj ) => {
-      return obj.group === key;
+      return obj.group === name;
     });
   }
 
@@ -142,16 +160,5 @@ export class PHASER_BITMAPDATA_MANAGER {
     return {object: this.bmd.object, array: this.bmd.array};
   }
 
-
-  public center(construct){
-    if(this.bmd.object[construct.name] === undefined){
-      console.log('Error centering sprite:  key does not exists.')
-      return null;
-    }
-    let obj = this.bmd.object[construct.name];
-    obj.x = construct.x - (obj.width/2);
-    obj.y = construct.y - (obj.height/2);
-    return obj;
-  }
 
 }

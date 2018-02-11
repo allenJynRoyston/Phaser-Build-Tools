@@ -6,11 +6,12 @@ export class PHASER_MASTER {
   states:any;
   currentState:string;
   inputDelay:any;
+  variables:any;
 
-  constructor(construct:any){
-    this._game = construct.game;
+  constructor(params:any){
+    this._game = params.game;
 
-    this.resolution = construct.resolution;
+    this.resolution = params.resolution;
     // default gameStates
     this.states = {
         BOOT: 'BOOT',
@@ -18,6 +19,34 @@ export class PHASER_MASTER {
         READY: 'READY',
     }
     this.currentState = this.states[0];
+    this.variables = {}
+  }
+
+  public let(key:string, value:any = null){
+    if( (this.variables[key] === undefined)  ){
+      this.variables[key] = value
+    }
+    else{
+      console.log(`Cannot LET duplicate key in PHASER_MASTER: ${key}`)
+    }
+  }
+
+  public forceLet(key:string, value:any = null){
+    this.variables[key] = value
+  }
+
+  public delete(key:string){
+    delete this.variables[key];
+  }
+
+  public get(key:string){
+    if(this.variables[key] !== undefined){
+      return this.variables[key]
+    }
+    else{
+      console.log("Cannot GET a variable that does not exist in PHASER_MASTER.")
+      return null
+    }
   }
 
   public changeState(state:string = null){
@@ -41,10 +70,6 @@ export class PHASER_MASTER {
 
   public getResolution(){
     return this.resolution;
-  }
-
-  public setState(state:string){
-    this.currentState = state.toUpperCase();
   }
 
   public checkState(state:string){
