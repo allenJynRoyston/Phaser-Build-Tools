@@ -22,16 +22,19 @@ export class PHASER_TEXT_MANAGER {
     });
 
     // create defaults if non exists
-    params.x = params.x ? params.x : 0;
-    params.y = params.y ? params.x : 0;
-    params.group = params.group ? params.group : null;
-    params.size = params.size ? params.size : 12;
-    params.default = params.default ? params.default : ''
+    params.x = params.x !== undefined ? params.x : 0;
+    params.y = params.y !== undefined ? params.y : 0;
+    params.group = params.group !== undefined ? params.group : null;
+    params.size = params.size !== undefined ? params.size : 12;
+    params.default = params.default !== undefined ? params.default : ''
+    params.visible = params.visible !== undefined ? params.visible : true
 
     if(duplicateCheck.length === 0){
       let newText = this.game.add.bitmapText(params.x, params.y, params.font, params.default, params.size);
           newText.name = params.name;
           newText.group = params.group;
+          newText.visible = params.visible;
+          
       this.texts.array.push(newText)
       this.texts.object[params.name] = newText;
       return newText;

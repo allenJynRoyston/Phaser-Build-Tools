@@ -56,7 +56,8 @@ class PhaserGameObject {
         game.stage.backgroundColor = '#2f2f2f';
 
         // images
-        game.load.image('texture', 'src/assets/game/demo1/images/cyberglow.png')
+        game.load.image('star', 'src/assets/game/demo1/images/star.png')
+        game.load.image('ship', 'src/assets/game/demo1/images/ship.png')
 
         // font
         game.load.bitmapFont('gem', 'src/assets/fonts/gem.png', 'src/assets/fonts/gem.xml');
@@ -81,13 +82,13 @@ class PhaserGameObject {
         phaserButtons.assign(game)
         phaserGroup.assign(game)
 
-        // texts
         let padding = 15;
-        let header1 = phaserTexts.add({name: 'header', font: 'gem', size: 18, default: 'Filter FX Demo'})
+        // texts
+        let header1 = phaserTexts.add({name: 'header', font: 'gem', size: 18, default: 'Sprites and tweening!'})
         phaserTexts.alignToTopCenter('header', 10)
         phaserGroup.layer(10).add(header1)
 
-        let instructions = phaserTexts.add({name: 'instructions', size: 14, font: 'gem', default:`Trippy!`})
+        let instructions = phaserTexts.add({name: 'instructions', size: 14, font: 'gem', default:`Press [A] to add sprites`})
             instructions.maxWidth = game.canvas.width - padding
         phaserTexts.alignToBottomLeftCorner('instructions', 10)
         phaserGroup.layer(10).add(instructions)
@@ -114,63 +115,35 @@ class PhaserGameObject {
       /******************/
       function preloadComplete(){
           let game = phaserMaster.game();
-
-          //  Shader by triggerHLM (https://www.shadertoy.com/view/lsfGDH)
-
-          var fragmentSrc = [
-              "precision mediump float;",
-              "uniform float     time;",
-              "uniform vec2      resolution;",
-              "uniform sampler2D iChannel0;",
-              "float speed = time * 0.2;",
-              "float pi = 3.14159265;",
-              "void main( void ) {",
-                  "vec2 position = vec2(640.0/2.0+640.0/2.0*sin(speed*2.0), 360.0/2.0+360.0/2.0*cos(speed*3.0));",
-                  "vec2 position2 = vec2(640.0/2.0+640.0/2.0*sin((speed+2000.0)*2.0), 360.0/2.0+360.0/2.0*cos((speed+2000.0)*3.0));",
-                  "vec2 offset = vec2(640.0/2.0, 360.0/2.0) ;",
-                  "vec2 offset2 = vec2(6.0*sin(speed*1.1), 3.0*cos(speed*1.1));",
-                  "vec2 oldPos = (gl_FragCoord.xy-offset);",
-                  "float angle = speed*2.0;",
-                  "vec2 newPos = vec2(oldPos.x *cos(angle) - oldPos.y *sin(angle),",
-                  "oldPos.y *cos(angle) + oldPos.x *sin(angle));",
-                  "newPos = (newPos)*(0.0044+0.004*sin(speed*3.0))-offset2;",
-                  "vec2 temp = newPos;",
-                  "newPos.x = temp.x + 0.4*sin(temp.y*2.0+speed*8.0);",
-                  "newPos.y = (-temp.y + 0.4*sin(temp.x*2.0+speed*8.0));",
-                  "vec4 final = texture2D(iChannel0,newPos);",
-                  "//final = texture2D(texCol,gl_FragCoord.xy*vec2(1.0/640, -1.0/360));",
-                  "gl_FragColor = vec4(final.xyz, 1.0);",
-              "}"
-          ];
-
-          let sprite = phaserMaster.let('sprite', game.add.sprite(0, 0, 'texture'));
-              sprite.width = game.canvas.width;
-              sprite.height = game.canvas.height;
-
-          var customUniforms = {
-              iChannel0: { type: 'sampler2D', value: sprite.texture, textureData: { repeat: true } }
-          };
-
-          let filter = phaserMaster.let('filter', new Phaser.Filter(game, customUniforms, fragmentSrc))
-              filter.setResolution(800, 600);
-
-          sprite.filters = [ filter ];
-          phaserGroup.layer(1).add(sprite)
-
+          // enable physics
+          //game.physics.startSystem(Phaser.Physics.ARCADE);
 
           // change state
           phaserMaster.changeState('READY');
       }
       /******************/
 
-
+      /******************/
+      function generateHexColor() {
+      	return '#' + ((0.5 + 0.5 * Math.random()) * 0xFFFFFF << 0).toString(16);
+      }
+      /******************/
 
       /******************/
       function update() {
         let game = phaserMaster.game();
-        let filter = phaserMaster.get('filter');
 
-         filter.update();
+        if(phaserControls.checkWithDelay({isActive: true, key: 'A', delay: 100})){
+          let i = phaserSprites.getAll('ARRAY').length;
+          let newSprite = phaserSprites.add({name: `star${i}`, group: 'g1', reference: 'star', x: game.world.randomX, y: game.world.randomY + game.canvas.height})
+              newSprite.alpha = 1;
+              let rnd = game.rnd.integerInRange(1, 2)
+              newSprite.scale.setTo(rnd, rnd)
+              phaserGroup.layer(rnd).add(newSprite)
+              game.add.tween(newSprite).to({ y: -256, alpha: 1 }, 4000, Phaser.Easing.Sinusoidal.InOut, true, 100, 1000, false);
+              phaserTexts.get('spriteCount').text = `Number of sprites rendered: ${i}`
+              phaserTexts.alignToBottomRightCorner('spriteCount', 10)
+        }
 
       }
       /******************/

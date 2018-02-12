@@ -62,11 +62,20 @@ export class PHASER_SPRITE_MANAGER {
       return obj.name === params.name;
     });
     if(duplicateCheck.length === 0){
+
+
+      // create defaults if non exists
+      params.x = params.x !== undefined ? params.x : 0;
+      params.y = params.y !== undefined ? params.y : 0;
+      params.group = params.group !== undefined ? params.group : null;
+      params.visible = params.visible !== undefined ? params.visible : true;
+
       let newSprite = this.game.add.sprite(params.x, params.y, params.reference);
           // add custom properties
           newSprite.name = params.name;
-          newSprite.group = params.group || null;
+          newSprite.group = params.group;
           newSprite.defaultPosition = {x: params.x, y: params.y}
+          newSprite.visible = params.visible
           newSprite.setDefaultPositions = function(x,y){this.defaultPosition.x = x, this.defaultPosition.y = y};
           newSprite.getDefaultPositions = function(){return this.defaultPosition};
       this.sprites.array.push(newSprite)

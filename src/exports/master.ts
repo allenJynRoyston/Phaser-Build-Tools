@@ -24,7 +24,7 @@ export class PHASER_MASTER {
 
   public let(key:string, value:any = null){
     if( (this.variables[key] === undefined)  ){
-      this.variables[key] = value
+      return this.variables[key] = value
     }
     else{
       console.log(`Cannot LET duplicate key in PHASER_MASTER: ${key}`)
@@ -32,7 +32,7 @@ export class PHASER_MASTER {
   }
 
   public forceLet(key:string, value:any = null){
-    this.variables[key] = value
+    return this.variables[key] = value
   }
 
   public delete(key:string){
