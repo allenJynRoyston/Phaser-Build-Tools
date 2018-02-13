@@ -42,7 +42,8 @@ class PhaserGameObject {
             phaserBmd = new PHASER_BITMAPDATA_MANAGER(),
             phaserTexts = new PHASER_TEXT_MANAGER(),
             phaserButtons = new PHASER_BUTTON_MANAGER(),
-            phaserGroup = new PHASER_GROUP_MANAGER();
+            phaserGroup = new PHASER_GROUP_MANAGER(),
+            phaserBitmapdata = new PHASER_BITMAPDATA_MANAGER()
       /******************/
 
 
@@ -97,6 +98,7 @@ class PhaserGameObject {
         phaserTexts.assign(game)
         phaserButtons.assign(game)
         phaserGroup.assign(game)
+        phaserBitmapdata.assign(game)
 
         game.physics.startSystem(Phaser.Physics.ARCADE);
 
@@ -133,21 +135,41 @@ class PhaserGameObject {
         sprite.filters = [ filter ];
         phaserGroup.add(1, sprite)
 
+        // game variables
+        phaserMaster.let('score', 0)
+
+        // particles
         let emitter = phaserMaster.let('emitter', game.add.emitter(game, 0, 0, 100))
             emitter.makeParticles('particlefx');
-            emitter.gravity = 200;
+            emitter.gravity = 10;
             phaserGroup.layer(1).add(emitter)
 
         //  Texts
-        let scoreText = phaserTexts.add({name: 'scoreText', x:10, y:10,  font: 'gem', size: 18, default: 'Score:'})
-        let livesText = phaserTexts.add({name: 'livesText', x:game.world.width - 100, y:10,  font: 'gem', size: 18, default: 'Lives'})
-        let stateText = phaserTexts.add({name: 'stateText', font: 'gem', size: 25, default: 'State text'})
+        let scoreText = phaserTexts.add({name: 'scoreText', group: 'topbar', x:10, y:10,  font: 'gem', size: 18, default: `Score: ${phaserMaster.get('score')}`, visible: false})
+            scoreText.updateScore = function(){
+              this.setText(`Score: ${phaserMaster.get('score')}`)
+            }
+        let livesText = phaserTexts.add({name: 'livesText', group: 'topbar', x:game.world.width - 100, y:10,  font: 'gem', size: 18, default: 'Lives', visible: false})
+        let stateText = phaserTexts.add({name: 'stateText', group: 'mission', font: 'gem', size: 25, default: 'SAVE. THE. WORLD.', visible: false})
             phaserTexts.center('stateText', 0, 0)
-        let subText = phaserTexts.add({name: 'subText', y:game.world.centerY,  font: 'gem', size: 18, default: 'Sub text'})
+        let subText = phaserTexts.add({name: 'subText', group: 'mission', y:game.world.centerY - 50,  font: 'gem', size: 18, default: 'Sub text', visible: false})
             phaserTexts.center('subText', 0, 50)
         let debuggerText = phaserTexts.add({name: 'debuggerText', font: 'gem', size: 16, default: 'Sprite count: '})
             phaserTexts.alignToBottomCenter('debuggerText', 10)
+        let healthText = phaserTexts.add({name: 'healthText', font: 'gem', size: 16, default: 'Heaalth'})
+            phaserTexts.alignToBottomLeftCorner('healthText', 10)
         phaserGroup.addMany(9, [scoreText, livesText, stateText, subText, debuggerText])
+
+        // create healthbar
+        let shape = phaserBitmapdata.addGradient({name: 'bmpHealthbar', group: 'g1', start: '#0000FF', end: '#33B5E5', width: 200, height: 20, render: false})
+        let healthbar = phaserSprites.add({x: 5, y: game.canvas.height - 25, name: `healthbar`, group: 'ui', reference: shape.cacheBitmapData, visible: false})
+            healthbar.scale.setTo(.5, 1)
+
+        let shape2 = phaserBitmapdata.addGradient({name: 'bmpUnderbar', group: 'g1', start: '#2f3640', end: '#e84118', width: 200, height: 20, render: false})
+        let underbar = phaserSprites.add({x: 5, y: game.canvas.height - 25, name: `underbar`, group: 'ui', reference: shape2.cacheBitmapData, visible: false})
+
+        phaserGroup.add(9, healthbar)
+        phaserGroup.add(8, underbar)
 
       }
       /******************/
@@ -158,10 +180,39 @@ class PhaserGameObject {
 
         // create player
         let player = createPlayer();
-            player.moveToStart();
+
 
         // change state
         phaserMaster.changeState('READY');
+
+        // create first wave of enemies
+        for(var i = 0; i < 5; i++){
+          createAlien({
+            x: game.rnd.integerInRange(50, game.canvas.width -50),
+            y: game.rnd.integerInRange(-50, -200),
+            ix: game.rnd.integerInRange(-100, 100),
+            iy: game.rnd.integerInRange(0, 100)
+          });
+        }
+
+        game.time.events.add(Phaser.Timer.SECOND*1, () => {
+          phaserTexts.getGroup('topbar').forEach((text) => {
+            text.y = -text.height;
+            text.visible = true
+            game.add.tween(text).to( { y: 10 }, 1000, Phaser.Easing.Back.InOut, true, 0, 0, false);
+          })
+
+          phaserSprites.getGroup('ui').forEach((sprite) => {
+            sprite.x = -600
+            sprite.visible = true
+            game.add.tween(sprite).to( { x: 5 }, 1500, Phaser.Easing.Elastic.InOut, true, 0, 0, false);
+          })
+          player.moveToStart();
+        })
+
+
+
+
       }
       /******************/
 
@@ -226,7 +277,7 @@ class PhaserGameObject {
               let emitter = phaserMaster.get('emitter');
                   emitter.x = this.x;
                   emitter.y = this.y
-                  emitter.start(true, 2000, null, 5);
+                  emitter.start(true, 1500, null, 5);
 
               let explosion = phaserSprites.add({name: `exp_${game.rnd.integer()}`, group: 'enemy_explosions',  x: this.x - this.width/2, y: this.y - this.height/2, reference: 'kaboom'})
                   explosion.scale.setTo(0.5, 0.5)
@@ -249,6 +300,13 @@ class PhaserGameObject {
 
             // destroy it
             alien.destroyIt = function(){
+                // add to score
+                let score = phaserMaster.get('score');
+                phaserMaster.forceLet('score', score += 100);
+                let scoreText = phaserTexts.get('scoreText')
+                    scoreText.updateScore();
+
+                // animate it
                 let tween = {
                   angle: game.rnd.integerInRange(-720, 720),
                   x: this.x - game.rnd.integerInRange(-25, 25),
@@ -301,19 +359,19 @@ class PhaserGameObject {
 
             alien.checkLocation = function(){
               this.angle += alien.angleMomentum
-              if(alien.angleMomentum > 0){
-                alien.angleMomentum -= 0.002
+              if(this.angleMomentum > 0){
+                this.angleMomentum -= 0.002
               }
-              if(alien.angleMomentum < 0){
-                alien.angleMomentum += 0.002
+              if(this.angleMomentum < 0){
+                this.angleMomentum += 0.002
               }
               if(this.y > this.height){
-                if(alien.body !== null){
-                  alien.body.collideWorldBounds = true;
+                if(this.body !== null){
+                  this.body.collideWorldBounds = true;
                 }
               }
               if(this.y > this.game.canvas.height - 100){
-                if(alien.body !== null){
+                if(this.body !== null){
                   this.body.collideWorldBounds = false;
                 }
               }
@@ -396,7 +454,7 @@ class PhaserGameObject {
         let player = phaserSprites.get('player')
         let debuggerText = phaserTexts.get('debuggerText')
             debuggerText.setText(`Sprite count: ${phaserSprites.getAll("ARRAY").length}`)
-        //filter.update();
+
 
         if(phaserControls.checkWithDelay({isActive: true, key: 'START', delay: 500 })){
           if(phaserMaster.getCurrentState() === 'READY'){
