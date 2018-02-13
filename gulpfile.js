@@ -10,7 +10,8 @@ const gulp = require('gulp'),
 
 /* ALTER THIS WHEN BUILDING GAMES */
 let buildGame = {
-  mainFile: 'filterDemo.ts',
+  //mainFile: 'gameTemplate.ts',
+  mainFile: 'shooterDemo.ts',
   requiredFiles: ['src/exports/*.ts'],
   exportTo: '../phaser/boilerplate'
 }

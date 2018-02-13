@@ -21,9 +21,18 @@ export class PHASER_GROUP_MANAGER {
     }
   }
 
-
   public layer(key:number){
     return this.group.object[key]
+  }
+
+  public add(key:number, item:string){
+    this.group.object[key].add(item)
+  }
+
+  public addMany(key:number, list:Array<string>){
+    list.forEach((item) => {
+        this.group.object[key].add(item)
+    })
   }
 
 

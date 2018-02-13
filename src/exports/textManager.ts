@@ -34,7 +34,7 @@ export class PHASER_TEXT_MANAGER {
           newText.name = params.name;
           newText.group = params.group;
           newText.visible = params.visible;
-          
+
       this.texts.array.push(newText)
       this.texts.object[params.name] = newText;
       return newText;
@@ -229,7 +229,7 @@ export class PHASER_TEXT_MANAGER {
   }
 
 
-  public center(name:string, offsetx:number =0, offsety: number=0){
+  public center(name:string, offsetx:number =0, offsety:number=0){
     if(this.texts.object[name] === undefined){
       console.log('Error centering sprite:  key does not exists.')
       return null;
