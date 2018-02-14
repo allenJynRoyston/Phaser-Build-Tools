@@ -88,6 +88,12 @@ class PhaserGameObject {
       /******************/
 
       /******************/
+      function generateHexColor() {
+        return '#' + ((0.5 + 0.5 * Math.random()) * 0xFFFFFF << 0).toString(16);
+      }
+      /******************/
+
+      /******************/
       function create(){
         let game = phaserMaster.game();
         // assign game to classes
@@ -133,16 +139,34 @@ class PhaserGameObject {
         let filter = phaserMaster.let('filter', new Phaser.Filter(game, {iChannel0: { type: 'sampler2D', value: sprite.texture, textureData: { repeat: true } }}, fragmentSrc))
             filter.setResolution(1920, 1080);
         sprite.filters = [ filter ];
-        phaserGroup.add(1, sprite)
+        phaserGroup.add(0, sprite)
 
         // game variables
         phaserMaster.let('score', 0)
 
         // particles
+        let particlesSprite = phaserBmd.addGradient({name: 'blockBmp', group: 'particles', start: '#fff000', end: '#ffffff', width: 2, height: 2, render: false})
         let emitter = phaserMaster.let('emitter', game.add.emitter(game, 0, 0, 100))
-            emitter.makeParticles('particlefx');
-            emitter.gravity = 10;
+            emitter.makeParticles(particlesSprite);
+            emitter.alpha = 0.5
+            emitter.gravity = 0;
             phaserGroup.layer(1).add(emitter)
+
+        // stars
+        let stars = phaserBmd.addGradient({name: 'starBmp', group: 'blockBmpGroup', start: '#ffffff', end: '#ffffff', width: 1, height: 1, render: false})
+        for (var i = 0; i < 100; i++){
+            let star = phaserSprites.add({name: `star_${i}`, group: 'movingStarField', x: game.rnd.integerInRange(0, game.world.width), y:game.rnd.integerInRange(0, game.world.height), reference: stars})
+                star.starType = game.rnd.integerInRange(1, 3);
+                star.scale.setTo(star.starType, star.starType);
+                star.onUpdate = function(){
+                  let momentum = 10 - (this.starType * 3)
+                  if(this.y  > this.game.world.height){
+                    this.y = 10
+                  }
+                  this.y += momentum
+                }
+                phaserGroup.layer(0).add(star)
+        }
 
         //  Texts
         let scoreText = phaserTexts.add({name: 'scoreText', group: 'topbar', x:10, y:10,  font: 'gem', size: 18, default: `Score: ${phaserMaster.get('score')}`, visible: false})
@@ -150,15 +174,13 @@ class PhaserGameObject {
               this.setText(`Score: ${phaserMaster.get('score')}`)
             }
         let livesText = phaserTexts.add({name: 'livesText', group: 'topbar', x:game.world.width - 100, y:10,  font: 'gem', size: 18, default: 'Lives', visible: false})
-        let stateText = phaserTexts.add({name: 'stateText', group: 'mission', font: 'gem', size: 25, default: 'SAVE. THE. WORLD.', visible: false})
-            phaserTexts.center('stateText', 0, 0)
         let subText = phaserTexts.add({name: 'subText', group: 'mission', y:game.world.centerY - 50,  font: 'gem', size: 18, default: 'Sub text', visible: false})
             phaserTexts.center('subText', 0, 50)
         let debuggerText = phaserTexts.add({name: 'debuggerText', font: 'gem', size: 16, default: 'Sprite count: '})
             phaserTexts.alignToBottomCenter('debuggerText', 10)
         let healthText = phaserTexts.add({name: 'healthText', font: 'gem', size: 16, default: 'Heaalth'})
             phaserTexts.alignToBottomLeftCorner('healthText', 10)
-        phaserGroup.addMany(9, [scoreText, livesText, stateText, subText, debuggerText])
+        phaserGroup.addMany(9, [scoreText, livesText, subText, debuggerText])
 
         // create healthbar
         let shape = phaserBitmapdata.addGradient({name: 'bmpHealthbar', group: 'g1', start: '#0000FF', end: '#33B5E5', width: 200, height: 20, render: false})
@@ -182,39 +204,66 @@ class PhaserGameObject {
         let player = createPlayer();
 
 
-        // change state
-        phaserMaster.changeState('READY');
+        playSequence(['SAVE', 'THE', 'WORLD'], ()=>{
 
-        // create first wave of enemies
-        for(var i = 0; i < 5; i++){
-          createAlien({
-            x: game.rnd.integerInRange(50, game.canvas.width -50),
-            y: game.rnd.integerInRange(-50, -200),
-            ix: game.rnd.integerInRange(-100, 100),
-            iy: game.rnd.integerInRange(0, 100)
-          });
-        }
-
-        game.time.events.add(Phaser.Timer.SECOND*1, () => {
-          phaserTexts.getGroup('topbar').forEach((text) => {
-            text.y = -text.height;
-            text.visible = true
-            game.add.tween(text).to( { y: 10 }, 1000, Phaser.Easing.Back.InOut, true, 0, 0, false);
-          })
-
-          phaserSprites.getGroup('ui').forEach((sprite) => {
-            sprite.x = -600
-            sprite.visible = true
-            game.add.tween(sprite).to( { x: 5 }, 1500, Phaser.Easing.Elastic.InOut, true, 0, 0, false);
-          })
           player.moveToStart();
+          // create first wave of enemies
+          for(var i = 0; i < 5; i++){
+            createAlien({
+              x: game.rnd.integerInRange(50, game.canvas.width -50),
+              y: game.rnd.integerInRange(-50, -200),
+              ix: game.rnd.integerInRange(-100, 100),
+              iy: game.rnd.integerInRange(0, 100)
+            });
+          }
+
+          game.time.events.add(Phaser.Timer.SECOND*1, () => {
+            phaserTexts.getGroup('topbar').forEach((text) => {
+              text.y = -text.height;
+              text.visible = true
+              game.add.tween(text).to( { y: 10 }, 1000, Phaser.Easing.Back.InOut, true, 0, 0, false);
+            })
+
+            phaserSprites.getGroup('ui').forEach((sprite) => {
+              sprite.x = -600
+              sprite.visible = true
+              game.add.tween(sprite).to( { x: 5 }, 1500, Phaser.Easing.Elastic.InOut, true, 0, 0, false);
+            })
+
+          }).autoDestroy = true;
         })
 
 
-
+        // change state
+        phaserMaster.changeState('READY');
 
       }
       /******************/
+
+      /******************/
+      function playSequence(wordlist:Array<string>, callback:any){
+        let game = phaserMaster.game();
+
+          wordlist.forEach( (word, index) => {
+            let splashText = phaserTexts.add({name: `splashText_${index}`, group: 'splash', font: 'gem', size: 18, default: word, visible: false})
+                splashText.startSplash = function(){
+                  this.visible = true;
+                  this.scale.setTo(10, 10)
+                  phaserTexts.alignToCenter(this.name)
+                  game.add.tween(splashText.scale).to( { x:0.5, y:0.5}, 350, Phaser.Easing.Linear.In, true, 0);
+                  game.add.tween(splashText).to( { x: this.game.world.centerX, y: this.game.world.centerY, alpha: 0.75}, 350, Phaser.Easing.Linear.In, true, 0)
+                  setTimeout(() => {
+                    phaserTexts.destroy(this.name)
+                  }, 350)
+                }
+                game.time.events.add(Phaser.Timer.SECOND/2.5 * index, splashText.startSplash, splashText).autoDestroy = true;
+          })
+
+          game.time.events.add(Phaser.Timer.SECOND/2.5 * wordlist.length, callback, this).autoDestroy = true;
+
+      }
+      /******************/
+
 
       /******************/
       function createPlayer(){
@@ -287,7 +336,7 @@ class PhaserGameObject {
                   // destroy expolosion sprite
                   game.time.events.add(Phaser.Timer.SECOND/2, () => {
                     phaserSprites.destroy(explosion.name)
-                  })
+                  }).autoDestroy = true;
 
               this.destroyIt()
             }
@@ -338,7 +387,7 @@ class PhaserGameObject {
                        phaserSprites.destroy(explosion.name)
                      })
                   phaserSprites.destroy(this.name);
-               }, this);
+               }, this).autoDestroy = true;
             }
 
             alien.pause = function(){
@@ -456,14 +505,11 @@ class PhaserGameObject {
             debuggerText.setText(`Sprite count: ${phaserSprites.getAll("ARRAY").length}`)
 
 
-        if(phaserControls.checkWithDelay({isActive: true, key: 'START', delay: 500 })){
-          if(phaserMaster.getCurrentState() === 'READY'){
-            phaserMaster.changeState('PAUSE')
-          }
-          else if(phaserMaster.getCurrentState() === 'PAUSE'){
-            phaserMaster.changeState('READY')
-          }
-        }
+            filter.update();
+
+        phaserSprites.getGroup('movingStarField').forEach(star => {
+          star.onUpdate();
+        })
 
 
         if(phaserMaster.checkState('READY')){
@@ -499,7 +545,7 @@ class PhaserGameObject {
             player.moveX(-5)
           }
 
-          if(phaserControls.checkWithDelay({isActive: true, key: 'A', delay: 400 - (phaserControls.read('A').state * 50) })){
+          if(phaserControls.checkWithDelay({isActive: true, key: 'A', delay: 500 - (phaserControls.read('A').state * 75) })){
             createBullet(player.x, player.y)
           }
         }

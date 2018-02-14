@@ -44,14 +44,15 @@ export class PHASER_TEXT_MANAGER {
     }
   }
 
-  public destroy(key:string){
-    let keys = [];
+  public destroy(name:string){
+    let destroyArray = [];
     // remove from array
     let deleteArray = this.texts.array.filter(( obj ) => {
       return obj.name === name;
     });
+
     for(let text of deleteArray){
-      keys.push(text.key)
+      destroyArray.push(text.name)
       text.destroy()
     }
 
@@ -60,34 +61,34 @@ export class PHASER_TEXT_MANAGER {
 
     // save as new array
     this.texts.array = this.texts.array.filter(( obj ) => {
-      return obj.name !== key;
+      return obj.name !== name;
     });
 
     // returns a list of destroyed sprites
-    return keys;
+    return destroyArray;
   }
 
-  public destroyGroup(key:string){
-    let keys = [];
+  public destroyGroup(name:string){
+    let destroyArray = [];
     // remove from array
     let deletearray = this.texts.array.filter(( obj ) => {
-      return obj.group === key;
+      return obj.group === name;
     });
     for(let text of deletearray){
-      keys.push(text.key)
+      destroyArray.push(text.key)
       text.destroy()
     }
 
     // remove from object
-    delete this.texts.object[key];
+    delete this.texts.object[name];
 
     // save as new array
     this.texts.array = this.texts.array.filter(( obj ) => {
-      return obj.group !== key;
+      return obj.group !== name;
     });
 
     // returns a list of destroyed sprites
-    return keys;
+    return destroyArray;
   }
 
   public get(key:string){
