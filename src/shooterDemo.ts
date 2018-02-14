@@ -96,6 +96,7 @@ class PhaserGameObject {
       /******************/
       function create(){
         let game = phaserMaster.game();
+
         // assign game to classes
         phaserControls.assign(game)
         phaserMouse.assign(game)
@@ -108,11 +109,21 @@ class PhaserGameObject {
 
         // game variables
         phaserMaster.let('score', 0)
-        phaserMaster.let('time', 34)
-        phaserMaster.let('startTime', 0)
+        phaserMaster.let('roundTime', 30)
+        phaserMaster.let('clock', game.time.create(false))
+        phaserMaster.let('elapsedTime', 0)
+
+        // pause behavior
+        game.onPause.add(() => {
+          pauseGame()
+        }, this);
+        game.onResume.add(() => {
+          unpauseGame();
+        }, this);
 
         // filter
         game.physics.startSystem(Phaser.Physics.ARCADE);
+        /*
         var fragmentSrc = [
             "precision mediump float;",
             "uniform float     time;",
@@ -144,18 +155,18 @@ class PhaserGameObject {
             filter.setResolution(1920, 1080);
         sprite.filters = [ filter ];
         phaserGroup.add(0, sprite)
+        */
 
         // particles
-        let particlesSprite = phaserBmd.addGradient({name: 'blockBmp', group: 'particles', start: '#fff000', end: '#ffffff', width: 2, height: 2, render: false})
+        let particlesSprite = phaserBmd.addGradient({name: 'blockBmp', group: 'particles', start: '#ff0000', end: '#FF4500', width: 1, height: 1, render: false})
         let emitter = phaserMaster.let('emitter', game.add.emitter(game, 0, 0, 100))
             emitter.makeParticles(particlesSprite);
-            emitter.alpha = 0.5
             emitter.gravity = 0;
             phaserGroup.layer(1).add(emitter)
 
         // stars
         let stars = phaserBmd.addGradient({name: 'starBmp', group: 'blockBmpGroup', start: '#ffffff', end: '#ffffff', width: 1, height: 1, render: false})
-        for (var i = 0; i < 100; i++){
+        for (var i = 0; i < 25; i++){
             let star = phaserSprites.add({name: `star_${i}`, group: 'movingStarField', x: game.rnd.integerInRange(0, game.world.width), y:game.rnd.integerInRange(0, game.world.height), reference: stars})
                 star.starType = game.rnd.integerInRange(1, 3);
                 star.scale.setTo(star.starType, star.starType);
@@ -173,22 +184,27 @@ class PhaserGameObject {
         let timeSeconds = phaserTexts.add({name: 'timeSeconds', group: 'timeKeeper', font: 'gem', size: 65, default: `25`, visible: false})
             phaserTexts.alignToTopCenter('timeSeconds', 20)
             timeSeconds.onUpdate = function(){
-              let totalTime = phaserMaster.get('time');
-              let inSeconds = parseInt((totalTime - phaserMaster.get('startTime') - this.game.time.totalElapsedSeconds()).toFixed(0))
+              let totalTime = phaserMaster.get('elapsedTime');
+              let elapsedTime = phaserMaster.get('elapsedTime');
+                  elapsedTime += (phaserMaster.get('clock').elapsed * .001);
+              phaserMaster.forceLet('elapsedTime', elapsedTime);
+              let roundTime = phaserMaster.get('roundTime');
+
+              let inSeconds = parseInt((roundTime - elapsedTime).toFixed(0))
               if(inSeconds >= 0){
-                  this.setText(`${inSeconds}`)
+                   this.setText(`${inSeconds}`)
               }
               else{
                 endLevel()
               }
             }
             timeSeconds.reveal = function(){
-              this.y = -this.height;
+              this.y = -200;
               this.visible = true
               this.game.add.tween(this).to( { y: 10 }, 1000, Phaser.Easing.Back.InOut, true, 0, 0, false);
             }
             timeSeconds.hide = function(){
-              this.game.add.tween(this).to( { y: -this.height }, 1000, Phaser.Easing.Back.InOut, true, 0, 0, false);
+              this.game.add.tween(this).to( { y: -200 }, 1000, Phaser.Easing.Back.InOut, true, 0, 0, false);
             }
 
 
@@ -296,16 +312,16 @@ class PhaserGameObject {
 
 
 
-        playSequence(['SAVE', 'THE', 'WORLD'], ()=>{
+        playSequence(['BEES?', '', '', 'NO!', 'RADIOACTIVE', 'KILLER', 'BEES'], ()=>{
           player.moveToStart();
-          game.time.events.add(Phaser.Timer.SECOND*1, () => {
-          playSequence([`${phaserMaster.get('time')} SECONDS`, 'GO'], () => {
+          game.time.events.add(Phaser.Timer.SECOND*1.5, () => {
+          playSequence([`${phaserMaster.get('roundTime')} SECONDS`, 'GO'], () => {
 
               phaserTexts.getGroup('timeKeeper').forEach((text) => {
                 text.reveal();
               })
 
-              game.time.events.add(Phaser.Timer.SECOND*2, () => {
+              game.time.events.add(Phaser.Timer.SECOND/2, () => {
                 phaserTexts.getGroup('ui').forEach((text) => {
                   text.reveal()
                 })
@@ -314,14 +330,12 @@ class PhaserGameObject {
                   sprite.reveal()
                 })
 
-                // start timer
-                phaserMaster.let('startTime', game.time.totalElapsedSeconds())
               }).autoDestroy = true;
 
-
+              // start clock
+              phaserMaster.get('clock').start()
               // change state
               phaserMaster.changeState('READY');
-
             })
           })
         })
@@ -352,7 +366,6 @@ class PhaserGameObject {
 
       }
       /******************/
-
 
       /******************/
       function createPlayer(){
@@ -778,15 +791,26 @@ class PhaserGameObject {
       /******************/
 
       /******************/
+      function pauseGame(){
+        phaserMaster.get('clock').stop();
+      }
+      /******************/
+
+      /******************/
+      function unpauseGame(){
+        phaserMaster.get('clock').start();
+      }
+      /******************/
+
+      /******************/
       function update() {
         let game = phaserMaster.game();
-        let filter = phaserMaster.get('filter');
+        //let filter = phaserMaster.get('filter');
+        //  filter.update();
         let player = phaserSprites.get('player')
         let debuggerText = phaserTexts.get('debuggerText')
             debuggerText.onUpdate()
 
-
-            filter.update();
 
         phaserSprites.getGroup('movingStarField').forEach(star => {
           star.onUpdate();
@@ -796,7 +820,7 @@ class PhaserGameObject {
         if(phaserMaster.checkState('READY')){
 
           // create a steady steam of aliens to shoot
-          if( phaserSprites.getGroup('aliens').length < 30){
+          if( phaserSprites.getGroup('aliens').length < 5){
             createAlien({
               x: game.rnd.integerInRange(0, game.canvas.width),
               y: game.rnd.integerInRange(-50, -100),
