@@ -57,15 +57,14 @@ class PhaserGameObject {
         game.stage.backgroundColor = '#2f2f2f';
 
         // images
-        game.load.image('winners', 'src/assets/game/demo1/images/winners.jpg')
         game.load.image('bullet', 'src/assets/game/demo1/images/bullet.png');
         game.load.image('bomb', 'src/assets/game/demo1/images/enemy-bullet.png');
         game.load.spritesheet('invader', 'src/assets/game/demo1/images/invader32x32x4.png', 32, 32);
         game.load.image('player', 'src/assets/game/demo1/images/ship.png');
         game.load.spritesheet('kaboom', 'src/assets/game/demo1/images/explode.png', 128, 128);
-        game.load.image('starfield', 'src/assets/game/demo1/images/starfield.png');
-        game.load.image('background', 'src/assets/game/demo1/images/tron.png');
+        game.load.image('background', 'src/assets/game/demo1/images/starfield.png');
         game.load.image('particlefx', 'src/assets/game/demo1/images/gem.png')
+        game.load.image('earth', 'src/assets/game/demo1/images/earth.png')
 
         // load music into buffer
         game.load.audio('music-main', ['src/assets/game/demo1/music/zombies-in-space.ogg']);
@@ -112,6 +111,9 @@ class PhaserGameObject {
         phaserMaster.let('roundTime', 30)
         phaserMaster.let('clock', game.time.create(false))
         phaserMaster.let('elapsedTime', 0)
+        phaserMaster.let('devMode', false)
+        phaserMaster.let('starMomentum', {x: 0, y:0})
+        phaserMaster.let('population', {total: 7000000, killed: 0})
 
         // pause behavior
         game.onPause.add(() => {
@@ -123,7 +125,6 @@ class PhaserGameObject {
 
         // filter
         game.physics.startSystem(Phaser.Physics.ARCADE);
-        /*
         var fragmentSrc = [
             "precision mediump float;",
             "uniform float     time;",
@@ -155,10 +156,10 @@ class PhaserGameObject {
             filter.setResolution(1920, 1080);
         sprite.filters = [ filter ];
         phaserGroup.add(0, sprite)
-        */
+
 
         // particles
-        let particlesSprite = phaserBmd.addGradient({name: 'blockBmp', group: 'particles', start: '#ff0000', end: '#FF4500', width: 1, height: 1, render: false})
+        let particlesSprite = phaserBmd.addGradient({name: 'blockBmp', group: 'particles', start: '#FFFF00', end: '#ff8100', width: 2, height: 2, render: false})
         let emitter = phaserMaster.let('emitter', game.add.emitter(game, 0, 0, 100))
             emitter.makeParticles(particlesSprite);
             emitter.gravity = 0;
@@ -171,14 +172,50 @@ class PhaserGameObject {
                 star.starType = game.rnd.integerInRange(1, 3);
                 star.scale.setTo(star.starType, star.starType);
                 star.onUpdate = function(){
-                  let momentum = 16 - (this.starType * 5)
+                  let baseMomentum = 0.25 + (3 - star.starType)*5
+                  let starMomentum = phaserMaster.get('starMomentum')
                   if(this.y  > this.game.world.height){
                     this.y = 10
+                    this.x = game.rnd.integerInRange(-100, game.world.width)
                   }
-                  this.y += momentum
+                  if(this.x  > this.game.world.width){
+                    this.x = 0
+                  }
+                  if(this.x  < 0){
+                    this.x = this.game.world.width
+                  }
+                  if(starMomentum.x > 0){
+                    starMomentum.x -= 0.05
+                  }
+                  if(starMomentum.x < 0){
+                    starMomentum.x += 0.05
+                  }
+                  if(starMomentum.y > 0){
+                    starMomentum.y -= 0.05
+                  }
+                  if(starMomentum.y < 0){
+                    starMomentum.y += 0.05
+                  }
+
+                  this.x += (3 - star.starType)*starMomentum.x
+                  this.y += (baseMomentum + starMomentum.y)
                 }
-                phaserGroup.layer(0).add(star)
+                star.fadeOut = function(){
+                  this.game.add.tween(this).to( { alpha: 0 }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, game.rnd.integerInRange(0, 500), 0, false).autoDestroy = true;
+                }
+                phaserGroup.layer(4 - star.starType).add(star)
         }
+
+        let earth = phaserSprites.add({reference: 'earth', name: 'earth', group: 'earth', x: this.game.world.centerX, y: this.game.canvas.height + 900})
+            earth.scale.setTo(3.5, 3.5)
+            earth.anchor.setTo(0.5, 0.5)
+            earth.onUpdate = function(){
+              earth.angle +=0.01
+            }
+            earth.fadeOut = function(){
+              this.game.add.tween(this).to( { y: this.y + 200, alpha: 0.5 }, Phaser.Timer.SECOND*6, Phaser.Easing.Linear.Out, true, 0, 0, false).autoDestroy = true;
+            }
+            phaserGroup.add(2, earth)
 
         //  TIME
         let timeSeconds = phaserTexts.add({name: 'timeSeconds', group: 'timeKeeper', font: 'gem', size: 65, default: `25`, visible: false})
@@ -201,10 +238,10 @@ class PhaserGameObject {
             timeSeconds.reveal = function(){
               this.y = -200;
               this.visible = true
-              this.game.add.tween(this).to( { y: 10 }, 1000, Phaser.Easing.Back.InOut, true, 0, 0, false);
+              this.game.add.tween(this).to( { y: 10 }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, 0, 0, false);
             }
             timeSeconds.hide = function(){
-              this.game.add.tween(this).to( { y: -200 }, 1000, Phaser.Easing.Back.InOut, true, 0, 0, false);
+              this.game.add.tween(this).to( { y: -200 }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, 0, 0, false);
             }
 
 
@@ -217,10 +254,10 @@ class PhaserGameObject {
             scoreText.reveal = function(){
               this.y = -this.height;
               this.visible = true
-              game.add.tween(this).to( { y: 10 }, 1000, Phaser.Easing.Back.InOut, true, 0, 0, false);
+              game.add.tween(this).to( { y: 10 }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, 0, 0, false);
             }
             scoreText.hide = function(){
-              game.add.tween(this).to( { y: -100 }, 1000, Phaser.Easing.Back.InOut, true, 0, 0, false);
+              game.add.tween(this).to( { y: -100 }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, 0, 0, false);
             }
 
         // LIVES
@@ -229,99 +266,119 @@ class PhaserGameObject {
             livesText.reveal = function(){
               this.y = -this.height;
               this.visible = true
-              this.game.add.tween(this).to( { y: 10 }, 1000, Phaser.Easing.Back.InOut, true, 0, 0, false);
+              this.game.add.tween(this).to( { y: 10 }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, 0, 0, false);
             }
             livesText.hide = function(){
-              this.game.add.tween(this).to( { y: -100 }, 1000, Phaser.Easing.Back.InOut, true, 0, 0, false);
+              this.game.add.tween(this).to( { y: -100 }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, 0, 0, false);
             }
 
 
         // HEALTH TEXT
-        let healthText = phaserTexts.add({name: 'healthText', group: 'ui', font: 'gem', size: 16, default: 'Planet', visible: false})
-            phaserTexts.alignToBottomLeftCorner('healthText', 10)
-            healthText.onUpdate = function(){}
+        let healthText = phaserTexts.add({name: 'healthText', group: 'ui', font: 'gem', x: 15, y: game.canvas.height - 23, size: 16, default: '', visible: false})
+            healthText.onUpdate = function(){
+              let pop = phaserMaster.get('population')
+              this.setText(`Population: ${pop.total - pop.killed}`)
+            }
             healthText.reveal = function(){
               this.x = -this.width;
               this.visible = true
-              this.game.add.tween(this).to( { x: 25 }, 1000, Phaser.Easing.Back.InOut, true, 0, 0, false);
+              this.game.add.tween(this).to( { x: 15 }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, 0, 0, false);
             }
             healthText.hide = function(){
-              this.game.add.tween(this).to( { x: -this.width }, 1000, Phaser.Easing.Back.InOut, true, 0, 0, false);
+              this.game.add.tween(this).to( { x: -this.width }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, 0, 0, false);
             }
 
-        // DEBUGGER
-        let debuggerText = phaserTexts.add({name: 'debuggerText', group: 'ui', font: 'gem', size: 16, default: 'Sprite count:', visible: false})
-            phaserTexts.alignToBottomCenter('debuggerText', 10)
-            debuggerText.onUpdate = function(){
-              let count = [...phaserSprites.getGroup('trashes'), ...phaserSprites.getGroup('aliens')]
-              debuggerText.setText(`Enemy count: ${count.length}`)
-            }
-            debuggerText.reveal = function(){
-              this.y = this.game.canvas.height + this.height;
-              this.visible = true
-              this.game.add.tween(this).to( { y: this.game.canvas.height - this.height - 20 }, 1000, Phaser.Easing.Back.InOut, true, 0, 0, false);
-            }
-            debuggerText.hide = function(){
-              this.game.add.tween(this).to( { y: this.game.canvas.height + this.height }, 1000, Phaser.Easing.Back.InOut, true, 0, 0, false);
+        // KILL COUNT
+        let killCountText = phaserTexts.add({name: 'killCount', group: 'ui', font: 'gem', size: 16, default: 'Humans left...', visible: false})
+            phaserTexts.alignToCenter('killCount')
+            killCountText.onUpdate = function(){  }
+            killCountText.reveal = function(){}
+            killCountText.hide = function(){
+              killCountText.visible = true;
+              killCountText.alpha = 0;
+              this.game.add.tween(this).to( { alpha: 1, y: this.game.world.centerY - 25 }, 3000, Phaser.Easing.Linear.In, true, Phaser.Timer.SECOND*6, 0, false).
+                onComplete.add(() => {
+                  let pop = phaserMaster.get('population')
+                  this.game.add.tween(this).to( { alpha: 0}, 2000, Phaser.Easing.Linear.Out, true, Phaser.Timer.SECOND*2).onComplete.add(() => {
+                    let pop = phaserMaster.get('population')
+                    setTimeout(() => {
+                      let leftText = phaserTexts.add({name: 'popLeft',  font: 'gem', y: this.game.world.centerY,  size: 58, default: `${pop.total - pop.killed}`, visible: true})
+                      phaserTexts.alignToCenter('popLeft')
+                      leftText.game.add.tween(leftText).to( { alpha: 0}, 2000, Phaser.Easing.Linear.Out, true, Phaser.Timer.SECOND/2)
+                        .onComplete.add(() => {
+                          console.log("END LEVEL")
+                        })
+                    }, 500)
+                  })
+
+                  // destroy all aliens
+                  phaserSprites.getGroup('movingStarField').forEach((star) => {
+                    star.fadeOut()
+                  })
+
+                  // destroy all aliens
+                  phaserSprites.get('earth').fadeOut()
+
+                })
             }
 
         // add texts to layers
-        phaserGroup.addMany(9, [scoreText, livesText, debuggerText])
+        phaserGroup.addMany(9, [scoreText, livesText, killCountText])
 
         // create healthbar
-        let shape = phaserBitmapdata.addGradient({name: 'bmpHealthbar', group: 'ui', start: '#0000FF', end: '#33B5E5', width: 200, height: 20, render: false})
+        let shape = phaserBitmapdata.addGradient({name: 'bmpHealthbar', group: 'ui', start: '#0000FF', end: '#33B5E5', width: game.canvas.width - 10, height: 20, render: false})
         let healthbar = phaserSprites.add({x: 5, y: game.canvas.height - 25, name: `healthbar`, group: 'ui', reference: shape.cacheBitmapData, visible: false})
-            healthbar.scale.setTo(.5, 1)
+            healthbar.scale.setTo(1, 1)
+            healthbar.defaultWidth = healthbar.width
+            healthbar.takeDamage = function(val:number){
+              let population = phaserMaster.get('population')
+                  population.killed += val
+              let damageAmount = (val/population.total)
+              let damagePercent = (population.killed/population.total)
+              this.width = (this.defaultWidth - Math.round(this.defaultWidth * damagePercent))
+              createChipDamage({x: this.width + (damageAmount * 100), y: this.y, width: Math.round(this.defaultWidth * damageAmount), height: this.height })
+              phaserMaster.forceLet('population', population)
+
+            }
             healthbar.onUpdate = function(){
 
             }
             healthbar.reveal = function(){
-              this.x = -600
+              this.y = game.canvas.height + 100
               this.visible = true
-              this.game.add.tween(this).to( { x: 5 }, 1500, Phaser.Easing.Elastic.InOut, true, 0, 0, false);
+              this.game.add.tween(this).to( { y: game.canvas.height - 25 }, 1500, Phaser.Easing.Linear.In, true, 0, 0, false);
             }
             healthbar.hide = function(){
-              this.game.add.tween(this).to( { x: -600 }, 1500, Phaser.Easing.Elastic.InOut, true, 0, 0, false);
+              this.game.add.tween(this).to( { y: game.canvas.height + 100 }, 1500, Phaser.Easing.Elastic.InOut, true, 0, 0, false);
             }
 
-        let shape2 = phaserBitmapdata.addGradient({name: 'bmpUnderbar', group: 'ui', start: '#2f3640', end: '#e84118', width: 200, height: 20, render: false})
-        let underbar = phaserSprites.add({x: 5, y: game.canvas.height - 25, name: `underbar`, group: 'ui', reference: shape2.cacheBitmapData, visible: false})
-            underbar.onUpdate = function(){
+        // chipdamage bar
+        phaserBitmapdata.addGradient({name: 'chipDamageBmp', group: 'chipdamage', start: '#2f3640', end: '#e84118', width: 1, height: 20, render: false})
 
-            }
-            underbar.reveal = function(){
-              this.x = -600
-              this.visible = true
-              this.game.add.tween(this).to( { x: 5 }, 1500, Phaser.Easing.Elastic.InOut, true, 0, 0, false);
-            }
-            underbar.hide = function(){
-              this.game.add.tween(this).to( { x: -600 }, 1500, Phaser.Easing.Elastic.InOut, true, 0, 0, false);
-            }
         phaserGroup.add(9, healthbar)
-        phaserGroup.add(8, underbar)
-
       }
       /******************/
 
       /******************/
       function preloadComplete(){
         let game = phaserMaster.game();
+        let isDevMode = phaserMaster.get('devMode')
 
         // create player
         let player = createPlayer();
 
 
 
-        playSequence(['BEES?', '', '', 'NO!', 'RADIOACTIVE', 'KILLER', 'BEES'], ()=>{
+        playSequence(['SAVE', 'THE', 'WORLD'], ()=>{
           player.moveToStart();
-          game.time.events.add(Phaser.Timer.SECOND*1.5, () => {
+          game.time.events.add(isDevMode ? Phaser.Timer.SECOND*0 : Phaser.Timer.SECOND*1, () => {
           playSequence([`${phaserMaster.get('roundTime')} SECONDS`, 'GO'], () => {
 
               phaserTexts.getGroup('timeKeeper').forEach((text) => {
                 text.reveal();
               })
 
-              game.time.events.add(Phaser.Timer.SECOND/2, () => {
+              game.time.events.add(isDevMode ? Phaser.Timer.SECOND*0 : Phaser.Timer.SECOND/2, () => {
                 phaserTexts.getGroup('ui').forEach((text) => {
                   text.reveal()
                 })
@@ -348,18 +405,18 @@ class PhaserGameObject {
         let game = phaserMaster.game();
 
           wordlist.forEach( (word, index) => {
-            let splashText = phaserTexts.add({name: `splashText_${index}`, group: 'splash', font: 'gem', size: 18, default: word, visible: false})
+            let splashText = phaserTexts.add({name: `splashText_${phaserTexts.getGroup('splash').length}`, group: 'splash', font: 'gem', size: 18, default: word, visible: false})
                 splashText.startSplash = function(){
                   this.visible = true;
                   this.scale.setTo(10, 10)
                   phaserTexts.alignToCenter(this.name)
-                  game.add.tween(splashText.scale).to( { x:0.5, y:0.5}, 350, Phaser.Easing.Linear.In, true, 0);
-                  game.add.tween(splashText).to( { x: this.game.world.centerX, y: this.game.world.centerY, alpha: 0.75}, 350, Phaser.Easing.Linear.In, true, 0)
+                  game.add.tween(this.scale).to( { x:0.5, y:0.5}, 350, Phaser.Easing.Linear.In, true, 0);
+                  game.add.tween(this).to( { x: this.game.world.centerX, y: this.game.world.centerY, alpha: 0.75}, 350, Phaser.Easing.Linear.In, true, 0)
                   setTimeout(() => {
                     phaserTexts.destroy(this.name)
                   }, 350)
                 }
-                game.time.events.add(Phaser.Timer.SECOND/2.5 * index, splashText.startSplash, splashText).autoDestroy = true;
+                game.time.events.add((Phaser.Timer.SECOND/2.5 * index) + 100, splashText.startSplash, splashText).autoDestroy = true;
           })
 
           game.time.events.add(Phaser.Timer.SECOND/2.5 * wordlist.length, callback, this).autoDestroy = true;
@@ -375,7 +432,6 @@ class PhaserGameObject {
             player.anchor.setTo(0.5, 0.5);
             player.scale.setTo(.5, .5)
             player.isInvincible = true;
-            player.momentum = 0;
             game.physics.enable(player, Phaser.Physics.ARCADE);
             phaserGroup.add(8, player)
 
@@ -391,7 +447,20 @@ class PhaserGameObject {
               this.checkLimits()
             }
 
+            player.moveY = function(val:number){
+              this.y += val
+              this.checkLimits()
+            }
+
             player.checkLimits = function(){
+              if(this.y - this.height < 0){
+                this.y = this.height
+              }
+
+              if(this.y + this.height > this.game.canvas.height){
+                this.y = this.game.canvas.height - this.height
+              }
+
               if(this.x < 0){
                 this.x = this.game.canvas.width + this.width
               }
@@ -422,31 +491,50 @@ class PhaserGameObject {
       /******************/
 
       /******************/
+      function createChipDamage(options:any){
+        let game = phaserMaster.game();
+
+        let shape = phaserBitmapdata.get('chipDamageBmp')
+        let underbar = phaserSprites.add({x: options.x, y: options.y, name: `chipdamage_${game.rnd.integer()}`, group: 'chipdamage', reference: shape.cacheBitmapData, visible: true})
+            underbar.width = options.width
+            underbar.tweenIt = function(){
+              this.game.add.tween(this).to( { width: 0 }, 250, Phaser.Easing.Linear.Out, true, 100).
+              onComplete.add(() => {
+                phaserSprites.destroy(this.name);
+              })
+            }
+            underbar.tweenIt();
+      }
+
+
       function createAlien(options:any){
         let game = phaserMaster.game();
 
         let alien = phaserSprites.add({x: options.x, y: options.y, name: `alien_${game.rnd.integer()}`, group:'aliens', reference: 'invader', visible: true})
             alien.anchor.setTo(0.5, 0.5);
             alien.scale.setTo(1.5, 1.5);
-            alien.animations.add('movement', [ 0, 1, 2, 3 ], 20, true);
-            alien.play('movement')
+            //alien.animations.add('movement', [ 0, 1, 2, 3 ], 20, true);
+            //alien.play('movement')
             game.physics.enable(alien, Phaser.Physics.ARCADE);
             alien.body.velocity.y = options.iy
             alien.body.velocity.x = options.ix
             alien.angleMomentum = game.rnd.integerInRange(-5, 5)
             alien.body.bounce.setTo(1, 1);
+            alien.atTarget = false;
+            alien.fallThreshold = game.rnd.integerInRange(0, 75)
 
             phaserGroup.add(3, alien)
 
             // damage it
             alien.damageIt = function(){
-              let emitter = phaserMaster.get('emitter');
-                  emitter.x = this.x;
-                  emitter.y = this.y
-                  emitter.start(true, 1500, null, 5);
-              this.destroyIt()
+              if(!this.atTarget){
+                let emitter = phaserMaster.get('emitter');
+                    emitter.x = this.x;
+                    emitter.y = this.y
+                    emitter.start(true, 1500, null, 5);
+                this.destroyIt()
+              }
             }
-
 
 
             alien.removeIt = function(){
@@ -486,7 +574,20 @@ class PhaserGameObject {
                   }
                 phaserSprites.destroy(this.name);
                }, this).autoDestroy = true;
+            }
 
+            alien.fallToPlanet = function(){
+              this.atTarget = true;
+              this.body = null;
+              this.game.add.tween(this).to( {y: this.y + 60}, Phaser.Timer.SECOND*2, Phaser.Easing.Linear.In, true, 0).autoDestroy = true;
+              setTimeout(() => {
+                this.game.add.tween(this.scale).to( {x: 0, y: 0}, Phaser.Timer.SECOND*1, Phaser.Easing.Linear.In, true, game.rnd.integerInRange(0, 500)).
+                  onComplete.add(() => {
+                    this.removeIt();
+                    phaserSprites.get('healthbar').takeDamage(200000);
+                    createExplosion(this.x, this.y, 0.25)
+                  }).autoDestroy = true;
+              }, 300)
             }
 
             alien.checkLocation = function(){
@@ -502,29 +603,29 @@ class PhaserGameObject {
                   this.body.collideWorldBounds = true;
                 }
               }
-              if(this.y > this.game.canvas.height - 100){
-                if(this.body !== null){
+              if(this.y > this.game.canvas.height - (75 + this.fallThreshold)){
+                if(this.body !== null && !this.atTarget){
                   this.body.collideWorldBounds = false;
+                  this.fallToPlanet();
                 }
-              }
-              if(this.y > this.game.canvas.height + this.height){
-                this.removeIt();
               }
             }
 
             alien.onUpdate = function(){
-              if(this.body !== null){
-                if(this.body.velocity.y + 2 < 100){
-                  this.body.velocity.y += 2
+              if(!alien.atTarget){
+                if(this.body !== null){
+                  if(this.body.velocity.y + 2 < 100){
+                    this.body.velocity.y += 2
+                  }
+                  if(this.body.velocity.x > 0){
+                    this.body.velocity.x -= 0.2
+                  }
+                  if(this.body.velocity.x < 0){
+                    this.body.velocity.x += 0.2
+                  }
                 }
-                if(this.body.velocity.x > 0){
-                  this.body.velocity.x -= 0.2
-                }
-                if(this.body.velocity.x < 0){
-                  this.body.velocity.x += 0.2
-                }
+                this.checkLocation();
               }
-              this.checkLocation();
             }
       }
       /******************/
@@ -536,14 +637,15 @@ class PhaserGameObject {
         let trash = phaserSprites.add({x: options.x, y: options.y, name: `trash_${game.rnd.integer()}`, group:'trashes', reference: 'invader', visible: true})
             trash.anchor.setTo(0.5, 0.5);
             trash.scale.setTo(1, 1);
-            trash.animations.add('movement', [ 0, 1, 2, 3 ], 20, true);
-            trash.play('movement')
+            //trash.animations.add('movement', [ 0, 1, 2, 3 ], 20, true);
+            //trash.play('movement')
             game.physics.enable(trash, Phaser.Physics.ARCADE);
             trash.body.velocity.y = options.iy
             trash.body.velocity.x = options.ix
             trash.angleMomentum = game.rnd.integerInRange(-5, 5)
             trash.body.bounce.setTo(1, 1);
-
+            trash.atTarget = false;
+            trash.fallThrehold = game.rnd.integerInRange(0, 75)
             phaserGroup.add(3, trash)
 
             // damage it
@@ -555,10 +657,22 @@ class PhaserGameObject {
               this.destroyIt()
             }
 
-
-
             trash.removeIt = function(){
               phaserSprites.destroy(this.name)
+            }
+
+            trash.fallToPlanet = function(){
+              this.atTarget = true;
+              this.body = null;
+              this.game.add.tween(this).to( {y: this.y + 60}, Phaser.Timer.SECOND*2, Phaser.Easing.Linear.In, true, 0).autoDestroy = true;
+              setTimeout(() => {
+                this.game.add.tween(this.scale).to( {x: 0, y: 0}, Phaser.Timer.SECOND*1, Phaser.Easing.Linear.In, true, game.rnd.integerInRange(0, 500)).
+                  onComplete.add(() => {
+                    this.removeIt();
+                    phaserSprites.get('healthbar').takeDamage(100000);
+                    createExplosion(this.x, this.y, 0.25)
+                  }).autoDestroy = true;
+              }, 300)
             }
 
             // destroy it
@@ -599,9 +713,10 @@ class PhaserGameObject {
                   this.body.collideWorldBounds = true;
                 }
               }
-              if(this.y > this.game.canvas.height - 100){
-                if(this.body !== null){
+              if(this.y > this.game.canvas.height - (50 + this.fallThrehold)){
+                if(this.body !== null && !this.atTarget){
                   this.body.collideWorldBounds = false;
+                  this.fallToPlanet();
                 }
               }
               if(this.y > this.game.canvas.height + this.height){
@@ -805,12 +920,12 @@ class PhaserGameObject {
       /******************/
       function update() {
         let game = phaserMaster.game();
-        //let filter = phaserMaster.get('filter');
-        //  filter.update();
+        let filter = phaserMaster.get('filter');
+            filter.update();
+        let starMomentum = phaserMaster.get('starMomentum');
         let player = phaserSprites.get('player')
-        let debuggerText = phaserTexts.get('debuggerText')
-            debuggerText.onUpdate()
 
+        phaserSprites.get('earth').onUpdate();
 
         phaserSprites.getGroup('movingStarField').forEach(star => {
           star.onUpdate();
@@ -828,6 +943,11 @@ class PhaserGameObject {
               iy: game.rnd.integerInRange(0, 150)
             });
           }
+
+          phaserTexts.getGroup('ui').forEach((text) => {
+            text.onUpdate();
+          })
+
 
           phaserTexts.getGroup('timeKeeper').forEach((text) => {
             text.onUpdate();
@@ -862,10 +982,23 @@ class PhaserGameObject {
 
           // player controls
           if(phaserControls.read('RIGHT').active){
+            starMomentum.x = -2
             player.moveX(5)
           }
+
           if(phaserControls.read('LEFT').active){
+            starMomentum.x = 2
             player.moveX(-5)
+          }
+
+
+          if(phaserControls.read('UP').active){
+            starMomentum.y = 5
+            player.moveY(-5)
+          }
+          if(phaserControls.read('DOWN').active){
+            starMomentum.y = -2
+            player.moveY(5)
           }
 
           if(phaserControls.checkWithDelay({isActive: true, key: 'A', delay: 500 - (phaserControls.read('A').state * 75) })){
@@ -882,6 +1015,7 @@ class PhaserGameObject {
 
       /******************/
       function endLevel(){
+        let game = phaserMaster.game();
         phaserMaster.changeState('ENDLEVEL');
 
         // hide UI text
@@ -902,16 +1036,18 @@ class PhaserGameObject {
         // initiate player end sequence
         phaserSprites.get('player').playEndSequence(() => {
 
-
-
           // destroy all aliens
           phaserSprites.getGroup('aliens').forEach((alien) => {
-            alien.destroyIt(false)
+            setTimeout(() => {
+                alien.destroyIt(false)
+            }, game.rnd.integerInRange(0, 500))
           })
 
           // destroy all trash
           phaserSprites.getGroup('trashes').forEach((trash) => {
-            trash.destroyIt(false)
+            setTimeout(() => {
+              trash.destroyIt(false)
+            }, game.rnd.integerInRange(0, 500))
           })
 
         });
