@@ -213,7 +213,7 @@ class PhaserGameObject {
               earth.angle +=0.01
             }
             earth.fadeOut = function(){
-              this.game.add.tween(this).to( { y: this.y + 200, alpha: 0.5 }, Phaser.Timer.SECOND*6, Phaser.Easing.Linear.Out, true, 0, 0, false).autoDestroy = true;
+              this.game.add.tween(this).to( { y: this.y + 200, alpha: 1 }, Phaser.Timer.SECOND*6, Phaser.Easing.Linear.Out, true, 0, 0, false).autoDestroy = true;
             }
             phaserGroup.add(2, earth)
 
@@ -521,18 +521,27 @@ class PhaserGameObject {
             alien.angleMomentum = game.rnd.integerInRange(-5, 5)
             alien.body.bounce.setTo(1, 1);
             alien.atTarget = false;
+            alien.maxHealth = 100;
+            alien.health = 100;
             alien.fallThreshold = game.rnd.integerInRange(0, 75)
 
             phaserGroup.add(3, alien)
 
             // damage it
-            alien.damageIt = function(){
+            alien.damageIt = function(val:number){
               if(!this.atTarget){
                 let emitter = phaserMaster.get('emitter');
                     emitter.x = this.x;
                     emitter.y = this.y
                     emitter.start(true, 1500, null, 5);
-                this.destroyIt()
+                this.health -= val;
+
+                this.tint = 1 * 0xff0000;
+                this.game.add.tween(this).to( {tint: 1 * 0xffffff}, 100, Phaser.Easing.Linear.Out, true, 0, 0, false);
+
+                if(this.health <= 0){
+                  this.destroyIt()
+                }
               }
             }
 
@@ -645,16 +654,27 @@ class PhaserGameObject {
             trash.angleMomentum = game.rnd.integerInRange(-5, 5)
             trash.body.bounce.setTo(1, 1);
             trash.atTarget = false;
+            trash.health = 50;
             trash.fallThrehold = game.rnd.integerInRange(0, 75)
             phaserGroup.add(3, trash)
 
             // damage it
-            trash.damageIt = function(){
+            trash.damageIt = function(val:number){
               let emitter = phaserMaster.get('emitter');
                   emitter.x = this.x;
                   emitter.y = this.y
                   emitter.start(true, 1500, null, 5);
-              this.destroyIt()
+              this.health -= val;
+
+              this.tint = 1 * 0xff0000;
+              this.game.add.tween(this).to( {tint: 1 * 0xffffff}, 100, Phaser.Easing.Linear.Out, true, 0, 0, false);
+
+              if(this.health <= 0){
+                this.destroyIt()
+              }
+              else{
+
+              }
             }
 
             trash.removeIt = function(){
@@ -766,8 +786,8 @@ class PhaserGameObject {
               // check for bullet collision
               returnAllCollidables().forEach((target) => {
                 target.game.physics.arcade.overlap(this, target, (bullet, target)=>{
-                  bullet.destroyIt();
-                  target.damageIt();
+                  //bullet.destroyIt();
+                  target.damageIt(50);
                 }, null, this);
               })
            }
@@ -810,7 +830,7 @@ class PhaserGameObject {
               returnAllCollidables().forEach((target) => {
                 target.game.physics.arcade.overlap(this, target, (bomb, target)=>{
                   bomb.destroyIt();
-                  target.damageIt();
+                  target.damageIt(100);
                 }, null, this);
               })
 
@@ -848,7 +868,7 @@ class PhaserGameObject {
               returnAllCollidables().forEach((target) => {
                 target.game.physics.arcade.overlap(this, target, (bomb, target)=>{
                   bomblet.destroyIt();
-                  target.damageIt();
+                  target.damageIt(25);
                 }, null, this);
               })
 
@@ -891,7 +911,7 @@ class PhaserGameObject {
               // check for bullet collision
               returnAllCollidables().forEach((target) => {
                 target.game.physics.arcade.overlap(this, target, (impactExplosion, target)=>{
-                  target.damageIt();
+                  target.damageIt(25);
                 }, null, this);
               })
 
