@@ -96,8 +96,8 @@ export class PHASER_BITMAPDATA_MANAGER {
   public destroy(name:string){
     let deleted = [];
     // remove from array
-    let destroyArray = this.bmd.array.filter(( obj ) => {
-      return obj.key === name;
+    let destroyArray = this.bmd.array.filter(( item ) => {
+      return item.name === name;
     });
     for(let obj of destroyArray){
       deleted.push(obj.name)
@@ -108,8 +108,8 @@ export class PHASER_BITMAPDATA_MANAGER {
     delete this.bmd.object[name];
 
     // save as new array
-    this.bmd.array = this.bmd.array.filter(( sprite ) => {
-      return sprite.key !== name;
+    this.bmd.array = this.bmd.array.filter(( item ) => {
+      return item.name !== name;
     });
 
     // returns a list of destroyed sprites
@@ -119,8 +119,8 @@ export class PHASER_BITMAPDATA_MANAGER {
   public destroyGroup(key:string){
     let deleted = [];
     // remove from array
-    let destroyArray = this.bmd.array.filter(( obj ) => {
-      return obj.group === name;
+    let destroyArray = this.bmd.array.filter(( item ) => {
+      return item.group === name;
     });
     for(let obj of destroyArray){
       deleted.push(obj.name)
@@ -131,8 +131,8 @@ export class PHASER_BITMAPDATA_MANAGER {
     delete this.bmd.object[name];
 
     // save as new array
-    this.bmd.array = this.bmd.array.filter(( sprite ) => {
-      return sprite.group !== name;
+    this.bmd.array = this.bmd.array.filter(( item ) => {
+      return item.group !== name;
     });
 
     // returns a list of destroyed sprites
@@ -144,8 +144,8 @@ export class PHASER_BITMAPDATA_MANAGER {
   }
 
   public getGroup(name:string){
-    return this.bmd.array.filter(( obj ) => {
-      return obj.group === name;
+    return this.bmd.array.filter(( item ) => {
+      return item.group === name;
     });
   }
 
