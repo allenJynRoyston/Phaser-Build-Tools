@@ -25,7 +25,7 @@ export class PHASER_GROUP_MANAGER {
     return this.group.object[key]
   }
 
-  public add(key:number, item:string){
+  public add(key:number, item:any){
     this.group.object[key].add(item)
   }
 
