@@ -66,14 +66,8 @@ class PhaserGameObject {
         game.stage.backgroundColor = '#2f2f2f';
         let folder = 'src/phaser/saveTheWorld/resources'
 
-        // images
-        game.load.image('texture', `${folder}/images/cyberglow.png`)
-
-        // sprite
-        game.load.image('equipped', `${folder}/images/gem.png`)
-        game.load.image('purchased', `${folder}/images/player.png`)
-        game.load.image('powerup1', `${folder}/images/bulletBtn.png`)
-        game.load.image('pointer', `${folder}/images/ship.png`)
+        // atlas
+        game.load.atlas('atlas', `${folder}/spritesheets/sprites.png`, `${folder}/spritesheets/sprites.json`, Phaser.Loader.TEXTURE_ATLAS_JSON_HASH);
 
         // font
         game.load.bitmapFont('gem', `${folder}/fonts/gem.png`, `${folder}/fonts/gem.xml`);
@@ -137,6 +131,25 @@ class PhaserGameObject {
             }
 
 
+        // background
+        let tilebg1 = phaserSprites.addTilespriteFromAtlas({name: 'tilebg1', group: 'ui', x: 0, y: 0, width: game.canvas.width, height: game.canvas.height, atlas: 'atlas', filename: 'asteroidsbg.png'})
+        phaserGroup.add(1, tilebg1)
+        tilebg1.count = 0;
+        tilebg1.onUpdate = function(){
+          this.count += 0.005;
+          this.tilePosition.x -= Math.sin(this.count) * 4;
+          this.tilePosition.y -= Math.cos(this.count) * 4;
+        }
+
+        let tilebg2 = phaserSprites.addTilespriteFromAtlas({name: 'tilebg2', group: 'ui', x: 0, y: 0, width: game.canvas.width, height: game.canvas.height, atlas: 'atlas', filename: 'asteroidsbg.png'})
+        tilebg2.count = 0;
+        tilebg2.onUpdate = function(){
+          this.count += 0.005;
+          this.tilePosition.x += Math.sin(this.count) * 2;
+          this.tilePosition.y += Math.cos(this.count) * 2;
+        }
+        phaserGroup.add(2, tilebg2)
+
         // texts
         let padding = 15;
         let header = phaserTexts.add({name: 'header', font: 'gem', size: 18, default: 'Purchase Powerups!'})
@@ -145,6 +158,7 @@ class PhaserGameObject {
         let instructions = phaserTexts.add({name: 'instructions', size: 14, font: 'gem', default:`Trippy!`})
             instructions.maxWidth = game.canvas.width - padding
         phaserTexts.alignToBottomLeftCorner('instructions', 10)
+
 
 
         // create a gradient bmp -> turn it into a sprite -> manipulate the sprite width/height to fill screen
@@ -193,6 +207,9 @@ class PhaserGameObject {
         phaserGroup.addMany(9, [header, instructions])
         phaserGroup.addMany(8, [instructionbox, headerbox, popupBox])
 
+
+
+
         // create grid of objects
         let desiredColumns = 4;
         phaserMaster.let('columns', desiredColumns)
@@ -201,7 +218,8 @@ class PhaserGameObject {
         let centerX;
         weaponList.forEach((weapon, index) => {
 
-          let sprite =  phaserSprites.add({name: `powerUp_${index}`, reference: `${weapon.sprite}`})
+          let sprite =  phaserSprites.addFromAtlas({name: `powerUp_${index}`, atlas: 'atlas', group: 'powerup', filename: `${weapon.spriteIcon}.png`})
+              sprite.scale.setTo(0.5, 0.5)
               centerX = (game.canvas.width/desiredColumns)*(columns) + ((game.canvas.width/desiredColumns)/2) - (sprite.width/2)
               sprite.x = centerX;
               sprite.y = (rows * 200) + 100;
@@ -228,7 +246,7 @@ class PhaserGameObject {
 
 
         // add pointer
-        let pointer = phaserSprites.add({x: 0, y: 0, name: `pointer`, reference: `pointer`})
+        let pointer = phaserSprites.addFromAtlas({x: 0, y: 0, name: `pointer`, atlas: 'atlas', filename: `pointer.png`})
         phaserGroup.add(6, pointer)
         checkForEquipped();
         checkForPurchases();
@@ -295,8 +313,8 @@ class PhaserGameObject {
       function updatePointer(index:number){
         let powerUp = phaserSprites.get(`powerUp_${index}`)
         let pointer = phaserSprites.get('pointer')
-            pointer.x = powerUp.x - 27
-            pointer.y = powerUp.y + powerUp.height + 20
+            pointer.x = powerUp.x - 32
+            pointer.y = powerUp.y + 30
       }
       /******************/
 
@@ -384,28 +402,32 @@ class PhaserGameObject {
       function update() {
         let game = phaserMaster.game();
 
+        phaserSprites.getGroup('ui').forEach((sprite) => {
+          sprite.onUpdate()
+        })
+
         if(phaserMaster.checkState('READY')){
-          if(phaserControls.checkWithDelay({isActive: true, key: 'LEFT', delay: 250})){
+          if(phaserControls.checkWithDelay({isActive: true, key: 'LEFT', delay: 150})){
             updateColumn(-1);
           }
 
-          if(phaserControls.checkWithDelay({isActive: true, key: 'RIGHT', delay: 250})){
+          if(phaserControls.checkWithDelay({isActive: true, key: 'RIGHT', delay: 150})){
             updateColumn(1);
           }
 
-          if(phaserControls.checkWithDelay({isActive: true, key: 'UP', delay: 250})){
+          if(phaserControls.checkWithDelay({isActive: true, key: 'UP', delay: 150})){
             updateColumn(-(phaserMaster.get('columns')));
           }
 
-          if(phaserControls.checkWithDelay({isActive: true, key: 'DOWN', delay: 250})){
+          if(phaserControls.checkWithDelay({isActive: true, key: 'DOWN', delay: 150})){
             updateColumn((phaserMaster.get('columns')));
           }
 
-          if(phaserControls.checkWithDelay({isActive: true, key: 'START', delay: 250})){
+          if(phaserControls.checkWithDelay({isActive: true, key: 'START', delay: 150})){
             makePurchaseOrEquip()
           }
 
-          if(phaserControls.checkWithDelay({isActive: true, key: 'BACK', delay: 250})){
+          if(phaserControls.checkWithDelay({isActive: true, key: 'BACK', delay: 150})){
             end()
           }
         }

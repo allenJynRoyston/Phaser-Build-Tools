@@ -87,6 +87,75 @@ export class PHASER_SPRITE_MANAGER {
     }
   }
 
+  public addFromAtlas(params:any){
+
+    let duplicateCheck = this.sprites.array.filter(( obj ) => {
+      return obj.name === params.name;
+    });
+    if(duplicateCheck.length === 0){
+
+      // create defaults if non exists
+      params.x = params.x !== undefined ? params.x : 0;
+      params.y = params.y !== undefined ? params.y : 0;
+      params.group = params.group !== undefined ? params.group : null;
+      params.visible = params.visible !== undefined ? params.visible : true;
+
+      let newSprite = this.game.add.sprite(params.x, params.y, params.atlas, params.filename);
+          // add custom properties
+          newSprite.name = params.name;
+          newSprite.group = params.group;
+          newSprite.defaultPosition = {x: params.x, y: params.y}
+          newSprite.visible = params.visible
+          newSprite.setDefaultPositions = function(x,y){this.defaultPosition.x = x, this.defaultPosition.y = y};
+          newSprite.getDefaultPositions = function(){return this.defaultPosition};
+
+      this.sprites.array.push(newSprite)
+      this.sprites.object[params.name] = newSprite;
+
+      return newSprite;
+    }
+    else{
+      console.log(`Duplicate key name not allowed: ${params.name}`)
+    }
+  }
+
+  public addTilespriteFromAtlas(params:any){
+    let duplicateCheck = this.sprites.array.filter(( obj ) => {
+      return obj.name === params.name;
+    });
+    if(duplicateCheck.length === 0){
+
+      // create defaults if non exists
+      params.x = params.x !== undefined ? params.x : 0;
+      params.y = params.y !== undefined ? params.y : 0;
+      params.group = params.group !== undefined ? params.group : null;
+      params.visible = params.visible !== undefined ? params.visible : true;
+
+      let newSprite = this.game.add.tileSprite(params.x, params.y, params.width, params.height, params.atlas, params.filename);
+          // add custom properties
+          newSprite.name = params.name;
+          newSprite.group = params.group;
+          newSprite.defaultPosition = {x: params.x, y: params.y}
+          newSprite.visible = params.visible
+          newSprite.setDefaultPositions = function(x,y){this.defaultPosition.x = x, this.defaultPosition.y = y};
+          newSprite.getDefaultPositions = function(){return this.defaultPosition};
+      this.sprites.array.push(newSprite)
+      this.sprites.object[params.name] = newSprite;
+      return newSprite;
+    }
+    else{
+      console.log(`Duplicate key name not allowed: ${params.name}`)
+    }
+  }
+
+  public addBasicMaskToSprite(sprite:any){
+    let mask = this.game.add.graphics(0, 0);
+        mask.beginFill(0xffffff);
+        mask.drawRect(sprite.x, sprite.y, sprite.width, sprite.height);
+    sprite.mask = mask;
+    return mask;
+  }
+
   public destroy(name:string){
     if(this.sprites.object[name] !== undefined){
       let destroyed = [];
