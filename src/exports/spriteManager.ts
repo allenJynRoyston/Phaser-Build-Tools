@@ -78,6 +78,12 @@ export class PHASER_SPRITE_MANAGER {
           newSprite.visible = params.visible
           newSprite.setDefaultPositions = function(x,y){this.defaultPosition.x = x, this.defaultPosition.y = y};
           newSprite.getDefaultPositions = function(){return this.defaultPosition};
+
+          newSprite.init = function(){}
+          newSprite.onUpdate = function(){}
+          newSprite.reveal = function(){}
+          newSprite.hide = function(){}
+
       this.sprites.array.push(newSprite)
       this.sprites.object[params.name] = newSprite;
       return newSprite;
@@ -109,6 +115,11 @@ export class PHASER_SPRITE_MANAGER {
           newSprite.setDefaultPositions = function(x,y){this.defaultPosition.x = x, this.defaultPosition.y = y};
           newSprite.getDefaultPositions = function(){return this.defaultPosition};
 
+          newSprite.init = function(){}
+          newSprite.onUpdate = function(){}
+          newSprite.reveal = function(){}
+          newSprite.hide = function(){}
+
       this.sprites.array.push(newSprite)
       this.sprites.object[params.name] = newSprite;
 
@@ -139,6 +150,12 @@ export class PHASER_SPRITE_MANAGER {
           newSprite.visible = params.visible
           newSprite.setDefaultPositions = function(x,y){this.defaultPosition.x = x, this.defaultPosition.y = y};
           newSprite.getDefaultPositions = function(){return this.defaultPosition};
+
+          newSprite.init = function(){}
+          newSprite.onUpdate = function(){}
+          newSprite.reveal = function(){}
+          newSprite.hide = function(){}
+                    
       this.sprites.array.push(newSprite)
       this.sprites.object[params.name] = newSprite;
       return newSprite;
