@@ -69,6 +69,7 @@ export class PHASER_SPRITE_MANAGER {
       params.y = params.y !== undefined ? params.y : 0;
       params.group = params.group !== undefined ? params.group : null;
       params.visible = params.visible !== undefined ? params.visible : true;
+      params.alpha = params.alpha !== undefined ? params.alpha : 1;
 
       let newSprite = this.game.add.sprite(params.x, params.y, params.reference);
           // add custom properties
@@ -76,6 +77,7 @@ export class PHASER_SPRITE_MANAGER {
           newSprite.group = params.group;
           newSprite.defaultPosition = {x: params.x, y: params.y}
           newSprite.visible = params.visible
+          newSprite.alpha = params.alpha
           newSprite.setDefaultPositions = function(x,y){this.defaultPosition.x = x, this.defaultPosition.y = y};
           newSprite.getDefaultPositions = function(){return this.defaultPosition};
 
@@ -105,6 +107,7 @@ export class PHASER_SPRITE_MANAGER {
       params.y = params.y !== undefined ? params.y : 0;
       params.group = params.group !== undefined ? params.group : null;
       params.visible = params.visible !== undefined ? params.visible : true;
+      params.alpha = params.alpha !== undefined ? params.alpha : 1;
 
       let newSprite = this.game.add.sprite(params.x, params.y, params.atlas, params.filename);
           // add custom properties
@@ -112,6 +115,7 @@ export class PHASER_SPRITE_MANAGER {
           newSprite.group = params.group;
           newSprite.defaultPosition = {x: params.x, y: params.y}
           newSprite.visible = params.visible
+          newSprite.alpha = params.alpha
           newSprite.setDefaultPositions = function(x,y){this.defaultPosition.x = x, this.defaultPosition.y = y};
           newSprite.getDefaultPositions = function(){return this.defaultPosition};
 
@@ -141,6 +145,7 @@ export class PHASER_SPRITE_MANAGER {
       params.y = params.y !== undefined ? params.y : 0;
       params.group = params.group !== undefined ? params.group : null;
       params.visible = params.visible !== undefined ? params.visible : true;
+      params.alpha = params.alpha !== undefined ? params.alpha : 1;
 
       let newSprite = this.game.add.tileSprite(params.x, params.y, params.width, params.height, params.atlas, params.filename);
           // add custom properties
@@ -148,6 +153,7 @@ export class PHASER_SPRITE_MANAGER {
           newSprite.group = params.group;
           newSprite.defaultPosition = {x: params.x, y: params.y}
           newSprite.visible = params.visible
+          newSprite.alpha = params.alpha
           newSprite.setDefaultPositions = function(x,y){this.defaultPosition.x = x, this.defaultPosition.y = y};
           newSprite.getDefaultPositions = function(){return this.defaultPosition};
 
@@ -155,7 +161,46 @@ export class PHASER_SPRITE_MANAGER {
           newSprite.onUpdate = function(){}
           newSprite.reveal = function(){}
           newSprite.hide = function(){}
-                    
+
+      this.sprites.array.push(newSprite)
+      this.sprites.object[params.name] = newSprite;
+      return newSprite;
+    }
+    else{
+      console.log(`Duplicate key name not allowed: ${params.name}`)
+    }
+  }
+
+  public addEmptySprite(params:any){
+
+    let duplicateCheck = this.sprites.array.filter(( obj ) => {
+      return obj.name === params.name;
+    });
+    if(duplicateCheck.length === 0){
+
+
+      // create defaults if non exists
+      params.x = params.x !== undefined ? params.x : 0;
+      params.y = params.y !== undefined ? params.y : 0;
+      params.group = params.group !== undefined ? params.group : null;
+      params.visible = params.visible !== undefined ? params.visible : true;
+      params.alpha = params.alpha !== undefined ? params.alpha : 1;
+
+      let newSprite = this.game.add.sprite(params.x, params.y);
+          // add custom properties
+          newSprite.name = params.name;
+          newSprite.group = params.group;
+          newSprite.defaultPosition = {x: params.x, y: params.y}
+          newSprite.visible = params.visible
+          newSprite.alpha = params.alpha
+          newSprite.setDefaultPositions = function(x,y){this.defaultPosition.x = x, this.defaultPosition.y = y};
+          newSprite.getDefaultPositions = function(){return this.defaultPosition};
+
+          newSprite.init = function(){}
+          newSprite.onUpdate = function(){}
+          newSprite.reveal = function(){}
+          newSprite.hide = function(){}
+
       this.sprites.array.push(newSprite)
       this.sprites.object[params.name] = newSprite;
       return newSprite;

@@ -28,12 +28,14 @@ export class PHASER_TEXT_MANAGER {
     params.size = params.size !== undefined ? params.size : 12;
     params.default = params.default !== undefined ? params.default : ''
     params.visible = params.visible !== undefined ? params.visible : true
+    params.alpha = params.alpha !== undefined ? params.alpha : 1;
 
     if(duplicateCheck.length === 0){
       let newText = this.game.add.bitmapText(params.x, params.y, params.font, params.default, params.size);
           newText.name = params.name;
           newText.group = params.group;
           newText.visible = params.visible;
+          newText.alpha = params.alpha;
 
       this.texts.array.push(newText)
       this.texts.object[params.name] = newText;
