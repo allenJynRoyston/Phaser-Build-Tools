@@ -134,7 +134,7 @@ class PhaserGameObject {
         phaserBmd.assign(game)
         phaserTexts.assign(game)
         phaserButtons.assign(game)
-        phaserGroup.assign(game, 15)
+        phaserGroup.assign(game, 16)
         phaserBitmapdata.assign(game)
 
         // game variables
@@ -550,10 +550,10 @@ class PhaserGameObject {
                   phaserMaster.get('clock').start()
                   // change state
                   phaserMaster.changeState('READY');
-                  // // setTimeout(() => {
-                  // //   endLevel()
-                  // }, 2000)
-                  victoryScreenSequence(() => {})
+                  setTimeout(() => {
+                     endLevel()
+                  }, 2000)
+                  //victoryScreenSequence(() => {})
                 })
               })
             })
@@ -1846,6 +1846,7 @@ class PhaserGameObject {
       function victoryScreenSequence(callback:any){
         let game = phaserMaster.game();
 
+
         let victoryScreenContainer = phaserSprites.addFromAtlas({y: game.world.centerY - 100, name: `victoryScreenContainer`, group: 'ui_clear', filename: 'ui_clear.png', atlas: 'atlas_main', visible: false})
             victoryScreenContainer.anchor.setTo(0.5, 0.5)
             victoryScreenContainer.reveal = function(){
@@ -1882,11 +1883,8 @@ class PhaserGameObject {
                                       if(totalCount - countBy <= 0){
                                         peopleCount.setText(0)
                                         clearInterval(countInterval)
-                                        // phaserSprites.get('overlay').fadeIn(Phaser.Timer.SECOND*1.5, () => {
-                                        //   endGame();
-                                        // })
-                                        callback();
-                                        console.log(medalsEarned)
+                                        //callback();
+                                        //console.log(medalsEarned)
                                       }
                                       else{
                                         totalSaved += countBy
@@ -1967,9 +1965,19 @@ class PhaserGameObject {
               star.fadeOut()
             })
 
+
             setTimeout(() => {
               playSequence('NICE JOB HERO', ()=>{
-                phaserSprites.get('overlay').fadeIn(Phaser.Timer.SECOND*1.5, () => {
+
+                let background = phaserSprites.addTilespriteFromAtlas({ name: 'victory_bg', group: 'spaceGroup', x: 0, y: 0, width: game.canvas.width, height: game.canvas.height, atlas: 'atlas_main', filename: 'victory_bg.png', alpha: 0 });
+                    background.count = 0;
+                    background.onUpdate = function () {
+                        this.tilePosition.x -= 10
+                    };
+                phaserGroup.add(11, background)
+                game.add.tween(background).to( { alpha: 1 }, Phaser.Timer.SECOND/2, Phaser.Easing.Linear.In, true, 0, 0, false).autoDestroy = true;
+
+                phaserSprites.get('overlay').fadeIn(Phaser.Timer.SECOND/2, () => {
                   victoryScreenSequence(() => {
                     endGame();
                   })
