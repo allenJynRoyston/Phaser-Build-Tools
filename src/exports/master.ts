@@ -49,6 +49,10 @@ export class PHASER_MASTER {
     }
   }
 
+  public getAll(){
+    return this.variables
+  }
+
   public changeState(state:string = null){
     let _state = state.toUpperCase();
     let create = false;
