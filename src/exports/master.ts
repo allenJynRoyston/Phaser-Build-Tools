@@ -53,6 +53,27 @@ export class PHASER_MASTER {
     return this.variables
   }
 
+  public getOnly(names:Array<string>){
+    let _return = {};
+
+    let toArray = []
+    for (let key in this.variables) {
+        toArray.push({key: key, data: this.variables[key]})
+    }
+
+    for(let i = 0; i < names.length; i++){
+      let _r = toArray.filter(( obj ) => {
+        return obj.key === names[i];
+      });
+
+      _r.map(obj => {
+          _return[obj.key] = obj.data
+      })
+    }
+
+    return (_return as any);
+  }
+
   public changeState(state:string = null){
     let _state = state.toUpperCase();
     let create = false;
@@ -78,6 +99,11 @@ export class PHASER_MASTER {
 
   public checkState(state:string){
     return this.currentState === state.toUpperCase() ? true : false;
+  }
+
+  public getState(){
+    let _return = {currentState: this.currentState}
+    return _return
   }
 
   public game(){

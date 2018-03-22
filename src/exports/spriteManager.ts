@@ -89,7 +89,12 @@ export class PHASER_SPRITE_MANAGER {
           newSprite.init = function(){}
           newSprite.onUpdate = function(){}
           newSprite.reveal = function(){}
-          newSprite.hide = function(){}
+          newSprite.show = function(){
+            this.visible = true
+          }
+          newSprite.hide = function(){
+            this.visible = false
+          }
 
       this.sprites.array.push(newSprite)
       this.sprites.object[params.name] = newSprite;
@@ -131,7 +136,12 @@ export class PHASER_SPRITE_MANAGER {
           newSprite.init = function(){}
           newSprite.onUpdate = function(){}
           newSprite.reveal = function(){}
-          newSprite.hide = function(){}
+          newSprite.show = function(){
+            this.visible = true
+          }
+          newSprite.hide = function(){
+            this.visible = false
+          }
 
       this.sprites.array.push(newSprite)
       this.sprites.object[params.name] = newSprite;
@@ -173,7 +183,12 @@ export class PHASER_SPRITE_MANAGER {
           newSprite.init = function(){}
           newSprite.onUpdate = function(){}
           newSprite.reveal = function(){}
-          newSprite.hide = function(){}
+          newSprite.show = function(){
+            this.visible = true
+          }
+          newSprite.hide = function(){
+            this.visible = false
+          }
 
       this.sprites.array.push(newSprite)
       this.sprites.object[params.name] = newSprite;
@@ -216,7 +231,12 @@ export class PHASER_SPRITE_MANAGER {
           newSprite.init = function(){}
           newSprite.onUpdate = function(){}
           newSprite.reveal = function(){}
-          newSprite.hide = function(){}
+          newSprite.show = function(){
+            this.visible = true
+          }
+          newSprite.hide = function(){
+            this.visible = false
+          }
 
       this.sprites.array.push(newSprite)
       this.sprites.object[params.name] = newSprite;
@@ -225,6 +245,14 @@ export class PHASER_SPRITE_MANAGER {
     else{
       console.log(`Duplicate key name not allowed: ${params.name}`)
     }
+  }
+
+
+  public createBasicMask(x:number, y:number, width:number, height:number){
+    let mask = this.game.add.graphics(0, 0);
+        mask.beginFill(0xffffff);
+        mask.drawRect(x, y, width, height);
+    return mask;
   }
 
   public addBasicMaskToSprite(sprite:any){
@@ -297,7 +325,36 @@ export class PHASER_SPRITE_MANAGER {
     });
   }
 
-  public getAll(type:string = 'BOTH'){
+  public getManyGroups(names:Array<string>){
+    let _return = [];
+
+    for(let i = 0; i < names.length; i++){
+      let _r = this.sprites.array.filter(( obj ) => {
+        return obj.group === names[i];
+      });
+      _return = [..._return, ..._r]
+    }
+
+    return _return;
+  }
+
+  public getOnly(names:Array<string>){
+    let _return = {};
+
+    for(let i = 0; i < names.length; i++){
+      let _r = this.sprites.array.filter(( obj ) => {
+        return obj.group === names[i] || obj.name === names[i];
+      });
+
+      _r.map(obj => {
+          _return[obj.name] = obj
+      })
+    }
+
+    return (_return as any);
+  }
+
+  public getAll(type:string = 'OBJECT'){
     if(type === 'ARRAY'){
       return this.sprites.array;
     }

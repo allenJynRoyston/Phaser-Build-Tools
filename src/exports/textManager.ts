@@ -37,6 +37,13 @@ export class PHASER_TEXT_MANAGER {
           newText.visible = params.visible;
           newText.alpha = params.alpha;
 
+          newText.show = function(){
+            this.visible = true
+          }
+          newText.hide = function(){
+            this.visible = false
+          }
+
       this.texts.array.push(newText)
       this.texts.object[params.name] = newText;
       return newText;
@@ -103,8 +110,20 @@ export class PHASER_TEXT_MANAGER {
     });
   }
 
+  public getManyGroups(names:Array<string>){
+    let _return = [];
 
-  public getAll(type:string = 'BOTH'){
+    for(let i = 0; i < names.length; i++){
+      let _r = this.texts.array.filter(( obj ) => {
+        return obj.group === names[i];
+      });
+      _return = [..._return, ..._r]
+    }
+
+    return _return;
+  }
+
+  public getAll(type:string = 'OBJECT'){
     if(type === 'ARRAY'){
       return this.texts.array;
     }

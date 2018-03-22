@@ -10,10 +10,10 @@ const gulp = require('gulp'),
 
 /* ALTER THIS WHEN BUILDING GAMES */
 let buildGame = {
-  //mainFile: 'level1.ts',
-  mainFile: 'heroSelect.ts',
-  requiredFiles: ['src/exports/*.ts'],
-  exportTo: '../phaser/saveTheWorld'
+  mainFile: 'saveTheWorld/level1.ts',
+  //mainFile: 'saveTheWorld/heroSelect.ts',
+  requiredFiles: ['src/exports/*.ts', 'src/saveTheWorld/required/*.ts'],
+  exportTo: '../phaser/'
 }
 
 

@@ -441,6 +441,28 @@ export class PHASER_CONTROLS {
     }
   }
 
+  getOnly(names:Array<string>){
+    let _return = {}
+    for(let key of this.buttonArray){
+      names.map(name => {
+        if(key === name){
+          _return[key] = {id: this.buttonMapId[key.toUpperCase()], active: this.IO.state[key.toUpperCase()]().val > 0 ? true: false, duration: this.IO.state[key.toUpperCase()]().val, state: this.IO.state[key.toUpperCase()]().state, type: this.IO.state[key.toUpperCase()]().type, disabled: this.disabledButtons[key.toUpperCase()]}
+        }
+      })
+    }
+    return (_return as any);
+  }
+
+  getAll(){
+    let _return = {}
+
+    for(let key of this.buttonArray){
+      _return[key] = {id: this.buttonMapId[key.toUpperCase()], active: this.IO.state[key.toUpperCase()]().val > 0 ? true: false, duration: this.IO.state[key.toUpperCase()]().val, state: this.IO.state[key.toUpperCase()]().state, type: this.IO.state[key.toUpperCase()]().type, disabled: this.disabledButtons[key.toUpperCase()]}
+    }
+
+    return (_return as any);
+  }
+
   private debuggerString(key:string){
     return `${key.toUpperCase()} (${this.buttonMap[key.toUpperCase()].name}/${this.buttonMap[key.toUpperCase()].code}) | id: ${this.buttonMapId[key.toUpperCase()]} duration: ${this.IO.state[key.toUpperCase()]().val} | state: ${this.IO.state[key.toUpperCase()]().state} | type: ${this.IO.state[key.toUpperCase()]().type} | disabled: ${this.disabledButtons[key.toUpperCase()]}`
   }
