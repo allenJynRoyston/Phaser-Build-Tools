@@ -133,6 +133,22 @@ export class PHASER_TEXT_MANAGER {
     return {object: this.texts.object, array: this.texts.array};
   }
 
+  public getOnly(names:Array<string>){
+    let _return = {};
+
+    for(let i = 0; i < names.length; i++){
+      let _r = this.texts.array.filter(( obj ) => {
+        return obj.group === names[i] || obj.name === names[i];
+      });
+
+      _r.map(obj => {
+          _return[obj.name] = obj
+      })
+    }
+
+    return (_return as any);
+  }
+
   public alignToBottomLeftCorner(name: string, padding:number = 0){
     if(this.texts.object[name] === undefined){
       console.log('Error centering sprite:  key does not exists.')
