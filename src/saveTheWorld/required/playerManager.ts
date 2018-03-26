@@ -26,11 +26,11 @@ export class PLAYER_MANAGER {
   }
 
   /******************/
-  public createShip1(updateHealth:any = () => {}, loseLife:any = () => {}, onUpdate:any = () => {}){
+  public createShip1(params:any, updateHealth:any = () => {}, loseLife:any = () => {}, onUpdate:any = () => {}){
     let game = this.game
 
     //  The hero!
-    let player = this.phaserSprites.addFromAtlas({name: 'player', group: 'playership', atlas: 'atlas_main',  filename: 'ship_body.png', visible: false})
+    let player = this.phaserSprites.addFromAtlas({name: params.name, group: params.group, atlas: this.atlas,  filename: 'ship_body.png', visible: false})
         player.anchor.setTo(0.5, 0.5);
         player.scale.setTo(1, 1)
         player.isInvincible = false;
@@ -41,8 +41,8 @@ export class PLAYER_MANAGER {
           bottom: 50
         }
         game.physics.enable(player, Phaser.Physics.ARCADE);
-        this.phaserGroup.add(8, player)
-        this.createShipExhaust(player);
+        this.phaserGroup.add(params.layer, player)
+        this.createShipExhaust(player, params);
 
 
         player.onUpdate = () => {
@@ -88,15 +88,15 @@ export class PLAYER_MANAGER {
 
         player.createTrail = () => {
           let {currentState} = this.phaserMaster.getState();
-          let trailCount = this.phaserSprites.getGroup('trails').length;
+          let trailCount = this.phaserSprites.getGroup(`${params.name}_trails`).length;
           if(trailCount < (currentState === 'ENDLEVEL') ? 20 : 10){
-            let trail = this.phaserSprites.addFromAtlas({name: `trail_${game.rnd.integer()}`, group:'trails', x: player.x, y: player.y, filename: 'ship_body.png', atlas: 'atlas_main', visible: true})
+            let trail = this.phaserSprites.addFromAtlas({name: `${params.name}_trail_${game.rnd.integer()}`, group:`${params.name}_trails`, x: player.x, y: player.y, filename: 'ship_body.png', atlas: 'atlas_main', visible: true})
                 trail.anchor.setTo(0.5, 0.5)
                 trail.scale.setTo(player.scale.x - 0.2, player.scale.y - 0.2)
                 trail.alpha = 0.4
                 trail.angle = player.angle;
                 trail.tint = 1 * 0x0000ff;
-                this.phaserGroup.add(7, trail)
+                this.phaserGroup.add(params.layer - 1, trail)
                 trail.destroySelf = () => {
                   trail.game.add.tween(trail).to( { alpha: 0}, (currentState === 'ENDLEVEL') ? 600 : 250, Phaser.Easing.Linear.In, true, 0).
                     onComplete.add(() => {
@@ -136,7 +136,9 @@ export class PLAYER_MANAGER {
         }
 
         player.syncExhaust = () => {
-          let {player, exhaust} = this.phaserSprites.getOnly(['player', 'exhaust'])
+          let player = this.phaserSprites.get(params.name)
+          let exhaust = this.phaserSprites.get(`${params.name}_exhaust`)
+
           if(exhaust !== undefined && player !== undefined){
             exhaust.updateCords(player.x, player.y)
           }
@@ -196,11 +198,11 @@ export class PLAYER_MANAGER {
   /******************/
 
   /******************/
-  public createShipExhaust(player:any){
-    let shipExhaust = this.phaserSprites.addFromAtlas({name: 'exhaust', group: 'playership', atlas: 'atlas_main',  filename: 'exhaust_red_1.png', visible: false})
+  public createShipExhaust(player:any, params:any){
+    let shipExhaust = this.phaserSprites.addFromAtlas({name: `${params.name}_exhaust`, group: params.group, atlas: this.atlas,  filename: 'exhaust_red_1.png', visible: false})
         shipExhaust.animations.add('exhaust_animation', Phaser.Animation.generateFrameNames('exhaust_red_', 1, 8, '.png'), 1, true)
         shipExhaust.animations.play('exhaust_animation', 30, true)
-        this.phaserGroup.add(8, shipExhaust)
+        this.phaserGroup.add(params.layer, shipExhaust)
         shipExhaust.anchor.setTo(0.5, 0.5)
         shipExhaust.onUpdate = () => {
           let {currentState} = this.phaserMaster.getState();
@@ -234,6 +236,16 @@ export class PLAYER_MANAGER {
           this.phaserSprites.destroy(shipExhaust.name)
         }
 
+  }
+  /******************/
+
+  /******************/
+  public destroyShip(name:string){
+    this.phaserSprites.destroy(name)
+    this.phaserSprites.destroy(`${name}_exhaust`)
+    this.phaserSprites.getGroup(`${name}_trails`).map(obj => {
+      obj.destroySelf();
+    })
   }
   /******************/
 

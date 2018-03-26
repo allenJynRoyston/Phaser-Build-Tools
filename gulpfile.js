@@ -9,12 +9,19 @@ const gulp = require('gulp'),
       notify = require('gulp-notify');
 
 /* ALTER THIS WHEN BUILDING GAMES */
-let buildGame = {
-  mainFile: 'saveTheWorld/level1.ts',
-  //mainFile: 'saveTheWorld/heroSelect.ts',
-  requiredFiles: ['src/exports/*.ts', 'src/saveTheWorld/required/*.ts'],
-  exportTo: '../phaser/'
-}
+let buildGame = [
+  {
+    mainFile: 'saveTheWorld/heroSelect.ts',
+    requiredFiles: ['src/exports/*.ts', 'src/saveTheWorld/required/*.ts'],
+    exportTo: '../phaser/'
+  },
+  {
+    mainFile: 'saveTheWorld/level1.ts',
+    requiredFiles: ['src/exports/*.ts', 'src/saveTheWorld/required/*.ts'],
+    exportTo: '../phaser/'
+  },
+]
+
 
 
 gulp.task('default', function () {
@@ -27,24 +34,27 @@ gulp.task('default', function () {
 
 
 gulp.task('build', () => {
-  return gulp.src([`src/${buildGame.mainFile}`, ...buildGame.requiredFiles])
-    .pipe(removeCode({ gameBuild: true }))
-    .pipe(concat(`${buildGame.mainFile}`))
-    .pipe(replace('export class', 'class'))
-    .pipe(ts({
-      target: "es5",
-      module: "system",
-      declaration: false,
-      noImplicitAny: false,
-      removeComments: true,
-      noLib: false
-    }))
-    .pipe(gulp.dest(buildGame.exportTo || 'build'))
-    .pipe(minify({
-      ext:{
-          min:'.min.js'
-      },
-    }))
-    .pipe(gulp.dest(buildGame.exportTo || 'build'))
-    .pipe(notify({message: `${buildGame.mainFile} task has been completed.`, onLast: true}));
+  buildGame.map(obj => {
+    gulp.src([`src/${obj.mainFile}`, ...obj.requiredFiles])
+      .pipe(removeCode({ gameBuild: true }))
+      .pipe(concat(`${obj.mainFile}`))
+      .pipe(replace('export class', 'class'))
+      .pipe(ts({
+        target: "es5",
+        module: "system",
+        declaration: false,
+        noImplicitAny: false,
+        removeComments: true,
+        noLib: false
+      }))
+      .pipe(gulp.dest(obj.exportTo || 'build'))
+      .pipe(minify({
+        ext:{
+            min:'.min.js'
+        },
+      }))
+      .pipe(gulp.dest(obj.exportTo || 'build'))
+      .pipe(notify({message: `${obj.mainFile} task has been completed.`, onLast: true}));
+  })
+
 });

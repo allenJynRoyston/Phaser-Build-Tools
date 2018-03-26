@@ -14,6 +14,8 @@ import {PHASER_BITMAPDATA_MANAGER} from './../exports/bitmapdataManager'
 import {PHASER_GROUP_MANAGER} from './../exports/groupManager'
 
 import {WEAPON_MANAGER} from './required/weaponManager'
+import {PLAYER_MANAGER} from './required/playerManager'
+import {UTILITY_MANAGER} from './required/utilityManager'
 //endRemoveIf(gameBuild)
 
 class PhaserGameObject {
@@ -37,7 +39,9 @@ class PhaserGameObject {
       /******************/
       // declare variables BOILERPLATE
       // initiate control class
-      const phaserMaster = new PHASER_MASTER({game: new Phaser.Game(options.width, options.height, Phaser.WEBGL, el, { preload: preload, create: create, update: update}), resolution: {width: options.width, height: options.height}}),
+      let game = new Phaser.Game(options.width, options.height, Phaser.WEBGL, el, { preload: preload, create: create, update: update});
+          game.preserveDrawingBuffer = true;
+      const phaserMaster = new PHASER_MASTER({game: game, resolution: {width: options.width, height: options.height}}),
             phaserControls = new PHASER_CONTROLS(),
             phaserMouse = new PHASER_MOUSE({showDebugger: false}),
             phaserSprites = new PHASER_SPRITE_MANAGER(),
@@ -46,7 +50,9 @@ class PhaserGameObject {
             phaserButtons = new PHASER_BUTTON_MANAGER(),
             phaserGroup = new PHASER_GROUP_MANAGER(),
             phaserBitmapdata = new PHASER_BITMAPDATA_MANAGER(),
-            weaponManager = new WEAPON_MANAGER();
+            playerManager = new PLAYER_MANAGER(),
+            weaponManager = new WEAPON_MANAGER(),
+            utilityManager = new UTILITY_MANAGER();
 
       const store = options.store;
       let gameDataCopy = JSON.stringify(store.getters._gameData());
@@ -108,6 +114,8 @@ class PhaserGameObject {
         phaserGroup.assign(game, 20)
         phaserBitmapdata.assign(game)
         weaponManager.assign(game, phaserMaster, phaserSprites, phaserGroup, 'atlas_weapons')
+        playerManager.assign(game, phaserMaster, phaserSprites, phaserTexts, phaserGroup, phaserControls, weaponManager, 'atlas_main')
+        utilityManager.assign(game, phaserSprites, phaserBitmapdata, phaserGroup, 'atlas_main')
 
         // phaserMaster
         let currentSelection = phaserMaster.let('currentSelection', 0)
@@ -134,25 +142,8 @@ class PhaserGameObject {
         let mask1 = phaserSprites.addBasicMaskToSprite(container_1);
 
         // animate in
-        let squareSize = 80
-        let count = 0;
-        for(let c = 0; c < Math.ceil(game.world.height/squareSize); c++ ){
-          for(let r = 0; r < Math.ceil(game.world.width/squareSize); r++ ){
-            let gridSquare = phaserSprites.addFromAtlas({x: c * squareSize, y: r * squareSize, name: `grid${count}`, group: 'grids', width: squareSize, height: squareSize, atlas: 'atlas', filename: 'ui_textbox.png', visible: true})
-                gridSquare.anchor.setTo(0.5, 0.5)
-                gridSquare.x = gridSquare.x += gridSquare.width/2
-                gridSquare.y = gridSquare.y += gridSquare.height/2
-                gridSquare.fadeOut = (speed:number) => {
-                  this.game.add.tween(gridSquare).to( { height: 0 }, speed, Phaser.Easing.Linear.Out, true, 0, 0, false)
-                }
-                gridSquare.fadeIn = (speed:number) => {
-                  this.game.add.tween(gridSquare).to( { height: squareSize }, speed, Phaser.Easing.Linear.In, true, 0, 0, false)
-                }
-
-                count++;
-            phaserGroup.add(20, gridSquare)
-          }
-        }
+        utilityManager.buildOverlayBackground('#ffffff', '#ffffff', 19, true)
+        utilityManager.buildOverlayGrid(80, 20, 'landmine.png')
 
         // backgrounds
         let bg_clouds = phaserSprites.addTilespriteFromAtlas({ name: 'bg_clouds', group: 'ui_bg', x: container_1.x, y: container_1.y, width: container_1.width, height: container_1.height, atlas: 'atlas', filename: 'bg_clouds.png'});
@@ -260,8 +251,8 @@ HEALTH:             ${profilePictures[val].health}
 MOVEMENT:           ${profilePictures[val].movement}
               `)
             }
-        phaserGroup.addMany(18, [textbox0, textbox1, textbox2, pilotDescriptionBox])
-        phaserGroup.addMany(19, [text0, text1, text2, pilotDescriptionText])
+        phaserGroup.addMany(17, [textbox0, textbox1, textbox2, pilotDescriptionBox])
+        phaserGroup.addMany(18, [text0, text1, text2, pilotDescriptionText])
 
         // profiles
         let profilePictures = pilotData.pilots;
@@ -301,7 +292,7 @@ MOVEMENT:           ${profilePictures[val].movement}
               }
               updateProfileSelection(pilotSelection)
             }
-        phaserGroup.add(19, profileSelector)
+        phaserGroup.add(18, profileSelector)
 
         // loadout
         let i;
@@ -331,7 +322,7 @@ MOVEMENT:           ${profilePictures[val].movement}
           primaryWeaponList.push(item)
           i++;
           phaserGroup.addMany(18, [box, sbox])
-          phaserGroup.add(19, icon)
+          phaserGroup.add(18, icon)
         }
 
         i = 0;
@@ -356,7 +347,7 @@ MOVEMENT:           ${profilePictures[val].movement}
           secondaryWeaponList.push(item)
           i++;
           phaserGroup.addMany(18, [box, sbox])
-          phaserGroup.add(19, icon)
+          phaserGroup.add(18, icon)
         }
 
         i = 0
@@ -380,8 +371,8 @@ MOVEMENT:           ${profilePictures[val].movement}
 
           perkList.push(item)
           i++;
-          phaserGroup.addMany(18, [box, sbox])
-          phaserGroup.add(19, icon)
+          phaserGroup.addMany(17, [box, sbox])
+          phaserGroup.add(18, icon)
         }
 
         phaserMaster.let('primaryWeaponList', primaryWeaponList)
@@ -427,40 +418,12 @@ MOVEMENT:           ${profilePictures[val].movement}
         let loadoutDescriptionText = phaserTexts.add({name: 'loadoutDescriptionText', group: 'ui_text', x:loadoutDescription.x, y: loadoutDescription.y,  font: 'gem', size: 14, default: ``})
             loadoutDescriptionText.anchor.setTo(0.5, 0.5)
             loadoutDescriptionText.maxWidth = loadoutDescription.width - padding*2
-            phaserGroup.add(18, loadoutDescription)
-            phaserGroup.add(19, loadoutDescriptionText)
-
-        // create ship preview
-        let ship = phaserSprites.addFromAtlas({name: 'ship', group: 'ship_preview', atlas: 'atlas_main',  filename: 'ship_body.png', visible: true})
-            ship.anchor.setTo(0.5, 0.5)
-        phaserSprites.centerOnPoint('ship', container_3.x + container_3.width/2 + ship.width/2, container_3.height - 100 );
-
-
-        let shipExhaust = phaserSprites.addFromAtlas({name: 'exhaust', group: 'ship_preview', atlas: 'atlas_main',  filename: 'exhaust_red_1.png', visible: true})
-            shipExhaust.animations.add('exhaust_animation', Phaser.Animation.generateFrameNames('exhaust_red_', 1, 8, '.png'), 1, true)
-            shipExhaust.animations.play('exhaust_animation', 30, true)
-            shipExhaust.anchor.setTo(0.5, 0.5)
-            shipExhaust.onUpdate = function(){
-              let {x, y} = ship;
-              this.visible = true
-              this.x = x
-
-              if(phaserMaster.get('currentSelection')  === 2){
-                this.y = y + 40;
-                this.scale.setTo(1, 1)
-              }
-              else{
-                this.y = y + 25;
-                this.scale.setTo(1, 0.25)
-              }
-
-            }
+            phaserGroup.add(17, loadoutDescription)
+            phaserGroup.add(18, loadoutDescriptionText)
 
         //phaserGroup.addMany(0, [container_1])
         phaserGroup.addMany(1, [bg_space])
         // loadout preview is on layer 2
-        phaserGroup.addMany(5, [ship, shipExhaust])
-
         phaserGroup.addMany(6, [bg_clouds, bg_cityscape, bg_cityscape_1, bg_cityscape_2, bg_cityscape_3])
         phaserGroup.addMany(10, [verticleFrame, dividerFrame1])
         phaserGroup.addMany(15, [pointer, downarrow])
@@ -478,9 +441,11 @@ MOVEMENT:           ${profilePictures[val].movement}
           updateWeaponSelected()
           updateProfileSelection(0)
 
-          overlayControls('FADEOUT', () => {
+          overlayControls('WIPEOUT', () => {
             // change state
-            phaserMaster.changeState('MAINMENU');
+            utilityManager.overlayBGControls({transition: 'FADEOUT', delay: 0, speed: 250}, () => {
+              phaserMaster.changeState('MAINMENU');
+            })
           })
 
       }
@@ -488,33 +453,125 @@ MOVEMENT:           ${profilePictures[val].movement}
 
       /******************/
       function overlayControls(transition:string, callback:any = ()=>{}){
-        let delay = 500;
-        let speed = 500;
-        let tileDelay = 10
+        utilityManager.overlayControls({transition: transition, delay: 500, speed: 500, tileDelay: 15}, callback)
+      }
+      /******************/
 
-        setTimeout(() => {
-          if(transition === 'FADEOUT'){
-            phaserSprites.getGroup('grids').map( (obj, index) => {
-              setTimeout(() => {
-                  obj.fadeOut(speed)
-              }, tileDelay * index)
-            })
-            setTimeout(() => {
-              callback()
-            }, phaserSprites.getGroup('grids').length * tileDelay + speed)
-          }
+      /******************/
+      function fireBullet(){
+        let game = phaserMaster.game();
+        let {ship} = phaserSprites.getOnly(['ship']);
+        let {gap, shots} = {gap: 10, shots: 2}
+        let centerShots = (gap * (shots-1))/2
 
-          if(transition === 'FADEIN'){
-            phaserSprites.getGroup('grids').map( (obj, index) => {
-              setTimeout(() => {
-                  obj.fadeIn(speed)
-              }, tileDelay * index)
-            })
-            setTimeout(() => {
-              callback()
-            }, phaserSprites.getGroup('grids').length * tileDelay + speed)
-          }
-        }, delay)
+        for(let i = 0; i < shots; i++){
+          setTimeout(() => {
+            weaponManager.createBullet({name: `bullet_${game.rnd.integer()}`, group: 'ship_wpn_preview', x: ship.x + (i * gap) - centerShots, y: ship.y, spread: 0, layer: 3})
+         }, 25)
+        }
+      }
+      /******************/
+
+      /******************/
+      function fireLasers(){
+        let game = phaserMaster.game();
+        let {ship} = phaserSprites.getOnly(['ship']);
+        let {gap, shots} = {gap: 30, shots: 1}
+        let centerShots = (gap * (shots-1))/2
+
+        for(let i = 0; i < shots; i++){
+          weaponManager.createLaser({name: `laser_${game.rnd.integer()}`, group: 'ship_wpn_preview', x: ship.x + (i * gap) - centerShots, y: ship.y - ship.height/2, spread: 0, layer: 2})
+         }
+      }
+      /******************/
+
+      /******************/
+      function fireMissles(){
+        let game = phaserMaster.game();
+        let {ship} = phaserSprites.getOnly(['ship']);
+        let {gap, shots} = {gap: 30, shots: 2}
+        let centerShots = (gap * (shots-1))/2
+
+        // always shoots two at a minimum
+        for(let i = 0; i < shots; i++){
+          weaponManager.createMissle({name: `missle_${game.rnd.integer()}`, group: 'ship_wpn_preview', x: ship.x + (i * gap) - centerShots, y: ship.y - ship.height/2, spread:(i % 2 === 0 ? -0.50 : 0.50), layer: 2})
+        }
+      }
+      /******************/
+
+      /******************/
+      function createClusterbomb(){
+        let game = phaserMaster.game();
+        let {ship} = phaserSprites.getOnly(['ship']);
+
+        let onDestroy = (obj:any) => {
+             for(let i = 0; i < obj.bomblets; i++){
+               createBomblet({
+                 x: obj.x,
+                 y: obj.y,
+                 ix: game.rnd.integerInRange(-400, 400),
+                 iy: game.rnd.integerInRange(-400, 100),
+                 damage: obj.damageAmount/4,
+                 group: 'ship_wpn_preview',
+                 layer: 2
+               })
+            }
+        }
+        weaponManager.createClusterbomb({name: `clusterbomb_${game.rnd.integer()}`, group: 'ship_wpn_preview', x: ship.x, y: ship.y, layer: 2}, onDestroy)
+      }
+      /******************/
+
+      /******************/
+      function createBomblet(options:any){
+        let onDestroy = (obj:any) => { createExplosion(obj.x, obj.y, 0.5, options.layer+1)}
+        let bomblet = weaponManager.createBomblet(options, onDestroy)
+      }
+      /******************/
+
+      /******************/
+      function createExplosion(x, y, scale, layer){
+        weaponManager.createExplosion(x, y, scale, layer)
+      }
+      /******************/
+
+      /******************/
+      function createTriplebomb(){
+        let game = phaserMaster.game();
+        let {ship} = phaserSprites.getOnly(['ship']);
+
+
+        for(let i = 0; i < 3; i++){
+          setTimeout(() => {
+            weaponManager.createTriplebomb({name: `triplebomb_${game.rnd.integer()}`, group: 'ship_wpn_preview', x: ship.x, y: ship.y, layer: 2})
+          }, i * 300)
+        }
+
+      }
+      /******************/
+
+      /******************/
+      function createTurret(){
+        let game = phaserMaster.game();
+        let {ship} = phaserSprites.getOnly(['ship']);
+
+        let onInit = (obj:any) => {
+          let {gap, shots} = {gap: 10, shots: 3}
+          let centerShots = (gap * (shots-1))/2
+          obj.fireInterval = setInterval(() => {
+            for(let i = 0; i < shots; i++){
+              weaponManager.createBullet({name: `bullet_${game.rnd.integer()}`, group: 'ship_wpn_preview', x: obj.x + (i * gap) - centerShots, y: obj.y, spread: 0, layer: 2})
+            }
+          }, 200)
+          obj.fireInterval;
+        }
+        let onUpdate = (obj:any) => {
+          obj.x = ship.x - obj.offset
+          obj.y = ship.y
+        }
+        let onDestroy = (obj:any) => {}
+
+        weaponManager.createTurret({name: `turret_${game.rnd.integer()}`, group: 'ship_wpn_preview', x: ship.x, y: ship.y, offset: 50, layer: 3}, onInit, onDestroy, onUpdate)
+        weaponManager.createTurret({name: `turret_${game.rnd.integer()}`, group: 'ship_wpn_preview', x: ship.x, y: ship.y, offset: -50, layer: 3}, onInit, onDestroy, onUpdate)
 
       }
       /******************/
@@ -524,42 +581,38 @@ MOVEMENT:           ${profilePictures[val].movement}
         let game = phaserMaster.game();
         let {primaryWeaponList, primaryWeaponSelection, loadoutSelection, secondaryWeaponList, subWeaponSelection, perkSelection} = phaserMaster.getAll();
         let {ship} = phaserSprites.getAll('OBJECT')
-        
+
         // PREVIEW MAIN WEAPONS
+
         if(type === 'PRIMARY'){
-          if(primaryWeaponList[primaryWeaponSelection].reference === 'BULLET'){
-            weaponManager.createBullet({name: `B${game.rnd.integer()}`, group: 'ship_wpn_preview', x: ship.x - 25, offset: 0, y: ship.y, spread: 0, layer: 3})
-            weaponManager.createBullet({name: `B${game.rnd.integer()}`, group: 'ship_wpn_preview', x: ship.x + 25, offset: 0, y: ship.y, spread: 0, layer: 3})
-          }
-          if(primaryWeaponList[primaryWeaponSelection].reference === 'MISSLES'){
-            weaponManager.createMissle({name: `B${game.rnd.integer()}`, group: 'ship_wpn_preview', x: ship.x - 25, offset: 0, y: ship.y - ship.height/2, spread: -0.25, layer: 3})
-            weaponManager.createMissle({name: `B${game.rnd.integer()}`, group: 'ship_wpn_preview', x: ship.x + 25, offset: 0, y: ship.y - ship.height/2, spread: 0.25, layer: 3})
-          }
-          if(primaryWeaponList[primaryWeaponSelection].reference === 'LASER'){
-            weaponManager.createLaser({name: `B${game.rnd.integer()}`, group: 'ship_wpn_preview', x: ship.x - 25, offset: 0, y: ship.y - ship.height/2, spread: 0, layer: 3})
-            weaponManager.createLaser({name: `B${game.rnd.integer()}`, group: 'ship_wpn_preview', x: ship.x + 25, offset: 0, y: ship.y - ship.height/2, spread: 0, layer: 3})
-          }
+          switch(primaryWeaponList[primaryWeaponSelection].reference){
+            case 'BULLET':
+              fireBullet()
+              break
+            case 'LASER':
+              fireLasers()
+              break
+            case 'MISSLE':
+              fireMissles()
+              break
+           }
         }
 
         // PREVIEW SUBWEAPONS
         if(type === 'SECONDARY'){
-          if(secondaryWeaponList[subWeaponSelection].reference === 'CLUSTERBOMB'){
-            weaponManager.createClusterbomb({name: `B${game.rnd.integer()}`, group: 'ship_wpn_preview', x: ship.x, y: ship.y, layer: 3})
-          }
-          if(secondaryWeaponList[subWeaponSelection].reference === 'TRIPLEBOMB'){
-            weaponManager.createTriplebomb({name: `B${game.rnd.integer()}`, group: 'ship_wpn_preview', x: ship.x, y: ship.y, layer: 3})
-            setTimeout(() => {
-              weaponManager.createTriplebomb({name: `B${game.rnd.integer()}`, group: 'ship_wpn_preview', x: ship.x + game.rnd.integerInRange(0, 20), y: ship.y, layer: 3, spread: game.rnd.integerInRange(0, 2)})
-            }, 100)
-            setTimeout(() => {
-              weaponManager.createTriplebomb({name: `B${game.rnd.integer()}`, group: 'ship_wpn_preview', x: ship.x - game.rnd.integerInRange(0, 20), y: ship.y, layer: 3, spread: game.rnd.integerInRange(-2, 0)})
-            }, 200)
-          }
-          if(secondaryWeaponList[subWeaponSelection].reference === 'TURRET'){
-            weaponManager.createTurret({name: `B${game.rnd.integer()}`, group: 'ship_wpn_preview', x: ship.x, y: ship.y + 50, layer: 4})
-          }
-          if(secondaryWeaponList[subWeaponSelection].reference === 'BLASTRADIUS'){
-            weaponManager.createBlastradius({name: `B${game.rnd.integer()}`, group: 'ship_wpn_preview', x: ship.x, y: ship.y, layer: 2})
+          switch(secondaryWeaponList[subWeaponSelection].reference){
+            case 'CLUSTERBOMB':
+              createClusterbomb()
+              break
+            case 'TRIPLEBOMB':
+              createTriplebomb()
+              break
+            case 'TURRET':
+              createTurret()
+              break
+            case 'BLASTRADIUS':
+
+              break
           }
         }
 
@@ -582,8 +635,31 @@ MOVEMENT:           ${profilePictures[val].movement}
 
       /******************/
       function updateProfileSelection(val:number) {
-        let {profileSelector, loadoutCatagorySelector} = phaserSprites.getAll('OBJECT');
-        let {pilotDescriptionText} = phaserTexts.getAll('OBJECT')
+        let {profileSelector, loadoutCatagorySelector, container_3} = phaserSprites.getOnly(['profileSelector', 'loadoutCatagorySelector', 'container_3']);
+        let {pilotDescriptionText} = phaserTexts.getOnly(['pilotDescriptionText'])
+
+        if( phaserSprites.get('ship') !== undefined ){
+          playerManager.destroyShip('ship')
+        }
+
+        let ship
+        switch(val){
+          case 0:
+            ship = playerManager.createShip1({name: 'ship', group: 'playership', layer: 5});
+            break
+          case 1:
+            ship = playerManager.createShip1({name: 'ship', group: 'playership', layer: 5});
+            break
+          case 2:
+            ship = playerManager.createShip1({name: 'ship', group: 'playership', layer: 5});
+            break
+        }
+
+        // create ship preview
+        ship.visible = true;
+        phaserSprites.centerOnPoint('ship', container_3.x + container_3.width/2 + ship.width/2, container_3.height - 100 );
+
+
         profileSelector.updateLocation(val)
         pilotDescriptionText.updateThisText(val)
       }
@@ -705,10 +781,10 @@ MOVEMENT:           ${profilePictures[val].movement}
       function update() {
         let game = phaserMaster.game();
         let {currentSelection, pilotSelection, loadoutSelection, primaryWeaponList, primaryWeaponSelection, secondaryWeaponList, subWeaponSelection} = phaserMaster.getAll();
-        let {profileSelector, loadoutCatagorySelector, pointer, downarrow, loadoutDescription} = phaserSprites.getAll('OBJECT');
+        let {profileSelector, loadoutCatagorySelector, pointer, downarrow, loadoutDescription} = phaserSprites.getAll();
         let {loadoutDescriptionText} = phaserTexts.getAll('OBJECT')
 
-        phaserSprites.getManyGroups(['ui_bg', 'ship_preview', 'ship_wpn_preview']).map(obj => {
+        phaserSprites.getManyGroups(['ui_bg', 'playership', 'ship_wpn_preview']).map(obj => {
           obj.onUpdate()
         })
 
@@ -734,8 +810,10 @@ MOVEMENT:           ${profilePictures[val].movement}
           if(currentSelection === 2){
             pointer.hide()
             phaserMaster.forceLet('currentSelection', null)
-            overlayControls('FADEIN', () => {
-              startGame();
+            utilityManager.overlayBGControls({transition: 'FADEIN', delay: 0, speed: 250}, () => {
+              overlayControls('WIPEIN', () => {
+                startGame();
+              })
             })
           }
         }
@@ -850,8 +928,8 @@ MOVEMENT:           ${profilePictures[val].movement}
 
       /******************/
       function startGame(){
+        let game = phaserMaster.game();
         let {primaryWeaponList, primaryWeaponSelection, loadoutSelection, secondaryWeaponList, subWeaponSelection, perkList, perkSelection, pilotSelection} = phaserMaster.getAll();
-
         saveData('pilot', pilotSelection)
         saveData('primaryWeapon', primaryWeaponList[primaryWeaponSelection].reference)
         saveData('secondaryWeapon', secondaryWeaponList[subWeaponSelection].reference)

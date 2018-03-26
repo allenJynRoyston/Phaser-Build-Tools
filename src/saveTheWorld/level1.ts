@@ -16,6 +16,7 @@ import {PHASER_GROUP_MANAGER} from './../exports/groupManager'
 import {WEAPON_MANAGER} from './required/weaponManager'
 import {ENEMY_MANAGER} from './required/enemyManager'
 import {PLAYER_MANAGER} from './required/playerManager'
+import {UTILITY_MANAGER} from './required/utilityManager'
 //endRemoveIf(gameBuild)
 
 class PhaserGameObject {
@@ -39,7 +40,9 @@ class PhaserGameObject {
       /******************/
       // declare variables BOILERPLATE
       // initiate control class
-      const phaserMaster = new PHASER_MASTER({game: new Phaser.Game(options.width, options.height, Phaser.WEBGL, el, { preload: preload, create: create, update: update}), resolution: {width: options.width, height: options.height}}),
+      let game = new Phaser.Game(options.width, options.height, Phaser.WEBGL, el, { preload: preload, create: create, update: update});
+          game.preserveDrawingBuffer = true;
+      const phaserMaster = new PHASER_MASTER({game: game, resolution: {width: options.width, height: options.height}}),
             phaserControls = new PHASER_CONTROLS(),
             phaserMouse = new PHASER_MOUSE({showDebugger: false}),
             phaserSprites = new PHASER_SPRITE_MANAGER(),
@@ -50,7 +53,8 @@ class PhaserGameObject {
             phaserBitmapdata = new PHASER_BITMAPDATA_MANAGER(),
             weaponManager = new WEAPON_MANAGER(),
             enemyManager = new ENEMY_MANAGER(),
-            playerManager = new PLAYER_MANAGER();
+            playerManager = new PLAYER_MANAGER(),
+            utilityManager = new UTILITY_MANAGER();
 
       const store = options.store;
       let gameDataCopy = JSON.stringify(store.getters._gameData());
@@ -148,6 +152,7 @@ class PhaserGameObject {
         weaponManager.assign(game, phaserMaster, phaserSprites, phaserGroup, 'atlas_weapons')
         enemyManager.assign(game, phaserMaster, phaserSprites, phaserTexts, phaserGroup, weaponManager, 'atlas_main')
         playerManager.assign(game, phaserMaster, phaserSprites, phaserTexts, phaserGroup, phaserControls, weaponManager, 'atlas_main')
+        utilityManager.assign(game, phaserSprites, phaserBitmapdata, phaserGroup, 'atlas_main')
 
         // game variables
         phaserMaster.let('roundTime', 2)
@@ -171,25 +176,8 @@ class PhaserGameObject {
         }, this);
 
         // animate in
-        let squareSize = 80
-        let count = 0;
-        for(let c = 0; c < Math.ceil(game.world.height/squareSize); c++ ){
-          for(let r = 0; r < Math.ceil(game.world.width/squareSize); r++ ){
-            let gridSquare = phaserSprites.addFromAtlas({x: c * squareSize, y: r * squareSize, name: `grid${count}`, group: 'grids', width: squareSize, height: squareSize, atlas: 'atlas_main', filename: 'landmine.png', visible: true})
-                gridSquare.anchor.setTo(0.5, 0.5)
-                gridSquare.x = gridSquare.x += gridSquare.width/2
-                gridSquare.y = gridSquare.y += gridSquare.height/2
-                gridSquare.fadeOut = (speed:number) => {
-                  this.game.add.tween(gridSquare).to( { height: 0 }, speed, Phaser.Easing.Linear.Out, true, 0, 0, false)
-                }
-                gridSquare.fadeIn = (speed:number) => {
-                  this.game.add.tween(gridSquare).to( { height: squareSize }, speed, Phaser.Easing.Linear.In, true, 0, 0, false)
-                }
-
-                count++;
-            phaserGroup.add(20, gridSquare)
-          }
-        }
+        utilityManager.buildOverlayBackground('#ffffff', '#ffffff', 19, true)
+        utilityManager.buildOverlayGrid(80, 20, 'landmine.png')
 
         // create boundry
         let boundryObj = phaserBitmapdata.addGradient({name: 'boundryObj', start: '#ffffff', end: '#ffffff', width: 5, height: 5, render: false})
@@ -475,7 +463,7 @@ class PhaserGameObject {
                 })
             }
             bossContainer.hide = function(){
-              //updateEarthbar(0)
+              updateBossBar(0)
               this.game.add.tween(this).to( { y: -this.height  }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, 500, 0, false)
             }
 
@@ -583,32 +571,35 @@ class PhaserGameObject {
         let {overlay} = phaserSprites.getOnly(['overlay']);
         let {clock, roundTime} = phaserMaster.getOnly(['clock', 'roundTime']);
 
+        overlayControls('WIPEOUT', () => {
 
-        overlayControls('FADEOUT', () => {
+          utilityManager.overlayBGControls({transition: 'FADEOUT', delay: 0, speed: 250}, () => {
 
-          // create player
-          let player = createPlayer();
+            // create player
+            let player = createPlayer();
 
-          overlay.fadeOut(isDevMode ? 0 : Phaser.Timer.SECOND/2, () => {
+            overlay.fadeOut(isDevMode ? 0 : Phaser.Timer.SECOND/2, () => {
 
-              playSequence('SAVE THE WORLD', ()=>{
-                player.moveToStart();
-                game.time.events.add(isDevMode ? Phaser.Timer.SECOND*0 : Phaser.Timer.SECOND*1, () => {
-                playSequence(`${roundTime} SECONDS GO`, () => {
-                    game.time.events.add(isDevMode ? Phaser.Timer.SECOND*0 : Phaser.Timer.SECOND/2, () => {
-                      phaserSprites.getGroup('ui').map((sprite) => {
-                        sprite.reveal()
-                        // change state
-                        phaserMaster.changeState('READY');
-                      })
-                    }).autoDestroy = true;
+                playSequence('SAVE THE WORLD', ()=>{
+                  player.moveToStart();
+                  game.time.events.add(isDevMode ? Phaser.Timer.SECOND*0 : Phaser.Timer.SECOND*1, () => {
+                  playSequence(`${roundTime} SECONDS GO`, () => {
+                      game.time.events.add(isDevMode ? Phaser.Timer.SECOND*0 : Phaser.Timer.SECOND/2, () => {
+                        phaserSprites.getGroup('ui').map((sprite) => {
+                          sprite.reveal()
+                          // change state
+                          phaserMaster.changeState('READY');
+                        })
+                      }).autoDestroy = true;
 
-                    // start clock
-                    clock.start()
+                      // start clock
+                      clock.start()
 
+                    })
                   })
                 })
-              })
+            })
+
           })
         })
       }
@@ -616,34 +607,7 @@ class PhaserGameObject {
 
       /******************/
       function overlayControls(transition:string, callback:any = ()=>{}){
-        let delay = 500;
-        let speed = 500;
-        let tileDelay = 10
-
-        setTimeout(() => {
-          if(transition === 'FADEOUT'){
-            phaserSprites.getGroup('grids').map( (obj, index) => {
-              setTimeout(() => {
-                  obj.fadeOut(speed)
-              }, tileDelay * index)
-            })
-            setTimeout(() => {
-              callback()
-            }, phaserSprites.getGroup('grids').length * tileDelay + speed)
-          }
-
-          if(transition === 'FADEIN'){
-            phaserSprites.getGroup('grids').map( (obj, index) => {
-              setTimeout(() => {
-                  obj.fadeIn(speed)
-              }, tileDelay * index)
-            })
-            setTimeout(() => {
-              callback()
-            }, phaserSprites.getGroup('grids').length * tileDelay + speed)
-          }
-        }, delay)
-
+        utilityManager.overlayControls({transition: transition, delay: 500, speed: 500, tileDelay: 15}, callback)
       }
       /******************/
 
@@ -783,7 +747,7 @@ class PhaserGameObject {
           }
         }
 
-        let player = playerManager.createShip1(updateHealth, loseLife, onUpdate);
+        let player = playerManager.createShip1({name: 'player', group: 'playership', layer: 8}, updateHealth, loseLife, onUpdate);
 
         return player
       }
@@ -836,12 +800,12 @@ class PhaserGameObject {
         let game = phaserMaster.game();
         let {bossContainer} = phaserSprites.getOnly(['bossContainer'])
         let onDestroy = (enemy:any) => {
+            bossContainer.hide();
             let {gameData} = phaserMaster.getOnly(['gameData'])
                  gameData.score += 10000
             saveData('score', gameData.score)
             let {scoreText} = phaserTexts.getOnly(['scoreText'])
                 scoreText.updateScore();
-            bossContainer.hide();
             endLevel()
         }
         let onDamage = (boss) => {
@@ -850,7 +814,6 @@ class PhaserGameObject {
         }
         let onFail = () => {
           phaserMaster.changeState('ENDLEVEL');
-          updateBossBar(0)
           bossContainer.hide();
           earthTakeDamage(50)
           setTimeout(() => {
@@ -928,7 +891,7 @@ class PhaserGameObject {
       /******************/
 
       /******************/
-      function createClusterbomb(options){
+      function createClusterbomb(){
         let game = phaserMaster.game();
         let {player} = phaserSprites.getOnly(['player']);
 
@@ -951,7 +914,7 @@ class PhaserGameObject {
       /******************/
 
       /******************/
-      function createTriplebomb(options){
+      function createTriplebomb(){
         let game = phaserMaster.game();
         let {player} = phaserSprites.getOnly(['player']);
 
@@ -968,7 +931,7 @@ class PhaserGameObject {
       /******************/
 
       /******************/
-      function createTurret(options){
+      function createTurret(){
         let game = phaserMaster.game();
         let {player} = phaserSprites.getOnly(['player']);
 
@@ -1105,20 +1068,18 @@ class PhaserGameObject {
             starMomentum.y = 0
           }
 
-          if(phaserControls.checkWithDelay({isActive: true, key: 'A', delay: primaryWeapon.cooldown - (A.state * primaryWeapon.rapidFireSpd) })){
 
+          if(phaserControls.checkWithDelay({isActive: true, key: 'A', delay: primaryWeapon.cooldown - (A.state * primaryWeapon.rapidFireSpd) })){
             switch(primaryWeapon.reference){
               case 'LASER':
                 fireLasers()
                 break
-              case 'MISSLES':
+              case 'MISSLE':
                 fireMissles();
                 break
               case 'BULLET':
-                //fireMissles();
                 fireBullet();
             }
-
           }
 
           if(phaserControls.checkWithDelay( {isActive: true, key: 'B', delay: secondaryWeapon.cooldown} )){
@@ -1130,26 +1091,20 @@ class PhaserGameObject {
               }).autoDestroy = true;
             }
 
-            if(secondaryWeapon.reference === 'CLUSTERBOMB'){
-              let {x, y} = player
-              createClusterbomb({x: x, y: y, velocity: secondaryWeapon.velocity, damage: secondaryWeapon.damage, bomblets: secondaryWeapon.bomblets})
-            }
+            switch(secondaryWeapon.reference){
+              case 'CLUSTERBOMB':
+                createClusterbomb()
+                break
+              case 'TRIPLEBOMB':
+                createTriplebomb()
+                break
+              case 'TURRET':
+                createTurret()
+                break
+              case 'BLASTRADIUS':
 
-            if(secondaryWeapon.reference === 'TRIPLEBOMB'){
-              let {x, y} = player
-              createTriplebomb({x: x, y: y, initialVelocity: secondaryWeapon.initialVelocity, velocity: secondaryWeapon.velocity, damage: secondaryWeapon.damage})
+                break
             }
-
-            if(secondaryWeapon.reference === 'TURRET'){
-              let {x, y} = player
-              createTurret({x: x, y: y, damage: secondaryWeapon.damage, lifespan: secondaryWeapon.lifespan})
-            }
-
-            if(secondaryWeapon.reference === 'MINES'){
-              let {x, y} = player
-              //createMine({x: x, y: y, damage: secondaryWeapon.damage, limit: secondaryWeapon.limit})
-            }
-
           }
         }
 
@@ -1163,19 +1118,18 @@ class PhaserGameObject {
             phaserSprites.get('menuButtonCursor').updateLocation(2)
           }
           if(START.active){
-
             phaserMaster.changeState('LOCKED');
             phaserControls.disableAllInput()
-
-            if(menuButtonSelection === 1){
-              updateStore();
-              nextLevel();
+            switch(menuButtonSelection){
+              case 1:
+                updateStore();
+                nextLevel();
+                break
+              case 2:
+                updateStore();
+                saveAndQuit();
+                break
             }
-            if(menuButtonSelection === 2){
-              updateStore();
-              saveAndQuit();
-            }
-
           }
         }
 
@@ -1187,18 +1141,17 @@ class PhaserGameObject {
             phaserSprites.get('menuButtonCursor').updateLocation(2)
           }
           if(START.active){
-
             clearInterval(phaserMaster.get('endExplosion'))
             phaserMaster.changeState('LOCKED');
             phaserControls.disableAllInput()
-
-            if(menuButtonSelection === 1){
-              retryLevel();
+            switch(menuButtonSelection){
+              case 1:
+                retryLevel();
+                break
+              case 2:
+                resetGame();
+                break
             }
-            if(menuButtonSelection === 2){
-              resetGame();
-            }
-
           }
         }
 
@@ -1448,12 +1401,7 @@ class PhaserGameObject {
 
       /******************/
       function finalFadeOut(callback:any){
-        let game = phaserMaster.game();
-        let overlaybmd = phaserBitmapdata.addGradient({name: 'overlayFadeout', start: '#ffffff', end: '#ffffff', width: 5, height: 5, render: false})
-        let overlay = phaserSprites.add({x: 0, y: 0, name: `overlayFinal`, width: game.world.width, height: game.world.height, reference: overlaybmd.cacheBitmapData, alpha: 0})
-        phaserGroup.add(19, overlay)
-        game.add.tween(overlay).to( { alpha: 1 }, Phaser.Timer.SECOND, Phaser.Easing.Linear.In, true, 0, 0, false).
-          onComplete.add(() => {
+        utilityManager.overlayBGControls({transition: 'FADEIN', delay: 0, speed: 250}, () => {
 
             // hide UI text
             phaserTexts.getManyGroups(['ui', 'ui_text', 'ui_buttons']).map(text => {
@@ -1464,7 +1412,7 @@ class PhaserGameObject {
               phaserSprites.destroy(obj.name)
             })
 
-            overlayControls('FADEIN', () => {
+            overlayControls('WIPEIN', () => {
               setTimeout(() => {
                 callback();
               }, 500)

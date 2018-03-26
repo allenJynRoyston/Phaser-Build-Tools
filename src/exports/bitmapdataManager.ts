@@ -160,5 +160,8 @@ export class PHASER_BITMAPDATA_MANAGER {
     return {object: this.bmd.object, array: this.bmd.array};
   }
 
+  public takeSnapshot(){    
+    return this.game.canvas.toDataURL()
+  }
 
 }
