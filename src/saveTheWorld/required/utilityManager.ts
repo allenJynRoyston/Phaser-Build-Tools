@@ -43,41 +43,37 @@ export class UTILITY_MANAGER {
     this.phaserGroup.add(layer, overlay)
   }
 
-  public buildOverlayGrid(squareSize:number = 80, layer:number, image:string){
+  public buildOverlayGrid(squareSizeH:number = 80, squareSizeV:number = 80, layer:number, image:string){
     let game = this.game;
     // animate in
     let count = 0;
-    for(let c = 0; c < Math.ceil(game.world.height/squareSize) + 1; c++ ){
-      for(let r = 0; r < Math.ceil(game.world.width/squareSize + 1); r++ ){
-        let gridSquare = this.phaserSprites.addFromAtlas({x: c * squareSize, y: r * squareSize, name: `grid${count}`, group: 'um_grid__bg', width: squareSize, height: squareSize, atlas: this.atlas, filename: image, visible: true})
+
+
+    for(let c = 0; c < Math.ceil(game.world.height/squareSizeV) + 1; c++ ){
+      for(let r = 0; r < Math.ceil(game.world.width/squareSizeH) + 1; r++ ){
+        let gridSquare = this.phaserSprites.addFromAtlas({x: r * squareSizeH, y: c * squareSizeV, name: `grid${count}`, group: 'um_grid__bg', width: squareSizeH, height: squareSizeV, atlas: this.atlas, filename: image, visible: true})
             gridSquare.anchor.setTo(0.5, 0.5)
-            gridSquare.x = gridSquare.x += gridSquare.width/2  - gridSquare.width/2
-            gridSquare.y = gridSquare.y += gridSquare.height/2  - gridSquare.height/2
+            gridSquare.scale.setTo(1, 1)
             gridSquare.fadeOut = (speed:number) => {
               gridSquare.scale.setTo(1, 1)
               game.add.tween(gridSquare).to( { height: 0}, speed, Phaser.Easing.Linear.Out, true, 0, 0, false)
             }
-            gridSquare.scaleOut = (speed:number) => {
-              gridSquare.scale.setTo(1, 1)
-              game.add.tween(gridSquare.scale).to( { x: 0, y:0 }, speed, Phaser.Easing.Linear.Out, true, 0, 0, false)
-            }
             gridSquare.fadeIn = (speed:number) => {
-              gridSquare.height = squareSize;
-              gridSquare.width = squareSize;
-              game.add.tween(gridSquare).to( { height: squareSize }, speed, Phaser.Easing.Linear.In, true, 0, 0, false)
+              game.add.tween(gridSquare).to( { height: squareSizeV }, speed, Phaser.Easing.Linear.In, true, 0, 0, false)
+            }
+            gridSquare.scaleOut = (speed:number) => {
+              game.add.tween(gridSquare.scale).to( { x: 0, y:0 }, speed, Phaser.Easing.Linear.In, true, 0, 0, false)
             }
             gridSquare.scaleIn = (speed:number) => {
-              gridSquare.height = squareSize;
-              gridSquare.width = squareSize;
-              game.add.tween(gridSquare.scale).to( { x: 1, y:1 }, speed, Phaser.Easing.Linear.In, true, 0, 0, false)
+              game.add.tween(gridSquare.scale).to( { x:1, y:1 }, speed, Phaser.Easing.Linear.Out, true, 0, 0, false)
             }
 
             count++;
-        this.phaserGroup.add(20, gridSquare)
+        this.phaserGroup.add(layer, gridSquare)
       }
     }
   }
-  
+
   public overlayBGControls(options, callback){
       let {transition, delay, speed} = options
       let {um_overlay__bg} = this.phaserSprites.getOnly(['um_overlay__bg'])

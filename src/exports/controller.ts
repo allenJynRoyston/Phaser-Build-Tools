@@ -120,6 +120,7 @@ export class PHASER_CONTROLS {
   debugger:any;
   disabledButtons:any;
   inputDelay:any;
+  releasedKeys:any;
 
   constructor(){
     this.IO = null;
@@ -127,7 +128,7 @@ export class PHASER_CONTROLS {
 
     /* BUTTON SENSITIVTY can be changed to whatever you want */
     this.buttonSensitivity = {QUICK: 1, SHORT: 50, LONG: 150, SUPERLONG: 300}
-
+    this.releasedKeys = [];
     /* CLASS PROPERTIES */
     this.properties = {
       isReady: false,
@@ -285,6 +286,12 @@ export class PHASER_CONTROLS {
     game.input.keyboard.onUpCallback = (e) => {
         for (let btn of this.buttonArray) {
           if(e.code === this.buttonMap[btn].code){
+              this.releasedKeys.push(this.buttonMap[btn].code)
+
+              setTimeout(() => {
+                this.releasedKeys.shift()
+              }, 1500)
+
               // clear intervals
               clearInterval(IO.sensitivityPress[btn]);
               // reset value
@@ -441,7 +448,11 @@ export class PHASER_CONTROLS {
     }
   }
 
-  getOnly(names:Array<string>){
+  public getReleasedKeys(){
+    return this.releasedKeys
+  }
+
+  public getOnly(names:Array<string>){
     let _return = {}
     for(let key of this.buttonArray){
       names.map(name => {

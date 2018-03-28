@@ -52,7 +52,7 @@ class PhaserGameObject {
             phaserGroup = new PHASER_GROUP_MANAGER(),
             phaserBitmapdata = new PHASER_BITMAPDATA_MANAGER(),
             weaponManager = new WEAPON_MANAGER(),
-            enemyManager = new ENEMY_MANAGER(),
+            enemyManager = new ENEMY_MANAGER({showHitbox: true}),
             playerManager = new PLAYER_MANAGER(),
             utilityManager = new UTILITY_MANAGER();
 
@@ -92,6 +92,8 @@ class PhaserGameObject {
         game.load.atlas('atlas_main', `${folder}/spritesheets/main/main.png`, `${folder}/spritesheets/main/main.json`, Phaser.Loader.TEXTURE_atlas_main_JSON_HASH);
         game.load.atlas('atlas_weapons', `${folder}/spritesheets/weapons/weaponsAtlas.png`, `${folder}/spritesheets/weapons/weaponsAtlas.json`, Phaser.Loader.TEXTURE_atlas_main_JSON_HASH);
         game.load.atlas('atlas_large', `${folder}/spritesheets/large/large.png`, `${folder}/spritesheets/large/large.json`, Phaser.Loader.TEXTURE_atlas_main_JSON_HASH);
+        game.load.atlas('atlas_enemies', `${folder}/spritesheets/enemies/enemies.png`, `${folder}/spritesheets/enemies/enemies.json`, Phaser.Loader.TEXTURE_atlas_main_JSON_HASH);
+        game.load.atlas('atlas_ships', `${folder}/spritesheets/ships/ships.png`, `${folder}/spritesheets/ships/ships.json`, Phaser.Loader.TEXTURE_atlas_main_JSON_HASH);
 
         // load music into buffer
         // game.load.audio('music-main', ['src/assets/game/demo1/music/zombies-in-space.ogg']);
@@ -150,22 +152,24 @@ class PhaserGameObject {
         phaserGroup.assign(game, 20)
         phaserBitmapdata.assign(game)
         weaponManager.assign(game, phaserMaster, phaserSprites, phaserGroup, 'atlas_weapons')
-        enemyManager.assign(game, phaserMaster, phaserSprites, phaserTexts, phaserGroup, weaponManager, 'atlas_main')
-        playerManager.assign(game, phaserMaster, phaserSprites, phaserTexts, phaserGroup, phaserControls, weaponManager, 'atlas_main')
+        enemyManager.assign(game, phaserMaster, phaserSprites, phaserTexts, phaserGroup, weaponManager, 'atlas_enemies', 'atlas_weapons')
+        playerManager.assign(game, phaserMaster, phaserSprites, phaserTexts, phaserGroup, phaserControls, weaponManager, 'atlas_ships', 'atlas_weapons')
         utilityManager.assign(game, phaserSprites, phaserBitmapdata, phaserGroup, 'atlas_main')
 
         // game variables
-        phaserMaster.let('roundTime', 2)
+        phaserMaster.let('roundTime', 60)
         phaserMaster.let('clock', game.time.create(false))
         phaserMaster.let('elapsedTime', 0)
         phaserMaster.let('devMode', false)
         phaserMaster.let('starMomentum', {x: 0, y:0})
         phaserMaster.let('pauseStatus', false)
+        phaserMaster.let('firepowerUp', 1)
 
         // weapon data
         let weaponData = phaserMaster.let('weaponData', game.cache.getJSON('weaponData'));
         let pw = phaserMaster.let('primaryWeapon', weaponData.primaryWeapons[gameData.primaryWeapon])
         let sw = phaserMaster.let('secondaryWeapon', weaponData.secondaryWeapons[gameData.secondaryWeapon])
+        let perk = phaserMaster.let('perk', weaponData.perks[gameData.perk])
 
         // pause behavior
         game.onPause.add(() => {
@@ -177,7 +181,7 @@ class PhaserGameObject {
 
         // animate in
         utilityManager.buildOverlayBackground('#ffffff', '#ffffff', 19, true)
-        utilityManager.buildOverlayGrid(80, 20, 'landmine.png')
+        utilityManager.buildOverlayGrid(240, 132, 20, 'logo_small.png')
 
         // create boundry
         let boundryObj = phaserBitmapdata.addGradient({name: 'boundryObj', start: '#ffffff', end: '#ffffff', width: 5, height: 5, render: false})
@@ -607,7 +611,7 @@ class PhaserGameObject {
 
       /******************/
       function overlayControls(transition:string, callback:any = ()=>{}){
-        utilityManager.overlayControls({transition: transition, delay: 500, speed: 500, tileDelay: 15}, callback)
+        utilityManager.overlayControls({transition: transition, delay: 1000, speed: 250, tileDelay: 5}, callback)
       }
       /******************/
 
@@ -708,16 +712,22 @@ class PhaserGameObject {
       /******************/
       function createPlayer(){
         let game = phaserMaster.game();
+        let {gameData, primaryWeapon, secondaryWeapon, perk} = phaserMaster.getOnly(['gameData', 'primaryWeapon', 'secondaryWeapon', 'perk'])
+
 
         let onUpdate = (player:any) => {
             let {currentState} = phaserMaster.getState();
             if(!player.isInvincible && (currentState !== 'ENDLEVEL')){
               let hasCollided = false;
               returnAllCollidables().map((target) => {
-                target.game.physics.arcade.overlap(player, target, (player, target)=>{
-                  hasCollided = true;
-                  target.damageIt(50);
-                }, null, player);
+                if(target.game !== null){
+                  if(target.game.physics !== null){
+                    target.game.physics.arcade.overlap(player, target, (player, target)=>{
+                      hasCollided = true;
+                      target.parent.damageIt(50);
+                    }, null, player);
+                  }
+                }
               })
               if(hasCollided){
                 player.isInvincible = true;
@@ -747,14 +757,52 @@ class PhaserGameObject {
           }
         }
 
-        let player = playerManager.createShip1({name: 'player', group: 'playership', layer: 8}, updateHealth, loseLife, onUpdate);
+        let player = playerManager.createShip({name: 'player', group: 'playership', layer: 8, shipId: gameData.pilot}, updateHealth, loseLife, onUpdate);
+
+        player.attachPerk(perk.reference)
+        player.attachWeapon(primaryWeapon.reference)
+        player.attachSubweapon(secondaryWeapon.reference)
 
         return player
       }
       /******************/
 
       /******************/
-      function createEnemy(options:any){
+      function createBigEnemy(options){
+        let game = phaserMaster.game();
+        let onDestroy = (enemy:any) => {
+            let {gameData} = phaserMaster.getOnly(['gameData'])
+                 gameData.score += 200
+            saveData('score', gameData.score)
+            let {scoreText} = phaserTexts.getOnly(['scoreText'])
+                scoreText.updateScore();
+        }
+        let onDamage = () => {}
+        let onFail = () => { }
+        let onUpdate = () => {}
+        let enemy = enemyManager.createBigEnemy1(options, onDamage, onDestroy, onFail, onUpdate)
+      }
+      /******************/
+
+      /******************/
+      function createSmallEnemy(options){
+        let game = phaserMaster.game();
+        let onDestroy = (enemy:any) => {
+            let {gameData} = phaserMaster.getOnly(['gameData'])
+                 gameData.score += 200
+            saveData('score', gameData.score)
+            let {scoreText} = phaserTexts.getOnly(['scoreText'])
+                scoreText.updateScore();
+        }
+        let onDamage = () => {}
+        let onFail = () => { }
+        let onUpdate = () => {}
+        let enemy = enemyManager.createSmallEnemy1(options, onDamage, onDestroy, onFail, onUpdate)
+      }
+      /******************/
+
+      /******************/
+      function createAsteroid(options:any){
         let game = phaserMaster.game();
         let onDestroy = (enemy:any) => {
             let {gameData} = phaserMaster.getOnly(['gameData'])
@@ -829,15 +877,19 @@ class PhaserGameObject {
       /******************/
 
       /******************/
-      function targetCheck(obj:any){
+      function targetCheck(obj:any, wpnType:string = null){
         returnAllCollidables().map(target => {
-          target.game.physics.arcade.overlap(obj, target, (obj, target)=>{
-            obj.pierceStrength -= target.pierceResistence
-            target.damageIt(obj.damageAmount);
-            if(obj.pierceStrength <= 0){
-              obj.destroyIt()
+          if(target.game !== null){
+            if(target.game.physics !== null){
+              target.game.physics.arcade.overlap(obj, target, (obj, target)=>{
+                obj.pierceStrength -= target.parent.pierceResistence
+                target.parent.damageIt(obj.damageAmount, wpnType);
+                if(obj.pierceStrength <= 0){
+                  obj.destroyIt()
+                }
+              }, null, obj);
             }
-          }, null, obj);
+          }
         })
       }
       /******************/
@@ -846,14 +898,16 @@ class PhaserGameObject {
       function fireBullet(){
         let game = phaserMaster.game();
         let {player} = phaserSprites.getOnly(['player']);
-        let {gap, shots} = {gap: 10, shots: 2}
+        let {firepowerUp} = phaserMaster.getOnly(['firepowerUp'])
+        let {gap, shots} = {gap: 10, shots: 2 + (2 * firepowerUp)}
         let centerShots = (gap * (shots-1))/2
 
+        player.fireWeapon()
         for(let i = 0; i < shots; i++){
           setTimeout(() => {
-            let onUpdate = (obj:any) => { targetCheck(obj) }
+            let onUpdate = (obj:any) => { targetCheck(obj, 'BULLET') }
             let onDestroy = () => {}
-            weaponManager.createBullet({name: `bullet_${game.rnd.integer()}`, group: 'ship_weapons', x: player.x + (i * gap) - centerShots, y: player.y, spread: 0, layer: 3}, onDestroy, onUpdate)
+            weaponManager.createBullet({name: `bullet_${game.rnd.integer()}`, group: 'ship_weapons', x: player.x + (i * gap) - centerShots, y: player.y, spread: 0, layer: player.onLayer + 1}, onDestroy, onUpdate)
          }, 25)
         }
       }
@@ -863,13 +917,15 @@ class PhaserGameObject {
       function fireLasers(){
         let game = phaserMaster.game();
         let {player} = phaserSprites.getOnly(['player']);
-        let {gap, shots} = {gap: 30, shots: 1}
+        let {firepowerUp} = phaserMaster.getOnly(['firepowerUp'])
+        let {gap, shots} = {gap: 30, shots: 1 + (1 * firepowerUp)}
         let centerShots = (gap * (shots-1))/2
 
+        player.fireWeapon()
         for(let i = 0; i < shots; i++){
-          let onUpdate = (obj:any) => { targetCheck(obj) }
+          let onUpdate = (obj:any) => { targetCheck(obj, 'LASER') }
           let onDestroy = () => {}
-          weaponManager.createLaser({name: `laser_${game.rnd.integer()}`, group: 'ship_weapons', x: player.x + (i * gap) - centerShots, y: player.y - player.height/2, spread: 0, layer: 2}, onDestroy, onUpdate)
+          weaponManager.createLaser({name: `laser_${game.rnd.integer()}`, group: 'ship_weapons', x: player.x + (i * gap) - centerShots, y: player.y - player.height/2, spread: 0, layer: player.onLayer + 1}, onDestroy, onUpdate)
          }
       }
       /******************/
@@ -878,14 +934,16 @@ class PhaserGameObject {
       function fireMissles(){
         let game = phaserMaster.game();
         let {player} = phaserSprites.getOnly(['player']);
-        let {gap, shots} = {gap: 30, shots: 2}
+        let {firepowerUp} = phaserMaster.getOnly(['firepowerUp'])
+        let {gap, shots} = {gap: 30, shots: 2 + (2 * firepowerUp)}
         let centerShots = (gap * (shots-1))/2
 
+        player.fireWeapon()
         // always shoots two at a minimum
         for(let i = 0; i < shots; i++){
-          let onUpdate = (obj:any) => { targetCheck(obj) }
-          let onDestroy = (obj:any) => { impactExplosion(obj.x + obj.height, obj.y, 1.5, obj.damageAmount/2) }
-          weaponManager.createMissle({name: `missle_${game.rnd.integer()}`, group: 'ship_weapons', x: player.x + (i * gap) - centerShots, y: player.y - player.height/2, spread:(i % 2 === 0 ? -0.50 : 0.50), layer: 2}, onDestroy, onUpdate)
+          let onUpdate = (obj:any) => { targetCheck(obj, 'MISSLE') }
+          let onDestroy = (obj:any) => { impactExplosion(obj.x + obj.height, obj.y, 1, obj.damageAmount/2) }
+          weaponManager.createMissle({name: `missle_${game.rnd.integer()}`, group: 'ship_weapons', x: player.x + (i * gap) - centerShots, y: player.y - player.height/2, spread:(i % 2 === 0 ? -0.50 : 0.50), layer: player.onLayer + 1}, onDestroy, onUpdate)
         }
       }
       /******************/
@@ -909,7 +967,9 @@ class PhaserGameObject {
                })
             }
         }
-        weaponManager.createClusterbomb({name: `clusterbomb_${game.rnd.integer()}`, group: 'ship_secondary_weapons', x: player.x, y: player.y, layer: 2}, onDestroy, onUpdate)
+
+        player.fireSubweapon()
+        weaponManager.createClusterbomb({name: `clusterbomb_${game.rnd.integer()}`, group: 'ship_secondary_weapons', x: player.x, y: player.y, layer: player.onLayer + 1}, onDestroy, onUpdate)
       }
       /******************/
 
@@ -923,7 +983,8 @@ class PhaserGameObject {
 
         for(let i = 0; i < 3; i++){
           setTimeout(() => {
-            weaponManager.createTriplebomb({name: `triplebomb_${game.rnd.integer()}`, group: 'ship_secondary_weapons', x: player.x, y: player.y, layer: 2}, onDestroy, onUpdate)
+            player.fireSubweapon()
+            weaponManager.createTriplebomb({name: `triplebomb_${game.rnd.integer()}`, group: 'ship_secondary_weapons', x: player.x, y: player.y, layer: player.onLayer + 1}, onDestroy, onUpdate)
           }, i * 300)
         }
 
@@ -942,7 +1003,7 @@ class PhaserGameObject {
             for(let i = 0; i < shots; i++){
               let onUpdate = (obj:any) => { targetCheck(obj) }
               let onDestroy = () => {}
-              weaponManager.createBullet({name: `bullet_${game.rnd.integer()}`, group: 'ship_secondary_weapons', x: obj.x + (i * gap) - centerShots, y: obj.y, spread: 0, layer: 2}, onDestroy, onUpdate)
+              weaponManager.createBullet({name: `bullet_${game.rnd.integer()}`, group: 'ship_secondary_weapons', x: obj.x + (i * gap) - centerShots, y: obj.y, spread: 0, layer: player.onLayer + 1}, onDestroy, onUpdate)
             }
           }, 200)
           obj.fireInterval;
@@ -953,8 +1014,9 @@ class PhaserGameObject {
         }
         let onDestroy = (obj:any) => {}
 
-        weaponManager.createTurret({name: `turret_${game.rnd.integer()}`, group: 'ship_secondary_weapons', x: player.x, y: player.y, offset: 50, layer: 3}, onInit, onDestroy, onUpdate)
-        weaponManager.createTurret({name: `turret_${game.rnd.integer()}`, group: 'ship_secondary_weapons', x: player.x, y: player.y, offset: -50, layer: 3}, onInit, onDestroy, onUpdate)
+        player.fireSubweapon()
+        weaponManager.createTurret({name: `turret_${game.rnd.integer()}`, group: 'ship_secondary_weapons', x: player.x, y: player.y, offset: 50, layer: player.onLayer + 2}, onInit, onDestroy, onUpdate)
+        weaponManager.createTurret({name: `turret_${game.rnd.integer()}`, group: 'ship_secondary_weapons', x: player.x, y: player.y, offset: -50, layer: player.onLayer + 2}, onInit, onDestroy, onUpdate)
 
       }
       /******************/
@@ -983,7 +1045,8 @@ class PhaserGameObject {
 
       /******************/
       function returnAllCollidables(){
-        return [...phaserSprites.getGroup('enemies'),   ...phaserSprites.getGroup('trashes'), ...phaserSprites.getGroup('boss')]
+        return [...phaserSprites.getGroup('enemy_hitboxes')]
+        //,   ...phaserSprites.getGroup('trashes'), ...phaserSprites.getGroup('boss')
       }
       /******************/
 
@@ -1014,7 +1077,7 @@ class PhaserGameObject {
         }
 
 
-        phaserSprites.getManyGroups(['spaceGroup', 'movingStarField', 'ship_weapons', 'ship_secondary_weapons', 'impactExplosions', 'playership']).map(obj => {
+        phaserSprites.getManyGroups(['spaceGroup', 'movingStarField', 'ship_weapons', 'ship_secondary_weapons', 'impactExplosions', 'playership', 'enemy_bullets']).map(obj => {
           obj.onUpdate()
         })
 
@@ -1022,15 +1085,16 @@ class PhaserGameObject {
         if(currentState === 'READY'){
 
           // create a steady steam of aliens to shoot
-          if(phaserSprites.getGroup('enemies').length < 5 && phaserSprites.getGroup('boss').length === 0){
-            createEnemy({
-              x: game.rnd.integerInRange(0, game.canvas.width),
-              y: game.rnd.integerInRange(-50, -300),
-              ix: game.rnd.integerInRange(-100, 100),
-              iy: game.rnd.integerInRange(0, 80),
-              layer: 3
-            });
+          if(phaserSprites.getGroup('enemies').length < 1 && phaserSprites.getGroup('boss').length === 0){
+              createSmallEnemy({
+                x: game.rnd.integerInRange(0 + 100, game.canvas.width - 100),
+                y: game.rnd.integerInRange(100, 400),
+                iy: game.rnd.integerInRange(0, 80),
+                layer: 3
+              });
           }
+
+
 
           phaserSprites.getManyGroups(['ui_overlay', 'enemies', 'boss', 'trashes']).map(obj => {
             if(obj !== undefined){

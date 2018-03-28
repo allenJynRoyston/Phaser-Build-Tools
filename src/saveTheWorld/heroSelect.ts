@@ -41,6 +41,8 @@ class PhaserGameObject {
       // initiate control class
       let game = new Phaser.Game(options.width, options.height, Phaser.WEBGL, el, { preload: preload, create: create, update: update});
           game.preserveDrawingBuffer = true;
+
+
       const phaserMaster = new PHASER_MASTER({game: game, resolution: {width: options.width, height: options.height}}),
             phaserControls = new PHASER_CONTROLS(),
             phaserMouse = new PHASER_MOUSE({showDebugger: false}),
@@ -85,6 +87,7 @@ class PhaserGameObject {
         game.load.atlas('atlas', `${folder}/spritesheets/heroSelect/heroSelectAtlas.png`, `${folder}/spritesheets/heroSelect/heroSelectAtlas.json`, Phaser.Loader.TEXTURE_ATLAS_JSON_HASH);
         game.load.atlas('atlas_main', `${folder}/spritesheets/main/main.png`, `${folder}/spritesheets/main/main.json`, Phaser.Loader.TEXTURE_atlas_main_JSON_HASH);
         game.load.atlas('atlas_weapons', `${folder}/spritesheets/weapons/weaponsAtlas.png`, `${folder}/spritesheets/weapons/weaponsAtlas.json`, Phaser.Loader.TEXTURE_atlas_main_JSON_HASH);
+        game.load.atlas('atlas_ships', `${folder}/spritesheets/ships/ships.png`, `${folder}/spritesheets/ships/ships.json`, Phaser.Loader.TEXTURE_atlas_main_JSON_HASH);
 
         // font
         game.load.bitmapFont('gem', `${folder}/fonts/gem.png`, `${folder}/fonts/gem.xml`);
@@ -103,6 +106,7 @@ class PhaserGameObject {
 
       /******************/
       function create(){
+
         let game = phaserMaster.game();
         // assign game to classes
         phaserControls.assign(game)
@@ -114,7 +118,7 @@ class PhaserGameObject {
         phaserGroup.assign(game, 20)
         phaserBitmapdata.assign(game)
         weaponManager.assign(game, phaserMaster, phaserSprites, phaserGroup, 'atlas_weapons')
-        playerManager.assign(game, phaserMaster, phaserSprites, phaserTexts, phaserGroup, phaserControls, weaponManager, 'atlas_main')
+        playerManager.assign(game, phaserMaster, phaserSprites, phaserTexts, phaserGroup, phaserControls, weaponManager, 'atlas_ships', 'atlas_weapons')
         utilityManager.assign(game, phaserSprites, phaserBitmapdata, phaserGroup, 'atlas_main')
 
         // phaserMaster
@@ -143,7 +147,7 @@ class PhaserGameObject {
 
         // animate in
         utilityManager.buildOverlayBackground('#ffffff', '#ffffff', 19, true)
-        utilityManager.buildOverlayGrid(80, 20, 'landmine.png')
+        utilityManager.buildOverlayGrid(240, 132, 20, 'logo_small.png')
 
         // backgrounds
         let bg_clouds = phaserSprites.addTilespriteFromAtlas({ name: 'bg_clouds', group: 'ui_bg', x: container_1.x, y: container_1.y, width: container_1.width, height: container_1.height, atlas: 'atlas', filename: 'bg_clouds.png'});
@@ -294,69 +298,116 @@ MOVEMENT:           ${profilePictures[val].movement}
             }
         phaserGroup.add(18, profileSelector)
 
-        // loadout
-        let i;
-        let primaryWeaponList = [];
-        let secondaryWeaponList = [];
-        let perkList = []
+        //phaserGroup.addMany(0, [container_1])
+        phaserGroup.addMany(1, [bg_space])
+        // loadout preview is on layer 2
+        phaserGroup.addMany(6, [bg_clouds, bg_cityscape, bg_cityscape_1, bg_cityscape_2, bg_cityscape_3])
+        phaserGroup.addMany(10, [verticleFrame, dividerFrame1])
+        phaserGroup.addMany(14, [pointer, downarrow])
+      }
+      /******************/
 
-        i = 0
+      /******************/
+      function buildLoadout(pilotSelection:number){
+        let {weaponData, pilotData} = phaserMaster.getOnly(['weaponData', 'pilotData'])
+        let {container_2, downarrow} = phaserSprites.getOnly(['container_2', 'downarrow'])
+        let padding = 20;
+
+        phaserSprites.getManyGroups(['ui_loadout', 'ui_box_selected']).map(obj => {
+          phaserSprites.destroy(obj.name)
+        })
+
+        phaserTexts.getManyGroups(['ui_loadout']).map(obj => {
+          phaserTexts.destroy(obj.name)
+        })
+
+        let allPrimaryWeapons = []
+        let allSecondaryWeapons = []
+        let allPerks = []
+
         for (let key of Object.keys(weaponData.primaryWeapons)) {
-          let boxPadding = 5;
-          let item = weaponData.primaryWeapons[key]
-          let box = phaserSprites.addFromAtlas({ name: `box_pw_${i}`, group: 'ui_loadout', y: container_2.y + 90, atlas: 'atlas', filename: `ui_box_unselected.png`, alpha: 0});
-              box.anchor.setTo(0.5, 0.5)
-          let gap = (box.width + boxPadding)/2 *(returnSizeOfObject(weaponData.primaryWeapons)-1)
-          box.x = (container_2.x + (i*box.width) + container_2.width/2) - gap + (i * boxPadding)
-          box.alpha = 1
-
-          let sbox = phaserSprites.addFromAtlas({ name: `sbox_pw_${i}`, group: 'ui_box_selected', y: container_2.y + 90, atlas: 'atlas', filename: `ui_box_selected.png`, alpha: 0});
-              sbox.anchor.setTo(0.5, 0.5)
-          sbox.x = (container_2.x + (i*sbox.width) + container_2.width/2) - gap + (i * boxPadding)
-          sbox.alpha = 0
-
-          let icon = phaserSprites.addFromAtlas({ name: `icon_pw_${i}`, group: 'ui_loadout', y: container_2.y + 90, atlas: 'atlas_weapons', filename: `${item.spriteIcon}`, alpha: 1});
-              icon.anchor.setTo(0.5, 0.5)
-              icon.x = (container_2.x + (i*sbox.width) + container_2.width/2) - gap + (i * boxPadding)
-
-          primaryWeaponList.push(item)
-          i++;
-          phaserGroup.addMany(18, [box, sbox])
-          phaserGroup.add(18, icon)
+          allPrimaryWeapons.push(weaponData.primaryWeapons[key])
         }
 
-        i = 0;
         for (let key of Object.keys(weaponData.secondaryWeapons)) {
-          let boxPadding = 5;
-          let item = weaponData.secondaryWeapons[key]
-          let box = phaserSprites.addFromAtlas({ name: `box_sw_${i}`, group: 'ui_loadout', y: container_2.y + 140, atlas: 'atlas', filename: `ui_box_unselected.png`, alpha: 0});
-              box.anchor.setTo(0.5, 0.5)
-          let gap = (box.width + boxPadding)/2 *(returnSizeOfObject(weaponData.secondaryWeapons)-1)
-          box.x = (container_2.x + (i*box.width) + container_2.width/2) - gap + (i * boxPadding)
-          box.alpha = 1
-
-          let sbox = phaserSprites.addFromAtlas({ name: `sbox_sw_${i}`, group: 'ui_box_selected', y: container_2.y + 140, atlas: 'atlas', filename: `ui_box_selected.png`, alpha: 0});
-              sbox.anchor.setTo(0.5, 0.5)
-          sbox.x = (container_2.x + (i*sbox.width) + container_2.width/2) - gap + (i * boxPadding)
-          sbox.alpha = 0
-
-          let icon = phaserSprites.addFromAtlas({ name: `icon_sw_${i}`, group: 'ui_loadout', y: container_2.y + 140, atlas: 'atlas_weapons', filename: `${item.spriteIcon}`, alpha: 1});
-              icon.anchor.setTo(0.5, 0.5)
-              icon.x = (container_2.x + (i*sbox.width) + container_2.width/2) - gap + (i * boxPadding)
-
-          secondaryWeaponList.push(item)
-          i++;
-          phaserGroup.addMany(18, [box, sbox])
-          phaserGroup.add(18, icon)
+          allSecondaryWeapons.push(weaponData.secondaryWeapons[key])
         }
 
-        i = 0
         for (let key of Object.keys(weaponData.perks)) {
+          allPerks.push(weaponData.perks[key])
+        }
+
+        // match with specific pilot lists
+        let primaryWeaponList = allPrimaryWeapons.filter(obj => {
+          for(let i = 0; i < pilotData.pilots[pilotSelection].weapons.length; i++){
+             if(obj.reference === pilotData.pilots[pilotSelection].weapons[i]){ return obj }
+          }
+        })
+
+        let secondaryWeaponList = allSecondaryWeapons.filter(obj => {
+          for(let i = 0; i < pilotData.pilots[pilotSelection].subweapons.length; i++){
+             if(obj.reference === pilotData.pilots[pilotSelection].subweapons[i]){ return obj }
+          }
+        })
+
+        let perkList = allPerks.filter(obj => {
+          for(let i = 0; i < pilotData.pilots[pilotSelection].perks.length; i++){
+             if(obj.reference === pilotData.pilots[pilotSelection].perks[i]){ return obj }
+          }
+        })
+
+        phaserMaster.forceLet('primaryWeaponList', primaryWeaponList)
+        phaserMaster.forceLet('secondaryWeaponList', secondaryWeaponList)
+        phaserMaster.forceLet('perkList', perkList)
+
+        // loadout
+
+        primaryWeaponList.map( (obj, i) => {
+            let boxPadding = 5;
+            let box = phaserSprites.addFromAtlas({ name: `box_pw_${i}`, group: 'ui_loadout', y: container_2.y + 90, atlas: 'atlas', filename: `ui_box_unselected.png`, alpha: 0});
+                box.anchor.setTo(0.5, 0.5)
+            let gap = (box.width + boxPadding)/2 *(primaryWeaponList.length-1)
+            box.x = (container_2.x + (i*box.width) + container_2.width/2) - gap + (i * boxPadding)
+            box.alpha = 1
+
+            let sbox = phaserSprites.addFromAtlas({ name: `sbox_pw_${i}`, group: 'ui_box_selected', y: container_2.y + 90, atlas: 'atlas', filename: `ui_box_selected.png`, alpha: 0});
+                sbox.anchor.setTo(0.5, 0.5)
+            sbox.x = (container_2.x + (i*sbox.width) + container_2.width/2) - gap + (i * boxPadding)
+            sbox.alpha = 0
+
+            let icon = phaserSprites.addFromAtlas({ name: `icon_pw_${i}`, group: 'ui_loadout', y: container_2.y + 90, atlas: 'atlas_weapons', filename: `${obj.spriteIcon}`, alpha: 1});
+                icon.anchor.setTo(0.5, 0.5)
+                icon.x = (container_2.x + (i*sbox.width) + container_2.width/2) - gap + (i * boxPadding)
+
+            phaserGroup.addMany(13, [box, sbox, icon])
+        })
+
+        secondaryWeaponList.map( (obj, i) => {
+            let boxPadding = 5;
+            let box = phaserSprites.addFromAtlas({ name: `box_sw_${i}`, group: 'ui_loadout', y: container_2.y + 140, atlas: 'atlas', filename: `ui_box_unselected.png`, alpha: 0});
+                box.anchor.setTo(0.5, 0.5)
+            let gap = (box.width + boxPadding)/2 *(secondaryWeaponList.length-1)
+            box.x = (container_2.x + (i*box.width) + container_2.width/2) - gap + (i * boxPadding)
+            box.alpha = 1
+
+            let sbox = phaserSprites.addFromAtlas({ name: `sbox_sw_${i}`, group: 'ui_box_selected', y: container_2.y + 140, atlas: 'atlas', filename: `ui_box_selected.png`, alpha: 0});
+                sbox.anchor.setTo(0.5, 0.5)
+            sbox.x = (container_2.x + (i*sbox.width) + container_2.width/2) - gap + (i * boxPadding)
+            sbox.alpha = 0
+
+            let icon = phaserSprites.addFromAtlas({ name: `icon_sw_${i}`, group: 'ui_loadout', y: container_2.y + 140, atlas: 'atlas_weapons', filename: `${obj.spriteIcon}`, alpha: 1});
+                icon.anchor.setTo(0.5, 0.5)
+                icon.x = (container_2.x + (i*sbox.width) + container_2.width/2) - gap + (i * boxPadding)
+
+            phaserGroup.addMany(13, [box, sbox, icon])
+        })
+
+
+        perkList.map( (obj, i) => {
           let boxPadding = 5;
-          let item = weaponData.perks[key]
           let box = phaserSprites.addFromAtlas({ name: `box_sp_${i}`, group: 'ui_loadout', y: container_2.y + 190, atlas: 'atlas', filename: `ui_box_unselected.png`, alpha: 0});
               box.anchor.setTo(0.5, 0.5)
-          let gap = (box.width + boxPadding)/2 *(returnSizeOfObject(weaponData.perks)-1)
+          let gap = (box.width + boxPadding)/2 *(perkList.length-1)
           box.x = (container_2.x + (i*box.width) + container_2.width/2) - gap + (i * boxPadding)
           box.alpha = 1
 
@@ -365,19 +416,13 @@ MOVEMENT:           ${profilePictures[val].movement}
           sbox.x = (container_2.x + (i*sbox.width) + container_2.width/2) - gap + (i * boxPadding)
           sbox.alpha = 0
 
-          let icon = phaserSprites.addFromAtlas({ name: `icon_sp_${i}`, group: 'ui_loadout', y: container_2.y + 190, atlas: 'atlas_weapons', filename: `${item.spriteIcon}`, alpha: 1});
+          let icon = phaserSprites.addFromAtlas({ name: `icon_sp_${i}`, group: 'ui_loadout', y: container_2.y + 190, atlas: 'atlas_weapons', filename: `${obj.spriteIcon}`, alpha: 1});
               icon.anchor.setTo(0.5, 0.5)
               icon.x = (container_2.x + (i*sbox.width) + container_2.width/2) - gap + (i * boxPadding)
 
-          perkList.push(item)
-          i++;
-          phaserGroup.addMany(17, [box, sbox])
-          phaserGroup.add(18, icon)
-        }
+          phaserGroup.addMany(13, [box, sbox, icon])
+        })
 
-        phaserMaster.let('primaryWeaponList', primaryWeaponList)
-        phaserMaster.let('secondaryWeaponList', secondaryWeaponList)
-        phaserMaster.let('perkList', perkList)
 
         let loadoutCatagorySelector = phaserSprites.addFromAtlas({ name: `loadoutCatagorySelector`, group: 'ui_loadout', atlas: 'atlas', filename: 'ui_pointer.png', visible: false, alpha: 0});
             loadoutCatagorySelector.anchor.setTo(0.5, 0.5)
@@ -412,34 +457,27 @@ MOVEMENT:           ${profilePictures[val].movement}
               this.visible
             }
 
-        let loadoutDescription = phaserSprites.addFromAtlas({ name: 'loadoutDescription', group: 'ui_textholders', atlas: 'atlas', filename: 'ui_descriptionbox_small.png', visible: false});
+        let loadoutDescription = phaserSprites.addFromAtlas({ name: 'loadoutDescription', group: 'ui_loadout', atlas: 'atlas', filename: 'ui_descriptionbox_small.png', visible: false});
             loadoutDescription.anchor.setTo(0.5, 0.5)
             phaserSprites.centerOnPoint('loadoutDescription', container_2.width/2 + loadoutDescription.width/2, container_2.y + 310);
-        let loadoutDescriptionText = phaserTexts.add({name: 'loadoutDescriptionText', group: 'ui_text', x:loadoutDescription.x, y: loadoutDescription.y,  font: 'gem', size: 14, default: ``})
+        let loadoutDescriptionText = phaserTexts.add({name: 'loadoutDescriptionText', group: 'ui_loadout', x:loadoutDescription.x, y: loadoutDescription.y,  font: 'gem', size: 14, default: ``})
             loadoutDescriptionText.anchor.setTo(0.5, 0.5)
             loadoutDescriptionText.maxWidth = loadoutDescription.width - padding*2
             phaserGroup.add(17, loadoutDescription)
             phaserGroup.add(18, loadoutDescriptionText)
-
-        //phaserGroup.addMany(0, [container_1])
-        phaserGroup.addMany(1, [bg_space])
-        // loadout preview is on layer 2
-        phaserGroup.addMany(6, [bg_clouds, bg_cityscape, bg_cityscape_1, bg_cityscape_2, bg_cityscape_3])
-        phaserGroup.addMany(10, [verticleFrame, dividerFrame1])
-        phaserGroup.addMany(15, [pointer, downarrow])
       }
       /******************/
 
       /******************/
       function preloadComplete(){
           let game = phaserMaster.game();
-          let {pointer} = phaserSprites.getAll('OBJECT');
-          let {currentSelection} = phaserMaster.getAll();
+          let {pointer} = phaserSprites.getOnly(['pointer']);
+          let {currentSelection, pilotSelection} = phaserMaster.getOnly(['currentSelection', 'pilotSelection']);
 
           // setDefault
           pointer.updateLocation(currentSelection)
+          updateProfileSelection(pilotSelection)
           updateWeaponSelected()
-          updateProfileSelection(0)
 
           overlayControls('WIPEOUT', () => {
             // change state
@@ -453,7 +491,7 @@ MOVEMENT:           ${profilePictures[val].movement}
 
       /******************/
       function overlayControls(transition:string, callback:any = ()=>{}){
-        utilityManager.overlayControls({transition: transition, delay: 500, speed: 500, tileDelay: 15}, callback)
+        utilityManager.overlayControls({transition: transition, delay: 1, speed: 250, tileDelay: 10}, callback)
       }
       /******************/
 
@@ -464,9 +502,10 @@ MOVEMENT:           ${profilePictures[val].movement}
         let {gap, shots} = {gap: 10, shots: 2}
         let centerShots = (gap * (shots-1))/2
 
+        ship.fireWeapon();
         for(let i = 0; i < shots; i++){
           setTimeout(() => {
-            weaponManager.createBullet({name: `bullet_${game.rnd.integer()}`, group: 'ship_wpn_preview', x: ship.x + (i * gap) - centerShots, y: ship.y, spread: 0, layer: 3})
+            weaponManager.createBullet({name: `bullet_${game.rnd.integer()}`, group: 'ship_wpn_preview', x: ship.x + (i * gap) - centerShots, y: ship.y, spread: 0, layer: 7})
          }, 25)
         }
       }
@@ -479,8 +518,9 @@ MOVEMENT:           ${profilePictures[val].movement}
         let {gap, shots} = {gap: 30, shots: 1}
         let centerShots = (gap * (shots-1))/2
 
+        ship.fireWeapon();
         for(let i = 0; i < shots; i++){
-          weaponManager.createLaser({name: `laser_${game.rnd.integer()}`, group: 'ship_wpn_preview', x: ship.x + (i * gap) - centerShots, y: ship.y - ship.height/2, spread: 0, layer: 2})
+          weaponManager.createLaser({name: `laser_${game.rnd.integer()}`, group: 'ship_wpn_preview', x: ship.x + (i * gap) - centerShots, y: ship.y - ship.height/2, spread: 0, layer: 7})
          }
       }
       /******************/
@@ -493,8 +533,9 @@ MOVEMENT:           ${profilePictures[val].movement}
         let centerShots = (gap * (shots-1))/2
 
         // always shoots two at a minimum
+        ship.fireWeapon();
         for(let i = 0; i < shots; i++){
-          weaponManager.createMissle({name: `missle_${game.rnd.integer()}`, group: 'ship_wpn_preview', x: ship.x + (i * gap) - centerShots, y: ship.y - ship.height/2, spread:(i % 2 === 0 ? -0.50 : 0.50), layer: 2})
+          weaponManager.createMissle({name: `missle_${game.rnd.integer()}`, group: 'ship_wpn_preview', x: ship.x + (i * gap) - centerShots, y: ship.y - ship.height/2, spread:(i % 2 === 0 ? -0.50 : 0.50), layer: 7})
         }
       }
       /******************/
@@ -517,7 +558,9 @@ MOVEMENT:           ${profilePictures[val].movement}
                })
             }
         }
-        weaponManager.createClusterbomb({name: `clusterbomb_${game.rnd.integer()}`, group: 'ship_wpn_preview', x: ship.x, y: ship.y, layer: 2}, onDestroy)
+
+        ship.fireSubweapon();
+        weaponManager.createClusterbomb({name: `clusterbomb_${game.rnd.integer()}`, group: 'ship_wpn_preview', x: ship.x - 22, y: ship.y, layer: 2}, onDestroy)
       }
       /******************/
 
@@ -542,7 +585,8 @@ MOVEMENT:           ${profilePictures[val].movement}
 
         for(let i = 0; i < 3; i++){
           setTimeout(() => {
-            weaponManager.createTriplebomb({name: `triplebomb_${game.rnd.integer()}`, group: 'ship_wpn_preview', x: ship.x, y: ship.y, layer: 2})
+            ship.fireSubweapon();
+            weaponManager.createTriplebomb({name: `triplebomb_${game.rnd.integer()}`, group: 'ship_wpn_preview', x: ship.x + 20, y: ship.y, layer: 2})
           }, i * 300)
         }
 
@@ -600,6 +644,10 @@ MOVEMENT:           ${profilePictures[val].movement}
 
         // PREVIEW SUBWEAPONS
         if(type === 'SECONDARY'){
+          phaserSprites.getGroup('ship_wpn_preview').map(obj => {
+            obj.destroyIt();
+          })
+
           switch(secondaryWeaponList[subWeaponSelection].reference){
             case 'CLUSTERBOMB':
               createClusterbomb()
@@ -638,30 +686,29 @@ MOVEMENT:           ${profilePictures[val].movement}
         let {profileSelector, loadoutCatagorySelector, container_3} = phaserSprites.getOnly(['profileSelector', 'loadoutCatagorySelector', 'container_3']);
         let {pilotDescriptionText} = phaserTexts.getOnly(['pilotDescriptionText'])
 
+        phaserMaster.forceLet('primaryWeaponSelection', 0)
+        phaserMaster.forceLet('subWeaponSelection', 0)
+        phaserMaster.forceLet('perkSelection', 0)
+
         if( phaserSprites.get('ship') !== undefined ){
           playerManager.destroyShip('ship')
         }
 
-        let ship
-        switch(val){
-          case 0:
-            ship = playerManager.createShip1({name: 'ship', group: 'playership', layer: 5});
-            break
-          case 1:
-            ship = playerManager.createShip1({name: 'ship', group: 'playership', layer: 5});
-            break
-          case 2:
-            ship = playerManager.createShip1({name: 'ship', group: 'playership', layer: 5});
-            break
-        }
-
-        // create ship preview
-        ship.visible = true;
-        phaserSprites.centerOnPoint('ship', container_3.x + container_3.width/2 + ship.width/2, container_3.height - 100 );
-
-
+        buildLoadout(val)
         profileSelector.updateLocation(val)
         pilotDescriptionText.updateThisText(val)
+        updateWeaponSelected()
+
+        // create ship preview
+        let {primaryWeaponSelection, primaryWeaponList, secondaryWeaponList, subWeaponSelection, perkSelection, perkList} = phaserMaster.getOnly(['primaryWeaponSelection', 'primaryWeaponList', 'secondaryWeaponList', 'subWeaponSelection', 'perkSelection', 'perkList'])
+        let ship = playerManager.createShip({name: 'ship', group: 'playership', shipId: val, layer: 5});
+
+            ship.attachPerk(perkList[perkSelection].reference)
+            ship.attachWeapon(primaryWeaponList[primaryWeaponSelection].reference)
+            ship.attachSubweapon(secondaryWeaponList[subWeaponSelection].reference)
+
+        ship.visible = true;
+        phaserSprites.centerOnPoint('ship', container_3.x + container_3.width/2 + ship.width/2, container_3.height - 100 );
       }
       /******************/
 
@@ -691,61 +738,68 @@ MOVEMENT:           ${profilePictures[val].movement}
 
       /******************/
       function loadoutItemSelector(val:number){
-        let {weaponData, loadoutSelection, primaryWeaponSelection, subWeaponSelection, perkSelection, primaryWeaponList, secondaryWeaponList, perkList} = phaserMaster.getAll()
-        let {downarrow, loadoutCatagorySelector} = phaserSprites.getAll('OBJECT')
-        let {loadoutDescriptionText} = phaserTexts.getAll('OBJECT');
+        let {weaponData, loadoutSelection, primaryWeaponSelection, subWeaponSelection, perkSelection, primaryWeaponList, secondaryWeaponList, perkList} = phaserMaster.getOnly(['weaponData', 'loadoutSelection', 'primaryWeaponSelection', 'subWeaponSelection', 'perkSelection', 'primaryWeaponList', 'secondaryWeaponList', 'perkList'])
+        let {downarrow, loadoutCatagorySelector, ship} = phaserSprites.getOnly(['downarrow', 'loadoutCatagorySelector', 'ship'])
+        let {loadoutDescriptionText} = phaserTexts.getOnly(['loadoutDescriptionText']);
 
-        if(loadoutSelection === 0){
-          primaryWeaponSelection += val
-          if(val > 0){
-            if(primaryWeaponSelection >= returnSizeOfObject(weaponData.primaryWeapons)){
-               primaryWeaponSelection = 0
+
+        switch(loadoutSelection){
+          case 0:
+            primaryWeaponSelection += val
+            if(val > 0){
+              if(primaryWeaponSelection >= primaryWeaponList.length){
+                 primaryWeaponSelection = 0
+              }
+              phaserMaster.forceLet('primaryWeaponSelection', primaryWeaponSelection)
             }
-            phaserMaster.forceLet('primaryWeaponSelection', primaryWeaponSelection)
-          }
-          if(val < 0){
-            if(primaryWeaponSelection < 0){
-               primaryWeaponSelection = returnSizeOfObject(weaponData.primaryWeapons) - 1
+            if(val < 0){
+              if(primaryWeaponSelection < 0){
+                 primaryWeaponSelection = primaryWeaponList.length - 1
+              }
+              phaserMaster.forceLet('primaryWeaponSelection', primaryWeaponSelection)
             }
-            phaserMaster.forceLet('primaryWeaponSelection', primaryWeaponSelection)
-          }
 
-          loadoutDescriptionText.setText(`${primaryWeaponList[primaryWeaponSelection].name}: ${primaryWeaponList[primaryWeaponSelection].description}` )
-        }
-
-        if(loadoutSelection === 1){
+            loadoutDescriptionText.setText(`${primaryWeaponList[primaryWeaponSelection].name}: ${primaryWeaponList[primaryWeaponSelection].description}` )
+            break
+          case 1:
           subWeaponSelection += val
-          if(val > 0){
-            if(subWeaponSelection >= returnSizeOfObject(weaponData.secondaryWeapons)){
-               subWeaponSelection = 0
+            if(val > 0){
+              if(subWeaponSelection >= secondaryWeaponList.length){
+                 subWeaponSelection = 0
+              }
+              phaserMaster.forceLet('subWeaponSelection', subWeaponSelection)
             }
-            phaserMaster.forceLet('subWeaponSelection', subWeaponSelection)
-          }
-          if(val < 0){
-            if(subWeaponSelection < 0){
-               subWeaponSelection = returnSizeOfObject(weaponData.secondaryWeapons) - 1
+            if(val < 0){
+              if(subWeaponSelection < 0){
+                 subWeaponSelection = secondaryWeaponList.length - 1
+              }
+              phaserMaster.forceLet('subWeaponSelection', subWeaponSelection)
             }
-            phaserMaster.forceLet('subWeaponSelection', subWeaponSelection)
-          }
-          loadoutDescriptionText.setText(`${secondaryWeaponList[subWeaponSelection].name}: ${secondaryWeaponList[subWeaponSelection].description}` )
+
+            loadoutDescriptionText.setText(`${secondaryWeaponList[subWeaponSelection].name}: ${secondaryWeaponList[subWeaponSelection].description}` )
+            break
+          case 2:
+            perkSelection += val
+            if(val > 0){
+              if(perkSelection >= perkList.length){
+                 perkSelection = 0
+              }
+              phaserMaster.forceLet('perkSelection', perkSelection)
+            }
+            if(val < 0){
+              if(perkSelection < 0){
+                 perkSelection = perkList.length - 1
+              }
+              phaserMaster.forceLet('perkSelection', perkSelection)
+            }
+            loadoutDescriptionText.setText(`${perkList[perkSelection].name}: ${perkList[perkSelection].description}` )
+            break
         }
 
-        if(loadoutSelection === 2){
-          perkSelection += val
-          if(val > 0){
-            if(perkSelection >= returnSizeOfObject(weaponData.perks)){
-               perkSelection = 0
-            }
-            phaserMaster.forceLet('perkSelection', perkSelection)
-          }
-          if(val < 0){
-            if(perkSelection < 0){
-               perkSelection = returnSizeOfObject(weaponData.perks) - 1
-            }
-            phaserMaster.forceLet('perkSelection', perkSelection)
-          }
-          loadoutDescriptionText.setText(`${perkList[perkSelection].name}: ${perkList[perkSelection].description}` )
-        }
+        ship.attachPerk(perkList[perkSelection].reference)
+        ship.attachWeapon(primaryWeaponList[primaryWeaponSelection].reference)
+        ship.attachSubweapon(secondaryWeaponList[subWeaponSelection].reference)
+
 
         let box;
         if(loadoutSelection === 0){
@@ -782,7 +836,9 @@ MOVEMENT:           ${profilePictures[val].movement}
         let game = phaserMaster.game();
         let {currentSelection, pilotSelection, loadoutSelection, primaryWeaponList, primaryWeaponSelection, secondaryWeaponList, subWeaponSelection} = phaserMaster.getAll();
         let {profileSelector, loadoutCatagorySelector, pointer, downarrow, loadoutDescription} = phaserSprites.getAll();
+        let {DOWN, UP, LEFT, RIGHT} = phaserControls.getOnly(['DOWN', 'UP', 'LEFT', 'RIGHT', 'A', 'START'])
         let {loadoutDescriptionText} = phaserTexts.getAll('OBJECT')
+        let delay = 0
 
         phaserSprites.getManyGroups(['ui_bg', 'playership', 'ship_wpn_preview']).map(obj => {
           obj.onUpdate()
@@ -812,7 +868,9 @@ MOVEMENT:           ${profilePictures[val].movement}
             phaserMaster.forceLet('currentSelection', null)
             utilityManager.overlayBGControls({transition: 'FADEIN', delay: 0, speed: 250}, () => {
               overlayControls('WIPEIN', () => {
-                startGame();
+                setTimeout(() => {
+                  startGame();
+                }, 1000)
               })
             })
           }
@@ -881,10 +939,10 @@ MOVEMENT:           ${profilePictures[val].movement}
         if(phaserMaster.checkState('LOADOUTSELECT')){
 
 
-          if(phaserControls.checkWithDelay({isActive: true, key: 'A', delay: primaryWeaponList[primaryWeaponSelection].cooldown})){
+          if(loadoutSelection === 0 && phaserControls.checkWithDelay({isActive: false, key: 'R3', delay: primaryWeaponList[primaryWeaponSelection].cooldown})){
             playLoadoutPreview('PRIMARY')
           }
-          if(phaserControls.checkWithDelay({isActive: true, key: 'B', delay: secondaryWeaponList[subWeaponSelection].cooldown})){
+          if(loadoutSelection === 1 && phaserControls.checkWithDelay({isActive: false, key: 'R3', delay: 2000})){
             playLoadoutPreview('SECONDARY')
           }
 

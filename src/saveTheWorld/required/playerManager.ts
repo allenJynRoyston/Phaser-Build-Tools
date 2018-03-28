@@ -9,12 +9,13 @@ export class PLAYER_MANAGER {
   phaserControls:any;
   weaponManager:any;
   atlas:any;
-
+  weaponAtlas:any
+  player:any
   constructor(){
 
   }
 
-  public assign(game:any, phaserMaster:any, phaserSprites:any, phaserTexts:any, phaserGroup:any, phaserControls:any, weaponManager:any, atlas:string){
+  public assign(game:any, phaserMaster:any, phaserSprites:any, phaserTexts:any, phaserGroup:any, phaserControls:any, weaponManager:any, atlas:string, weaponAtlas:string){
     this.game = game;
     this.phaserSprites = phaserSprites;
     this.phaserMaster = phaserMaster;
@@ -23,18 +24,23 @@ export class PLAYER_MANAGER {
     this.phaserControls = phaserControls;
     this.weaponManager = weaponManager;
     this.atlas = atlas
+    this.weaponAtlas = weaponAtlas
+    this.player = null;
   }
 
   /******************/
-  public createShip1(params:any, updateHealth:any = () => {}, loseLife:any = () => {}, onUpdate:any = () => {}){
+  public createShip(params:any, updateHealth:any = () => {}, loseLife:any = () => {}, onUpdate:any = () => {}){
     let game = this.game
-
+    let shipId = params.shipId + 1
+    let shieldFrames = [...Phaser.Animation.generateFrameNames(`ship_${shipId}_shield_`, 1, 6, '.png'), ...Phaser.Animation.generateFrameNames(`ship_${shipId}_shield_`, 1, 6, '.png').reverse()]
+    let healFrames =   [...Phaser.Animation.generateFrameNames(`ship_${shipId}_heal_`, 1, 6, '.png'),   ...Phaser.Animation.generateFrameNames(`ship_${shipId}_heal_`, 1, 6, '.png').reverse()]
     //  The hero!
-    let player = this.phaserSprites.addFromAtlas({name: params.name, group: params.group, atlas: this.atlas,  filename: 'ship_body.png', visible: false})
+    let player = this.phaserSprites.addFromAtlas({name: params.name, group: params.group, atlas: this.atlas,  filename: `ship_${shipId}.png`, visible: false})
         player.anchor.setTo(0.5, 0.5);
         player.scale.setTo(1, 1)
         player.isInvincible = false;
         player.isDead = false
+        player.onLayer = params.layer
         player.exhaustPoints = {
           center: 40,
           top: 25,
@@ -44,6 +50,8 @@ export class PLAYER_MANAGER {
         this.phaserGroup.add(params.layer, player)
         this.createShipExhaust(player, params);
 
+        // player.animations.add('shields', healFrames, 1, true)
+        // player.animations.play('shields', 10, true)
 
         player.onUpdate = () => {
           onUpdate(player)
@@ -135,25 +143,25 @@ export class PLAYER_MANAGER {
             })
         }
 
-        player.syncExhaust = () => {
-          let player = this.phaserSprites.get(params.name)
-          let exhaust = this.phaserSprites.get(`${params.name}_exhaust`)
-
-          if(exhaust !== undefined && player !== undefined){
-            exhaust.updateCords(player.x, player.y)
-          }
+        player.fireWeapon = () => {
+          this.phaserSprites.get(`${params.name}_ship_weapon`).fireWeapon()
         }
 
+        player.fireSubweapon = () => {
+          this.phaserSprites.get(`${params.name}_ship_subweapon`).fireWeapon()
+        }
+
+        player.regenerateHealth = (active:Boolean = false) => {
+          //console.log("regenerating health..." + active)
+        }
 
         player.moveX = (val:number) => {
           player.x += val
-          player.syncExhaust();
           player.checkLimits()
         }
 
         player.moveY = (val:number) => {
           player.y += val
-          player.syncExhaust();
           player.checkLimits()
         }
 
@@ -191,46 +199,170 @@ export class PLAYER_MANAGER {
             }, player)
         }
 
+        player.attachPerk = (type:string) => {
+          this.attachPerk(player, params, type)
+        }
 
+        player.attachWeapon = (weaponType:string) => {
+          this.attachWeaponSprite(player, params, weaponType)
+        }
+
+        player.attachSubweapon = (weaponType:string) => {
+          this.attachSubWeaponSprite(player, params, weaponType)
+        }
+
+      this.player = player;
       return player;
 
   }
   /******************/
 
   /******************/
+  private attachPerk(player:any, params:any, type:string){
+    let animationSprites;
+    let framerate
+    let onLayer
+    switch(type){
+      case 'FIREPOWER':
+        animationSprites = [...Phaser.Animation.generateFrameNames('firepower_', 1, 8, '.png'), ...Phaser.Animation.generateFrameNames('firepower_', 1, 8, '.png').reverse()]
+        framerate = 30;
+        break
+      case 'ARMORPLATING':
+        animationSprites = ['armor_plating.png']
+        framerate = 30;
+        break
+      case 'REGEN':
+        animationSprites = [...Phaser.Animation.generateFrameNames('shield_layer_', 1, 8, '.png')]
+        framerate = 30;
+        break
+    }
+
+    if(this.phaserSprites.get(`${params.name}_ship_perk`) !== undefined){
+      this.phaserSprites.destroy(`${params.name}_ship_perk`)
+    }
+
+    let shipPerk
+    if(type === 'REGEN'){
+      shipPerk = this.phaserSprites.addFromAtlas({name: `${params.name}_ship_perk`, group: params.group, atlas: this.atlas,  filename: animationSprites[0], alpha: 0.5})
+      shipPerk.anchor.setTo(0.5, 0.5)
+      shipPerk.scale.set(1.25, 1.25)
+
+
+      shipPerk.tweenFadeIn = () => {
+        this.game.add.tween(shipPerk).to( {alpha: 0.8}, 1000, Phaser.Easing.Linear.In, true, 8000).onComplete.add(() => {
+          player.regenerateHealth(true)
+          shipPerk.tweenFadeOut()
+        })
+      }
+      shipPerk.tweenFadeOut = () => {
+        this.game.add.tween(shipPerk).to( {alpha: 0.0}, 1000, Phaser.Easing.Linear.In, true, 1000).onComplete.add(() => {
+          player.regenerateHealth(false)
+          shipPerk.tweenFadeIn()
+        })
+      }
+
+      setTimeout(() => {
+        if(shipPerk !== undefined){
+          shipPerk.tweenFadeOut();
+        }
+      },  500)
+
+      shipPerk.animations.add('animate', animationSprites, 1, true)
+      shipPerk.animations.play('animate', framerate, true)
+      player.addChild(shipPerk)
+    }
+    else{
+      shipPerk = this.phaserSprites.addFromAtlas({name: `${params.name}_ship_perk`, group: params.group, atlas: this.atlas,  filename: animationSprites[0], visible: true})
+      shipPerk.anchor.setTo(0.5, 0.5)
+      shipPerk.animations.add('animate', animationSprites, 1, true)
+      shipPerk.animations.play('animate', framerate, true)
+      player.addChild(shipPerk)
+      }
+  }
+  /******************/
+
+  /******************/
+  private attachSubWeaponSprite(player:any, params:any, weaponType:string){
+    let animationSprites;
+    let framerate
+    let onLayer
+    switch(weaponType){
+      case 'CLUSTERBOMB':
+        animationSprites = [...Phaser.Animation.generateFrameNames('cannon_fire_', 1, 8, '.png')]
+        framerate = 20;
+        break
+      case 'TRIPLEBOMB':
+        animationSprites = [...Phaser.Animation.generateFrameNames('cannon2_fire_', 1, 7, '.png'), ...['cannon2_fire_1.png']]
+        framerate = 60;
+        break
+      case 'TURRET':
+        animationSprites = ['turret_base.png']
+        framerate = 30;
+        break
+    }
+
+    if(this.phaserSprites.get(`${params.name}_ship_subweapon`) !== undefined){
+      this.phaserSprites.destroy(`${params.name}_ship_subweapon`)
+    }
+
+    let shipSubweapon = this.phaserSprites.addFromAtlas({name: `${params.name}_ship_subweapon`, group: params.group, atlas: this.weaponAtlas,  filename: animationSprites[0], visible: true})
+        shipSubweapon.anchor.setTo(0.5, 0.5)
+        shipSubweapon.animations.add('fireWeapon', animationSprites, 1, true)
+
+        shipSubweapon.fireWeapon = () => {
+          shipSubweapon.animations.play('fireWeapon', framerate, false)
+        }
+        player.addChild(shipSubweapon)
+  }
+  /******************/
+
+  /******************/
+  private attachWeaponSprite(player:any, params:any, weaponType:string){
+    let animationSprites;
+    let framerate
+    switch(weaponType){
+      case 'BULLET':
+        animationSprites = [...Phaser.Animation.generateFrameNames('bullet_fire_', 1, 4, '.png')]
+        framerate = 60;
+        break
+      case 'LASER':
+        animationSprites = [...Phaser.Animation.generateFrameNames('laser_fire_', 1, 6, '.png')]
+        framerate = 60;
+        break
+      case 'MISSLE':
+        animationSprites = [...Phaser.Animation.generateFrameNames('missle_fire_', 1, 6, '.png')]
+        framerate = 30;
+        break
+    }
+
+    if(this.phaserSprites.get(`${params.name}_ship_weapon`) !== undefined){
+      this.phaserSprites.destroy(`${params.name}_ship_weapon`)
+    }
+
+    let shipWeapon = this.phaserSprites.addFromAtlas({name: `${params.name}_ship_weapon`, group: params.group, atlas: this.weaponAtlas,  filename: animationSprites[0], visible: true})
+        shipWeapon.anchor.setTo(0.5, 0.5)
+        shipWeapon.animations.add('fireWeapon', animationSprites, 1, true)
+
+        shipWeapon.fireWeapon = () => {
+          shipWeapon.animations.play('fireWeapon', framerate, false)
+        }
+        player.addChild(shipWeapon)
+  }
+  /******************/
+
+
+  /******************/
   public createShipExhaust(player:any, params:any){
-    let shipExhaust = this.phaserSprites.addFromAtlas({name: `${params.name}_exhaust`, group: params.group, atlas: this.atlas,  filename: 'exhaust_red_1.png', visible: false})
+    let shipExhaust = this.phaserSprites.addFromAtlas({name: `${params.name}_exhaust`, group: params.group,  x: player.x, y: player.y + player.height/2 + 10, atlas: this.atlas,  filename: 'exhaust_red_1.png', visible: true})
         shipExhaust.animations.add('exhaust_animation', Phaser.Animation.generateFrameNames('exhaust_red_', 1, 8, '.png'), 1, true)
         shipExhaust.animations.play('exhaust_animation', 30, true)
-        this.phaserGroup.add(params.layer, shipExhaust)
         shipExhaust.anchor.setTo(0.5, 0.5)
+        player.addChild(shipExhaust)
+
         shipExhaust.onUpdate = () => {
-          let {currentState} = this.phaserMaster.getState();
-          let {x, width, height, y, visible, isDead} = player;
-          shipExhaust.visible = (currentState !== 'ENDLEVEL') ? player.visible : false;
-          shipExhaust.x = x
-          shipExhaust.y = y + player.exhaustPoints.center;
-          shipExhaust.alpha = (currentState === 'ENDLEVEL') && player.isDead ? 0 : 1
-          shipExhaust.scale.setTo(1, 1)
-        }
-
-        shipExhaust.updateCords = (x, y) => {
-          let {starMomentum} = this.phaserMaster.getOnly(['starMomentum'])
-          shipExhaust.x = x
-          if(starMomentum.y == 0){
-            shipExhaust.y = y + player.exhaustPoints.center;
-            shipExhaust.scale.setTo(1, 1)
-          }
-          if(starMomentum.y > 0){
-            shipExhaust.y = y + player.exhaustPoints.bottom;
-            shipExhaust.scale.setTo(1, 1.5)
-          }
-          if(starMomentum.y < 0){
-            shipExhaust.y = y + player.exhaustPoints.top;
-            shipExhaust.scale.setTo(1, 0.25)
-          }
 
         }
+        shipExhaust.updateCords = (x, y) => {}
 
         shipExhaust.destroyIt = () => {
           this.phaserSprites.destroy(shipExhaust.name)

@@ -8,12 +8,14 @@ export class ENEMY_MANAGER {
   phaserGroup:any
   weaponManager:any;
   atlas:any;
+  atlas_weapons:any;
+  showHitbox:any;
 
-  constructor(){
-
+  constructor(params){
+    this.showHitbox = params.showHitbox;
   }
 
-  public assign(game:any, phaserMaster:any, phaserSprites:any, phaserTexts:any, phaserGroup:any, weaponManager:any, atlas:string){
+  public assign(game:any, phaserMaster:any, phaserSprites:any, phaserTexts:any, phaserGroup:any, weaponManager:any, atlas:string, atlas_weapons:string){
     this.game = game;
     this.phaserSprites = phaserSprites;
     this.phaserMaster = phaserMaster;
@@ -21,7 +23,244 @@ export class ENEMY_MANAGER {
     this.phaserGroup = phaserGroup;
     this.weaponManager = weaponManager;
     this.atlas = atlas
+    this.atlas_weapons = atlas_weapons;
   }
+
+  /******************/
+  public collisionCheck(obj:any, damage:number){
+    this.phaserSprites.getManyGroups(['playership']).map(target => {
+      target.game.physics.arcade.overlap(obj, target, (obj, target)=>{
+        target.takeDamage(damage);
+        obj.destroyIt()
+      }, null, obj);
+    })
+  }
+  /******************/
+
+  /******************/
+  public fireBullet(enemy:any, tracking:Boolean = false){
+    let spriteAnimation = [...Phaser.Animation.generateFrameNames('e_bullet', 1, 1, '.png')]
+    // let ammo =  this.phaserSprites.addFromAtlas({x: x, y: y, name: `enemy_bullet_${this.game.rnd.integer()}`, group: 'enemy_bullets', atlas: this.atlas_weapons, filename: spriteAnimation[0]})
+    //     ammo
+    let onDestroy = () => {}
+    let onUpdate = (bullet:any) => {
+      this.collisionCheck(bullet, 2)
+    }
+    let bullet = this.weaponManager.createBullet({name: `enemy_bullet_${this.game.rnd.integer()}`, group: 'enemy_bullets', x: enemy.x, y: enemy.y, spread: 0, layer: enemy.onLayer + 1}, onDestroy, onUpdate)
+        bullet.body.velocity.y = 300;
+  }
+  /******************/
+
+  /******************/
+  public createSmallEnemy1(options:any, onDamage:any = () => {}, onDestroy:any = () => {}, onFail:any = () => {}, onUpdate:any = () => {}){
+    let game = this.game
+    let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
+    //let enemy = enemyData.BULLET;
+    let enemy = phaserSprites.addFromAtlas({x: options.x, name: `enemy_${game.rnd.integer()}`, group:'enemies', atlas: atlas, filename: `small_1.png`, visible: true})
+        enemy.anchor.setTo(0.5, 0.5);
+        enemy.scale.setTo(1,1);
+        game.physics.enable(enemy, Phaser.Physics.ARCADE);
+        enemy.atTarget = false;
+        enemy.maxHealth = 100;
+        enemy.health = enemy.maxHealth
+        enemy.pierceResistence = 1;
+        enemy.fallThreshold = game.rnd.integerInRange(0, 75)
+        enemy.cosWave = {data: game.math.sinCosGenerator(400, game.world.height * .80 , 0, 1).cos, count: 0}
+        enemy.sinWave = {data: game.math.sinCosGenerator(400, 200 , 1, 10).sin, count: 0}
+        enemy.fireDelay = 0
+        enemy.fireTimer = 500
+        enemy.inPlace = false;
+        enemy.isDestroyed = false;
+        enemy.onLayer = options.layer;
+        phaserGroup.add(options.layer, enemy)
+
+        console.log(enemy.sinWave)
+
+    // add hitboxes
+    let hitboxes = [`small_1_hitbox_1.png`]
+    hitboxes.map(obj => {
+      let e_hitbox = phaserSprites.addFromAtlas({name: `enemy_hitbox_${game.rnd.integer()}`, group:'enemy_hitboxes', atlas: atlas, filename: obj, alpha: this.showHitbox ? 0.75 : 0})
+          e_hitbox.anchor.setTo(0.5, 0.5)
+          game.physics.enable(e_hitbox, Phaser.Physics.ARCADE);
+          enemy.addChild(e_hitbox)
+    })
+
+
+
+    enemy.damageIt = (val:number) => {
+      onDamage(enemy);
+      if(!enemy.atTarget){
+        enemy.health -= val;
+        enemy.tint = 1 * 0xff0000;
+        //this.weaponImpactAnimation(enemy, options, wpnType)
+        enemy.game.add.tween(enemy).to( {tint: 1 * 0xffffff}, 100, Phaser.Easing.Linear.Out, true, 0, 0, false);
+        if(enemy.health <= 0){
+          enemy.destroyIt()
+        }
+      }
+    }
+
+    enemy.removeIt = () => {
+      phaserSprites.destroy(enemy.name);
+    }
+
+    // destroy it
+    enemy.destroyIt = () => {
+      // destroy hitboxes
+      enemy.children.map(obj => {
+        this.phaserSprites.destroy(obj.name);
+      })
+      if(!enemy.isDestroyed){
+       //enemy.body = null;
+       enemy.isDestroyed = true;
+       enemy.tint = 1 * 0xff0000;
+
+       enemy.explodeInterval = setInterval(() => {
+         this.weaponManager.createExplosion(enemy.x + game.rnd.integerInRange(-enemy.width/2, enemy.width/2), enemy.y + game.rnd.integerInRange(-enemy.height/2, enemy.height/2), 1, enemy.onLayer + 1)
+       }, 100)
+
+       enemy.game.add.tween(enemy).to( {y: enemy.y - 15, alpha: 0.5}, 750, Phaser.Easing.Linear.Out, true, 100, 0, false).
+         onComplete.add(() => {
+            clearInterval(enemy.explodeInterval)
+            onDestroy(enemy);
+            this.weaponManager.createExplosion(enemy.x, enemy.y, 1, options.layer + 1)
+            phaserSprites.destroy(enemy.name);
+         })
+       }
+    }
+
+    enemy.onUpdate = () => {
+      onUpdate(enemy);
+      if(game.time.now > enemy.fireDelay && enemy.inPlace){
+          enemy.fireDelay = game.time.now + enemy.fireTimer
+          this.fireBullet(enemy, true)
+      }
+
+
+      if(!enemy.isDestroyed){
+        enemy.y = -(enemy.cosWave.data[enemy.cosWave.count]) - enemy.height
+        enemy.x = enemy.sinWave.data[enemy.sinWave.count] + 100
+        enemy.cosWave.count++
+        enemy.sinWave.count++
+        if(enemy.cosWave.count >= enemy.cosWave.data.length){
+          enemy.removeIt();
+        }
+      }
+      else{
+        enemy.inPlace = true
+      }
+    }
+
+    enemy.removeIt = () => {
+      phaserSprites.destroy(enemy.name)
+    }
+
+
+    return enemy;
+  }
+  /******************/
+
+  /******************/
+  public createBigEnemy1(options:any, onDamage:any = () => {}, onDestroy:any = () => {}, onFail:any = () => {}, onUpdate:any = () => {}){
+    let game = this.game
+    let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
+    //let enemy = enemyData.BULLET;
+    let enemy = phaserSprites.addFromAtlas({x: options.x, name: `enemy_${game.rnd.integer()}`, group:'enemies', atlas: atlas, filename: `big_1.png`, visible: true})
+        enemy.anchor.setTo(0.5, 0.5);
+        enemy.scale.setTo(1,1);
+        game.physics.enable(enemy, Phaser.Physics.ARCADE);
+        enemy.atTarget = false;
+        enemy.maxHealth = 1500;
+        enemy.health = enemy.maxHealth
+        enemy.pierceResistence = 4;
+        enemy.fallThreshold = game.rnd.integerInRange(0, 75)
+        enemy.sinWave = game.math.sinCosGenerator(400 + options.y, game.world.height/2 , 1, 1);
+        enemy.count = 0;
+        enemy.fireDelay = 0
+        enemy.fireTimer = 500
+        enemy.inPlace = false;
+        enemy.isDestroyed = false;
+        enemy.onLayer = options.layer;
+        phaserGroup.add(options.layer, enemy)
+
+    // add hitboxes
+    let hitboxes = [`big_1_hitbox_1.png`, `big_1_hitbox_2.png`]
+    hitboxes.map(obj => {
+      let e_hitbox = phaserSprites.addFromAtlas({name: `enemy_hitbox_${game.rnd.integer()}`, group:'enemy_hitboxes', atlas: atlas, filename: obj, alpha: this.showHitbox ? 0.75 : 0})
+          e_hitbox.anchor.setTo(0.5, 0.5)
+          game.physics.enable(e_hitbox, Phaser.Physics.ARCADE);
+          enemy.addChild(e_hitbox)
+    })
+
+
+
+    enemy.damageIt = (val:number) => {
+      onDamage(enemy);
+      if(!enemy.atTarget){
+        enemy.health -= val;
+        enemy.tint = 1 * 0xff0000;
+        //this.weaponImpactAnimation(enemy, options, wpnType)
+        enemy.game.add.tween(enemy).to( {tint: 1 * 0xffffff}, 100, Phaser.Easing.Linear.Out, true, 0, 0, false);
+        if(enemy.health <= 0){
+          enemy.destroyIt()
+        }
+      }
+    }
+
+    enemy.removeIt = () => {
+      phaserSprites.destroy(enemy.name);
+    }
+
+    // destroy it
+    enemy.destroyIt = () => {
+      // destroy hitboxes
+      enemy.children.map(obj => {
+        this.phaserSprites.destroy(obj.name);
+      })
+      if(!enemy.isDestroyed){
+       //enemy.body = null;
+       enemy.isDestroyed = true;
+       enemy.tint = 1 * 0xff0000;
+
+       enemy.explodeInterval = setInterval(() => {
+         this.weaponManager.createExplosion(enemy.x + game.rnd.integerInRange(-enemy.width/2, enemy.width/2), enemy.y + game.rnd.integerInRange(-enemy.height/2, enemy.height/2), 1, enemy.onLayer + 1)
+       }, 100)
+
+       enemy.game.add.tween(enemy).to( {y: enemy.y - 15, alpha: 0.5}, 750, Phaser.Easing.Linear.Out, true, 100, 0, false).
+         onComplete.add(() => {
+            clearInterval(enemy.explodeInterval)
+            onDestroy(enemy);
+            this.weaponManager.createExplosion(enemy.x, enemy.y, 1, options.layer + 1)
+            phaserSprites.destroy(enemy.name);
+         })
+       }
+    }
+
+    enemy.onUpdate = () => {
+      onUpdate(enemy);
+      if(game.time.now > enemy.fireDelay && enemy.inPlace){
+          enemy.fireDelay = game.time.now + enemy.fireTimer
+          this.fireBullet(enemy, true)
+      }
+
+
+      if(!enemy.isDestroyed && enemy.count < enemy.sinWave.cos.length/2){
+        enemy.y = -(enemy.sinWave.cos[enemy.count]) - enemy.height
+        enemy.count++
+      }
+      else{
+        enemy.inPlace = true
+      }
+    }
+
+    enemy.removeIt = () => {
+      phaserSprites.destroy(enemy.name)
+    }
+
+
+    return enemy;
+  }
+  /******************/
 
   /******************/
   public createAsteroid(options:any, onDamage:any = () => {}, onDestroy:any = () => {}, onFail:any = () => {}, onUpdate:any = () => {}){
@@ -43,8 +282,21 @@ export class ENEMY_MANAGER {
         enemy.fallThreshold = game.rnd.integerInRange(0, 75)
         phaserGroup.add(options.layer, enemy)
 
+    // add hitboxes
+    let hitboxes = [`1_hitbox_1.png`, `1_hitbox_2.png`]
+    hitboxes.map(obj => {
+      let e_hitbox = phaserSprites.addFromAtlas({name: `enemy_hitbox_${game.rnd.integer()}`, group:'enemy_hitboxes', atlas: atlas, filename: obj, alpha: this.showHitbox ? 0.75 : 0})
+          e_hitbox.anchor.setTo(0.5, 0.5)
+          e_hitbox.destroyIt = (self:any) => {
+            self.body = null;
+            this.phaserSprites.destroy(self.name)
+          }
+          game.physics.enable(e_hitbox, Phaser.Physics.ARCADE);
+          enemy.addChild(e_hitbox)
+    })
 
-    enemy.damageIt = (val:number) => {
+
+    enemy.damageIt = (val:number, wpnType:string = null) => {
       onDamage(enemy);
       if(!enemy.atTarget){
         enemy.health -= val;
@@ -57,7 +309,7 @@ export class ENEMY_MANAGER {
     }
 
     // destroy it
-    enemy.destroyIt = (spawnMore = true) => {
+    enemy.destroyIt = () => {
         // animate it
         let tween = {
           angle: game.rnd.integerInRange(-720, 720),
@@ -163,7 +415,7 @@ export class ENEMY_MANAGER {
         phaserGroup.add(options.layer, enemy)
 
         // damage it
-        enemy.damageIt = (val:number) => {
+        enemy.damageIt = (val:number, wpnType:string = null) => {
           enemy.health -= val;
           enemy.tint = 1 * 0xff0000;
           enemy.game.add.tween(enemy).to( {tint: 1 * 0xffffff}, 100, Phaser.Easing.Linear.Out, true, 0, 0, false);
@@ -277,7 +529,7 @@ export class ENEMY_MANAGER {
         //enemy.fallThreshold = game.rnd.integerInRange(0, 75)
         phaserGroup.add(options.layer, enemy)
 
-    enemy.damageIt = (val:number) => {
+    enemy.damageIt = (val:number, wpnType:string = null) => {
       onDamage(enemy);
       if(!enemy.atTarget){
         enemy.health -= val;
