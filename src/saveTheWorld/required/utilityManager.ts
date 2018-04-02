@@ -23,6 +23,15 @@ export class UTILITY_MANAGER {
     let game = this.game;
     let overlaybmd = this.phaserBitmapdata.addGradient({name: 'um_overlay__bmd', start: start, end: end, width: 5, height: 5, render: false})
     let overlay = this.phaserSprites.add({x: 0, y: 0, name: `um_overlay__bg`, width: game.world.width, height: game.world.height, reference: overlaybmd.cacheBitmapData, visible: visibleOnStart})
+        overlay.flash = (speed:number = 500, callback:any = () => {}) => {
+          overlay.visible = true;
+          overlay.alpha = 1
+          setTimeout(() => {
+            game.add.tween(overlay).to( { alpha: 0 }, speed, Phaser.Easing.Linear.In, true, 0, 0, false).
+              onComplete.add(() => {})
+            callback()
+          }, 250)
+        }
         overlay.fadeIn = (speed:number = 500, callback:any = () => {}) => {
           overlay.visible = true;
           overlay.alpha = 0
@@ -79,6 +88,12 @@ export class UTILITY_MANAGER {
       let {um_overlay__bg} = this.phaserSprites.getOnly(['um_overlay__bg'])
       setTimeout(() => {
         switch(transition) {
+
+          //----------------
+          case 'FLASHWHITE':
+            um_overlay__bg.flash(speed, callback)
+            break
+          //----------------
 
           //----------------
           case 'FADEIN':

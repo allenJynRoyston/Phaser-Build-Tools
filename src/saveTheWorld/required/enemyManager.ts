@@ -98,7 +98,7 @@ export class ENEMY_MANAGER {
     let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
 
     //let enemy = enemyData.BULLET;
-    let enemy = phaserSprites.addFromAtlas({name: `enemy_${game.rnd.integer()}`, group:'enemies', atlas: atlas, filename: `small_1`, visible: true})
+    let enemy = phaserSprites.addFromAtlas({name: `enemy_${game.rnd.integer()}`, group:'enemies', org: 'gameobjects', atlas: atlas, filename: `small_1`, visible: true})
         enemy.anchor.setTo(0.5, 0.5);
         enemy.scale.setTo(1,1);
         enemy.atTarget = false;
@@ -206,7 +206,7 @@ export class ENEMY_MANAGER {
     let game = this.game
     let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
     //let enemy = enemyData.BULLET;
-    let enemy = phaserSprites.addFromAtlas({x: options.x, name: `enemy_${game.rnd.integer()}`, group:'enemies', atlas: atlas, filename: `big_1`, visible: true})
+    let enemy = phaserSprites.addFromAtlas({x: options.x, name: `enemy_${game.rnd.integer()}`, group:'enemies',  org: 'gameobjects', atlas: atlas, filename: `big_1`, visible: true})
         enemy.anchor.setTo(0.5, 0.5);
         enemy.scale.setTo(1,1);
         game.physics.enable(enemy, Phaser.Physics.ARCADE);
@@ -308,7 +308,7 @@ export class ENEMY_MANAGER {
     let game = this.game
     let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
     //let enemy = enemyData.BULLET;
-    let enemy = phaserSprites.addFromAtlas({x: options.x, y: options.y, name: `enemy_${game.rnd.integer()}`, group:'enemies', atlas: atlas, filename: `asteroid_mid_layer_${game.rnd.integerInRange(1, 3)}`, visible: true})
+    let enemy = phaserSprites.addFromAtlas({x: options.x, y: options.y, name: `enemy_${game.rnd.integer()}`, group:'enemies',  org: 'gameobjects', atlas: atlas, filename: `asteroid_mid_layer_${game.rnd.integerInRange(1, 3)}`, visible: true})
         enemy.anchor.setTo(0.5, 0.5);
         enemy.scale.setTo(1.5, 1.5);
         game.physics.enable(enemy, Phaser.Physics.ARCADE);
@@ -439,7 +439,7 @@ export class ENEMY_MANAGER {
     let game = this.game
     let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
 
-    let enemy = phaserSprites.addFromAtlas({x: options.x, y: options.y, name: `enemy_${game.rnd.integer()}`, group:'enemies', atlas: atlas, filename: `asteroid_mid_layer_${game.rnd.integerInRange(1, 3)}`, visible: true})
+    let enemy = phaserSprites.addFromAtlas({x: options.x, y: options.y, name: `enemy_${game.rnd.integer()}`, group:'enemies',  org: 'gameobjects', atlas: atlas, filename: `asteroid_mid_layer_${game.rnd.integerInRange(1, 3)}`, visible: true})
         enemy.anchor.setTo(0.5, 0.5);
         enemy.scale.setTo(1, 1);
         game.physics.enable(enemy, Phaser.Physics.ARCADE);

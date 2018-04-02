@@ -35,7 +35,7 @@ export class PLAYER_MANAGER {
     let shieldFrames = [...Phaser.Animation.generateFrameNames(`ship_${shipId}_shield_`, 1, 6), ...Phaser.Animation.generateFrameNames(`ship_${shipId}_shield_`, 1, 6).reverse()]
     let healFrames =   [...Phaser.Animation.generateFrameNames(`ship_${shipId}_heal_`, 1, 6),   ...Phaser.Animation.generateFrameNames(`ship_${shipId}_heal_`, 1, 6).reverse()]
     //  The hero!
-    let player = this.phaserSprites.addFromAtlas({name: params.name, group: params.group, atlas: this.atlas,  filename: `ship_${shipId}`, visible: false})
+    let player = this.phaserSprites.addFromAtlas({name: params.name, group: params.group, org: params.org, atlas: this.atlas,  filename: `ship_${shipId}`, visible: false})
         player.anchor.setTo(0.5, 0.5);
         player.scale.setTo(1, 1)
         player.isInvincible = false;
@@ -193,7 +193,7 @@ export class PLAYER_MANAGER {
                 onComplete.add(() => {
                     player.game.add.tween(player).to( { y: -200 }, 1000, Phaser.Easing.Exponential.InOut, true, 0, 0, false).
                       onComplete.add(() => {
-                        callback()
+                          callback()
                       }, player)
                 }, player)
             }, player)
