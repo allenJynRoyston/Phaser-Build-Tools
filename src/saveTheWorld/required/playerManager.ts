@@ -32,10 +32,10 @@ export class PLAYER_MANAGER {
   public createShip(params:any, updateHealth:any = () => {}, loseLife:any = () => {}, onUpdate:any = () => {}){
     let game = this.game
     let shipId = params.shipId + 1
-    let shieldFrames = [...Phaser.Animation.generateFrameNames(`ship_${shipId}_shield_`, 1, 6, '.png'), ...Phaser.Animation.generateFrameNames(`ship_${shipId}_shield_`, 1, 6, '.png').reverse()]
-    let healFrames =   [...Phaser.Animation.generateFrameNames(`ship_${shipId}_heal_`, 1, 6, '.png'),   ...Phaser.Animation.generateFrameNames(`ship_${shipId}_heal_`, 1, 6, '.png').reverse()]
+    let shieldFrames = [...Phaser.Animation.generateFrameNames(`ship_${shipId}_shield_`, 1, 6), ...Phaser.Animation.generateFrameNames(`ship_${shipId}_shield_`, 1, 6).reverse()]
+    let healFrames =   [...Phaser.Animation.generateFrameNames(`ship_${shipId}_heal_`, 1, 6),   ...Phaser.Animation.generateFrameNames(`ship_${shipId}_heal_`, 1, 6).reverse()]
     //  The hero!
-    let player = this.phaserSprites.addFromAtlas({name: params.name, group: params.group, atlas: this.atlas,  filename: `ship_${shipId}.png`, visible: false})
+    let player = this.phaserSprites.addFromAtlas({name: params.name, group: params.group, atlas: this.atlas,  filename: `ship_${shipId}`, visible: false})
         player.anchor.setTo(0.5, 0.5);
         player.scale.setTo(1, 1)
         player.isInvincible = false;
@@ -95,24 +95,24 @@ export class PLAYER_MANAGER {
 
 
         player.createTrail = () => {
-          let {currentState} = this.phaserMaster.getState();
-          let trailCount = this.phaserSprites.getGroup(`${params.name}_trails`).length;
-          if(trailCount < (currentState === 'ENDLEVEL') ? 20 : 10){
-            let trail = this.phaserSprites.addFromAtlas({name: `${params.name}_trail_${game.rnd.integer()}`, group:`${params.name}_trails`, x: player.x, y: player.y, filename: 'ship_body.png', atlas: 'atlas_main', visible: true})
-                trail.anchor.setTo(0.5, 0.5)
-                trail.scale.setTo(player.scale.x - 0.2, player.scale.y - 0.2)
-                trail.alpha = 0.4
-                trail.angle = player.angle;
-                trail.tint = 1 * 0x0000ff;
-                this.phaserGroup.add(params.layer - 1, trail)
-                trail.destroySelf = () => {
-                  trail.game.add.tween(trail).to( { alpha: 0}, (currentState === 'ENDLEVEL') ? 600 : 250, Phaser.Easing.Linear.In, true, 0).
-                    onComplete.add(() => {
-                      this.phaserSprites.destroy(trail.name)
-                    }, trail);
-                }
-                trail.destroySelf();
-           }
+          // let {currentState} = this.phaserMaster.getState();
+          // let trailCount = this.phaserSprites.getGroup(`${params.name}_trails`).length;
+          // if(trailCount < (currentState === 'ENDLEVEL') ? 20 : 10){
+          //   let trail = this.phaserSprites.addFromAtlas({name: `${params.name}_trail_${game.rnd.integer()}`, group:`${params.name}_trails`, x: player.x, y: player.y, filename: 'ship_body', atlas: 'atlas_main', visible: true})
+          //       trail.anchor.setTo(0.5, 0.5)
+          //       trail.scale.setTo(player.scale.x - 0.2, player.scale.y - 0.2)
+          //       trail.alpha = 0.4
+          //       trail.angle = player.angle;
+          //       trail.tint = 1 * 0x0000ff;
+          //       this.phaserGroup.add(params.layer - 1, trail)
+          //       trail.destroySelf = () => {
+          //         trail.game.add.tween(trail).to( { alpha: 0}, (currentState === 'ENDLEVEL') ? 600 : 250, Phaser.Easing.Linear.In, true, 0).
+          //           onComplete.add(() => {
+          //             this.phaserSprites.destroy(trail.name)
+          //           }, trail);
+          //       }
+          //       trail.destroySelf();
+          //  }
         }
 
         player.selfDestruct = () => {
@@ -224,15 +224,15 @@ export class PLAYER_MANAGER {
     let onLayer
     switch(type){
       case 'FIREPOWER':
-        animationSprites = [...Phaser.Animation.generateFrameNames('firepower_', 1, 8, '.png'), ...Phaser.Animation.generateFrameNames('firepower_', 1, 8, '.png').reverse()]
+        animationSprites = [...Phaser.Animation.generateFrameNames('firepower_', 1, 8), ...Phaser.Animation.generateFrameNames('firepower_', 1, 8).reverse()]
         framerate = 30;
         break
       case 'ARMORPLATING':
-        animationSprites = ['armor_plating.png']
+        animationSprites = ['armor_plating']
         framerate = 30;
         break
       case 'REGEN':
-        animationSprites = [...Phaser.Animation.generateFrameNames('shield_layer_', 1, 8, '.png')]
+        animationSprites = [...Phaser.Animation.generateFrameNames('shield_layer_', 1, 8)]
         framerate = 30;
         break
     }
@@ -288,15 +288,15 @@ export class PLAYER_MANAGER {
     let onLayer
     switch(weaponType){
       case 'CLUSTERBOMB':
-        animationSprites = [...Phaser.Animation.generateFrameNames('cannon_fire_', 1, 8, '.png')]
+        animationSprites = [...Phaser.Animation.generateFrameNames('cannon_fire_', 1, 8)]
         framerate = 20;
         break
       case 'TRIPLEBOMB':
-        animationSprites = [...Phaser.Animation.generateFrameNames('cannon2_fire_', 1, 7, '.png'), ...['cannon2_fire_1.png']]
+        animationSprites = [...Phaser.Animation.generateFrameNames('cannon2_fire_', 1, 7), ...['cannon2_fire_1']]
         framerate = 60;
         break
       case 'TURRET':
-        animationSprites = ['turret_base.png']
+        animationSprites = ['turret_base']
         framerate = 30;
         break
     }
@@ -322,15 +322,15 @@ export class PLAYER_MANAGER {
     let framerate
     switch(weaponType){
       case 'BULLET':
-        animationSprites = [...Phaser.Animation.generateFrameNames('bullet_fire_', 1, 4, '.png')]
+        animationSprites = [...Phaser.Animation.generateFrameNames('bullet_fire_', 1, 4)]
         framerate = 60;
         break
       case 'LASER':
-        animationSprites = [...Phaser.Animation.generateFrameNames('laser_fire_', 1, 6, '.png')]
+        animationSprites = [...Phaser.Animation.generateFrameNames('laser_fire_', 1, 6)]
         framerate = 60;
         break
       case 'MISSLE':
-        animationSprites = [...Phaser.Animation.generateFrameNames('missle_fire_', 1, 6, '.png')]
+        animationSprites = [...Phaser.Animation.generateFrameNames('missle_fire_', 1, 6)]
         framerate = 30;
         break
     }
@@ -353,8 +353,8 @@ export class PLAYER_MANAGER {
 
   /******************/
   public createShipExhaust(player:any, params:any){
-    let shipExhaust = this.phaserSprites.addFromAtlas({name: `${params.name}_exhaust`, group: params.group,  x: player.x, y: player.y + player.height/2 + 10, atlas: this.atlas,  filename: 'exhaust_red_1.png', visible: true})
-        shipExhaust.animations.add('exhaust_animation', Phaser.Animation.generateFrameNames('exhaust_red_', 1, 8, '.png'), 1, true)
+    let shipExhaust = this.phaserSprites.addFromAtlas({name: `${params.name}_exhaust`, group: params.group,  x: player.x, y: player.y + player.height/2 + 10, atlas: this.atlas,  filename: 'exhaust_red_1', visible: true})
+        shipExhaust.animations.add('exhaust_animation', Phaser.Animation.generateFrameNames('exhaust_red_', 1, 8), 1, true)
         shipExhaust.animations.play('exhaust_animation', 30, true)
         shipExhaust.anchor.setTo(0.5, 0.5)
         player.addChild(shipExhaust)

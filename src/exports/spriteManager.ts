@@ -68,6 +68,7 @@ export class PHASER_SPRITE_MANAGER {
       params.x = params.x !== undefined ? params.x : 0;
       params.y = params.y !== undefined ? params.y : 0;
       params.group = params.group !== undefined ? params.group : null;
+      params.org = params.org !== undefined ? params.org : null;
       params.visible = params.visible !== undefined ? params.visible : true;
       params.alpha = params.alpha !== undefined ? params.alpha : 1;
       params.width = params.width !== undefined ? params.width : null
@@ -77,12 +78,13 @@ export class PHASER_SPRITE_MANAGER {
           // add custom properties
           newSprite.name = params.name;
           newSprite.group = params.group;
+          newSprite.org = params.org;
           newSprite.defaultPosition = {x: params.x, y: params.y}
           newSprite.visible = params.visible
           newSprite.alpha = params.alpha
           if(params.width !== null){ newSprite.width = params.width}
           if(params.height !== null){ newSprite.height = params.height}
-          newSprite.setDefaultPositions = function(x,y){this.defaultPosition.x = x, this.defaultPosition.y = y};
+          newSprite.setDefaultPositions = function(x,y){this.defaultPosition.x = x ? x : this.x, this.defaultPosition.y = y ? y : this.y};
           newSprite.getDefaultPositions = function(){return this.defaultPosition};
 
 
@@ -116,6 +118,7 @@ export class PHASER_SPRITE_MANAGER {
       params.x = params.x !== undefined ? params.x : 0;
       params.y = params.y !== undefined ? params.y : 0;
       params.group = params.group !== undefined ? params.group : null;
+      params.org = params.org !== undefined ? params.org : null;
       params.visible = params.visible !== undefined ? params.visible : true;
       params.alpha = params.alpha !== undefined ? params.alpha : 1;
       params.width = params.width !== undefined ? params.width : null
@@ -125,12 +128,13 @@ export class PHASER_SPRITE_MANAGER {
           // add custom properties
           newSprite.name = params.name;
           newSprite.group = params.group;
+          newSprite.org = params.org;
           newSprite.defaultPosition = {x: params.x, y: params.y}
           newSprite.visible = params.visible
           newSprite.alpha = params.alpha
           if(params.width !== null){ newSprite.width = params.width}
           if(params.height !== null){ newSprite.height = params.height}
-          newSprite.setDefaultPositions = function(x,y){this.defaultPosition.x = x, this.defaultPosition.y = y};
+          newSprite.setDefaultPositions = function(x,y){this.defaultPosition.x = x ? x : this.x, this.defaultPosition.y = y ? y : this.y};
           newSprite.getDefaultPositions = function(){return this.defaultPosition};
 
           newSprite.init = function(){}
@@ -163,6 +167,7 @@ export class PHASER_SPRITE_MANAGER {
       params.x = params.x !== undefined ? params.x : 0;
       params.y = params.y !== undefined ? params.y : 0;
       params.group = params.group !== undefined ? params.group : null;
+      params.org = params.org !== undefined ? params.org : null;
       params.visible = params.visible !== undefined ? params.visible : true;
       params.alpha = params.alpha !== undefined ? params.alpha : 1;
       params.width = params.width !== undefined ? params.width : null
@@ -172,12 +177,13 @@ export class PHASER_SPRITE_MANAGER {
           // add custom properties
           newSprite.name = params.name;
           newSprite.group = params.group;
+          newSprite.org = params.org;
           newSprite.defaultPosition = {x: params.x, y: params.y}
           newSprite.visible = params.visible
           newSprite.alpha = params.alpha
           if(params.width !== null){ newSprite.width = params.width}
           if(params.height !== null){ newSprite.height = params.height}
-          newSprite.setDefaultPositions = function(x,y){this.defaultPosition.x = x, this.defaultPosition.y = y};
+          newSprite.setDefaultPositions = function(x,y){this.defaultPosition.x = x ? x : this.x, this.defaultPosition.y = y ? y : this.y};
           newSprite.getDefaultPositions = function(){return this.defaultPosition};
 
           newSprite.init = function(){}
@@ -211,6 +217,7 @@ export class PHASER_SPRITE_MANAGER {
       params.x = params.x !== undefined ? params.x : 0;
       params.y = params.y !== undefined ? params.y : 0;
       params.group = params.group !== undefined ? params.group : null;
+      params.org = params.org !== undefined ? params.org : null;
       params.visible = params.visible !== undefined ? params.visible : true;
       params.alpha = params.alpha !== undefined ? params.alpha : 1;
       params.width = params.width !== undefined ? params.width : null
@@ -220,12 +227,13 @@ export class PHASER_SPRITE_MANAGER {
           // add custom properties
           newSprite.name = params.name;
           newSprite.group = params.group;
+          newSprite.org = params.org;
           newSprite.defaultPosition = {x: params.x, y: params.y}
           newSprite.visible = params.visible
           newSprite.alpha = params.alpha
           if(params.width !== null){ newSprite.width = params.width}
           if(params.height !== null){ newSprite.height = params.height}
-          newSprite.setDefaultPositions = function(x,y){this.defaultPosition.x = x, this.defaultPosition.y = y};
+          newSprite.setDefaultPositions = function(x,y){this.defaultPosition.x = x ? x : this.x, this.defaultPosition.y = y ? y : this.y};
           newSprite.getDefaultPositions = function(){return this.defaultPosition};
 
           newSprite.init = function(){}
@@ -321,7 +329,7 @@ export class PHASER_SPRITE_MANAGER {
 
   public getGroup(name:string){
     return this.sprites.array.filter(( obj ) => {
-      return obj.group === name;
+      return obj.group === name || obj.org === name;
     });
   }
 
@@ -330,7 +338,7 @@ export class PHASER_SPRITE_MANAGER {
 
     for(let i = 0; i < names.length; i++){
       let _r = this.sprites.array.filter(( obj ) => {
-        return obj.group === names[i];
+        return obj.group === names[i] || obj.org === names[i];
       });
       _return = [..._return, ..._r]
     }

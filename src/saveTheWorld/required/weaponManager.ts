@@ -19,14 +19,56 @@ export class WEAPON_MANAGER {
     this.atlas = atlas
   }
 
+  public moveInDirection(object:any, angle:number) {
+  	object.x = object.x + angle * Math.cos(0);
+  }
+
+
+  /******************/
+  public redBullet(options:any, onDestroy:any = () => {}, onUpdate:any = () => {}){
+    let game = this.game
+    let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
+    let {weaponData, atlas_weapon} = phaserMaster.getAll(['weaponData', 'atlas_weapon']);
+    let ammo =  phaserSprites.addFromAtlas({x: options.x, y: options.y, name: options.name, group: options.group, atlas: atlas, filename: 'enemy_bullet'})
+        ammo.anchor.setTo(0.5, 0.5)
+        game.physics.enable(ammo, Phaser.Physics.ARCADE);
+        ammo.body.velocity.y = 300;        
+        ammo.angle =  options.spread
+
+        ammo.removeIt = () => {
+          phaserSprites.destroy(ammo.name)
+        }
+
+        ammo.destroyIt = () => {
+          this.orangeImpact(ammo.x + this.game.rnd.integerInRange(-5, 5), ammo.y + this.game.rnd.integerInRange(-5, 15), 1, options.layer + 1)
+          onDestroy(ammo)
+          phaserSprites.destroy(ammo.name)
+        }
+
+        ammo.onUpdate = () => {
+          this.moveInDirection(ammo, ammo.angle/4)
+          if( (ammo.y < -50) || (ammo.y > ammo.game.canvas.height + 50) ){ ammo.destroyIt() }
+          onUpdate(ammo)
+       }
+
+       if(options.layer !== undefined){
+         phaserGroup.add(options.layer, ammo)
+       }
+
+    return ammo;
+  }
+  /******************/
+
   /******************/
   public createBullet(options:any, onDestroy:any = () => {}, onUpdate:any = () => {}){
     let game = this.game
     let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
-    let {weaponData} = phaserMaster.getAll();
+    let {weaponData, atlas_weapon} = phaserMaster.getAll(['weaponData', 'atlas_weapon']);
+    let {player} = phaserSprites.getOnly(['player'])
     let weapon = weaponData.primaryWeapons.BULLET;
 
     let ammo =  phaserSprites.addFromAtlas({x: options.x, y: options.y, name: options.name, group: options.group, atlas: atlas, filename: weapon.spriteAnimation[0]})
+
         if(weapon.spriteAnimation.length > 1){
           ammo.animations.add('animate', weapon.spriteAnimation, 1, true)
           ammo.animations.play('animate', 30, true)
@@ -36,6 +78,11 @@ export class WEAPON_MANAGER {
         ammo.body.velocity.y = weapon.initialVelocity;
         ammo.pierceStrength = weapon.pierceStrength
         ammo.damageAmount = weapon.damage
+        ammo.angle =  options.spread
+
+        ammo.removeIt = () => {
+          phaserSprites.destroy(ammo.name)
+        }
 
         ammo.destroyIt = () => {
           this.orangeImpact(ammo.x + this.game.rnd.integerInRange(-5, 5), ammo.y + this.game.rnd.integerInRange(-5, 15), 1, options.layer + 1)
@@ -43,10 +90,19 @@ export class WEAPON_MANAGER {
           phaserSprites.destroy(ammo.name)
         }
 
-        ammo.onUpdate = function(){
-          // ammo speeds up
-          // destroy ammo
-          if(this.y < -this.height || this.y > this.game.canvas.height ){ this.destroyIt() }
+        ammo.onUpdate = () => {
+          // if(ammo.angle > 0){
+          //   if(ammo.angle !== 0){
+          //     ammo.angle -= 5
+          //   }
+          // }
+          // if(ammo.angle < 0){
+          //   if(ammo.angle !== 0){
+          //     ammo.angle += 5
+          //   }
+          // }
+          this.moveInDirection(ammo, ammo.angle/4)
+          if( (ammo.y < -50) || (ammo.y > ammo.game.canvas.height + 50) ){ ammo.destroyIt() }
           onUpdate(ammo)
        }
 
@@ -73,15 +129,15 @@ export class WEAPON_MANAGER {
         }
         ammo.anchor.setTo(0.5, 0.5)
         game.physics.enable(ammo, Phaser.Physics.ARCADE);
-        ammo.body.velocity.y = weapon.initialVelocity;
+        ammo.body.velocity.y = -weapon.initialVelocity;
         ammo.isActive = true
         ammo.pierceStrength = weapon.pierceStrength
         ammo.damageAmount = weapon.damage
+        ammo.angle =  options.spread
 
         ammo.accelerate = () => {
           if(ammo.body !== null){
             ammo.body.velocity.y -= weapon.velocity;
-            ammo.body.velocity.x += options.spread
           }
         }
 
@@ -97,6 +153,19 @@ export class WEAPON_MANAGER {
         }
 
         ammo.onUpdate = () => {
+
+          if(ammo.angle > 0){
+            if(ammo.angle !== 0){
+              ammo.angle -= 0.5
+            }
+          }
+          if(ammo.angle < 0){
+            if(ammo.angle !== 0){
+              ammo.angle += 0.5
+            }
+          }
+
+          this.moveInDirection(ammo, ammo.angle/8)
           // ammo speeds up
           ammo.accelerate();
           // destroy ammo
@@ -356,7 +425,7 @@ export class WEAPON_MANAGER {
   public createBomblet(options:any, onDestroy:any = () => {}, onUpdate:any = () => {}){
     let game = this.game
     let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
-    let ammo =  phaserSprites.addFromAtlas({x: options.x, y: options.y, name: `bomblet_${game.rnd.integer()}`, group: options.group, atlas: atlas, filename: 'clusterBomb.png'})
+    let ammo =  phaserSprites.addFromAtlas({x: options.x, y: options.y, name: `bomblet_${game.rnd.integer()}`, group: options.group, atlas: atlas, filename: 'clusterBomb'})
         ammo.anchor.setTo(0.5, 0.5)
         ammo.scale.setTo(0.5, 0.5)
         game.physics.enable(ammo, Phaser.Physics.ARCADE);
@@ -394,10 +463,10 @@ export class WEAPON_MANAGER {
     let game = this.game
     let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
 
-    let explosion = phaserSprites.addFromAtlas({name: `explosion_${game.rnd.integer()}`, group: 'explosions',  x: x, y: y, atlas: atlas, filename: `explosion2_layer_1.png`})
+    let explosion = phaserSprites.addFromAtlas({name: `explosion_${game.rnd.integer()}`, group: 'explosions',  x: x, y: y, atlas: atlas, filename: `explosion2_layer_1`})
         explosion.scale.setTo(scale, scale)
         explosion.anchor.setTo(0.5, 0.5)
-        explosion.animations.add('explosion', Phaser.Animation.generateFrameNames('explosion2_layer_', 1, 12, '.png'), 1, true)
+        explosion.animations.add('explosion', Phaser.Animation.generateFrameNames('explosion2_layer_', 1, 12), 1, true)
         explosion.animations.play('explosion', 30, true)
 
         // destroy expolosion sprite
@@ -426,11 +495,11 @@ export class WEAPON_MANAGER {
     let game = this.game
     let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
 
-    let explosion = phaserSprites.addFromAtlas({name: `impact_${game.rnd.integer()}`, group: 'impactExplosions',  x: x, y: y, atlas: atlas, filename: `explosions_Layer_1.png`})
+    let explosion = phaserSprites.addFromAtlas({name: `impact_${game.rnd.integer()}`, group: 'impactExplosions',  x: x, y: y, atlas: atlas, filename: `explosions_Layer_1`})
         explosion.scale.setTo(scale, scale)
         explosion.anchor.setTo(0.5, 0.5)
         game.physics.enable(explosion, Phaser.Physics.ARCADE);
-        explosion.animations.add('explosion', Phaser.Animation.generateFrameNames('explosions_Layer_', 1, 16, '.png'), 1, true)
+        explosion.animations.add('explosion', Phaser.Animation.generateFrameNames('explosions_Layer_', 1, 16), 1, true)
         explosion.animations.play('explosion', 30, true)
         explosion.damageAmount = damage;
 
@@ -461,7 +530,7 @@ export class WEAPON_MANAGER {
   public blueImpact(x:number, y:number, scale:number, layer:number){
     let game = this.game
     let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
-    let frames = Phaser.Animation.generateFrameNames('blue_explosion_small_layer_', 1, 7, '.png');
+    let frames = Phaser.Animation.generateFrameNames('blue_explosion_small_layer_', 1, 7);
     let explosion = phaserSprites.addFromAtlas({name: `impact_${game.rnd.integer()}`, group: 'impactExplosions',  x: x, y: y, atlas: atlas, filename: frames[0]})
         explosion.scale.setTo(scale, scale)
         explosion.anchor.setTo(0.5, 0.5)
@@ -489,7 +558,7 @@ export class WEAPON_MANAGER {
   public orangeImpact(x:number, y:number, scale:number, layer:number){
     let game = this.game
     let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
-    let frames = Phaser.Animation.generateFrameNames('orange_ring_explosion_layer_', 1, 7, '.png');
+    let frames = Phaser.Animation.generateFrameNames('orange_ring_explosion_layer_', 1, 7);
     let explosion = phaserSprites.addFromAtlas({name: `impact_${game.rnd.integer()}`, group: 'impactExplosions',  x: x, y: y, atlas: atlas, filename: frames[0]})
         explosion.scale.setTo(scale, scale)
         explosion.anchor.setTo(0.5, 0.5)
@@ -517,7 +586,7 @@ export class WEAPON_MANAGER {
   public electricDischarge(x:number, y:number, scale:number, layer:number){
     let game = this.game
     let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
-    let frames = Phaser.Animation.generateFrameNames('disintegrate', 1, 10, '.png');
+    let frames = Phaser.Animation.generateFrameNames('disintegrate', 1, 10);
     let explosion = phaserSprites.addFromAtlas({name: `impact_${game.rnd.integer()}`, group: 'impactExplosions',  x: x, y: y, atlas: atlas, filename: frames[0]})
         explosion.scale.setTo(scale, scale)
         explosion.anchor.setTo(0.5, 0.5)

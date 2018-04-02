@@ -23,7 +23,7 @@ class PhaserGameObject {
     // this properties
     global:any;
     game:any;
-
+    devMode: any
     /******************/
     constructor(){
       // accessible in gameObject as _this, accessible in class functions as this (obviously)
@@ -31,6 +31,11 @@ class PhaserGameObject {
       this.global = {
         pause: false
       };
+      this.devMode = {
+        skip: {
+          intro: true
+        }
+      }
     }
     /******************/
 
@@ -52,7 +57,7 @@ class PhaserGameObject {
             phaserGroup = new PHASER_GROUP_MANAGER(),
             phaserBitmapdata = new PHASER_BITMAPDATA_MANAGER(),
             weaponManager = new WEAPON_MANAGER(),
-            enemyManager = new ENEMY_MANAGER({showHitbox: true}),
+            enemyManager = new ENEMY_MANAGER({showHitbox: false}),
             playerManager = new PLAYER_MANAGER(),
             utilityManager = new UTILITY_MANAGER();
 
@@ -86,15 +91,16 @@ class PhaserGameObject {
 
         // images
         let folder = 'src/phaser/saveTheWorld/resources'
-        game.load.image('background', `${folder}/images/starfield.png`);
+        //game.load.image('background', `${folder}/images/starfield.png`);
         //game.load.atlas('atlas', `${folder}/spritesheets/heroSelect/heroSelectAtlas.png`, `${folder}/spritesheets/heroSelect/heroSelectAtlas.json`, Phaser.Loader.TEXTURE_ATLAS_JSON_HASH);
 
-        game.load.atlas('atlas_main', `${folder}/spritesheets/main/main.png`, `${folder}/spritesheets/main/main.json`, Phaser.Loader.TEXTURE_atlas_main_JSON_HASH);
-        game.load.atlas('atlas_weapons', `${folder}/spritesheets/weapons/weaponsAtlas.png`, `${folder}/spritesheets/weapons/weaponsAtlas.json`, Phaser.Loader.TEXTURE_atlas_main_JSON_HASH);
-        game.load.atlas('atlas_large', `${folder}/spritesheets/large/large.png`, `${folder}/spritesheets/large/large.json`, Phaser.Loader.TEXTURE_atlas_main_JSON_HASH);
-        game.load.atlas('atlas_enemies', `${folder}/spritesheets/enemies/enemies.png`, `${folder}/spritesheets/enemies/enemies.json`, Phaser.Loader.TEXTURE_atlas_main_JSON_HASH);
-        game.load.atlas('atlas_ships', `${folder}/spritesheets/ships/ships.png`, `${folder}/spritesheets/ships/ships.json`, Phaser.Loader.TEXTURE_atlas_main_JSON_HASH);
+        game.load.atlas('atlas_main', `${folder}/textureAtlas/main/main.png`, `${folder}/textureAtlas/main/main.json`, Phaser.Loader.TEXTURE_ATLAS_JSON_HASH);
+        game.load.atlas('atlas_weapons', `${folder}/textureAtlas/weapons/weaponsAtlas.png`, `${folder}/textureAtlas/weapons/weaponsAtlas.json`, Phaser.Loader.TEXTURE_ATLAS_JSON_HASH);
+        game.load.atlas('atlas_large', `${folder}/textureAtlas/large/large.png`, `${folder}/textureAtlas/large/large.json`, Phaser.Loader.TEXTURE_ATLAS_JSON_HASH);
+        game.load.atlas('atlas_enemies', `${folder}/textureAtlas/enemies/enemies.png`, `${folder}/textureAtlas/enemies/enemies.json`, Phaser.Loader.TEXTURE_ATLAS_JSON_HASH);
+        game.load.atlas('atlas_ships', `${folder}/textureAtlas/ships/ships.png`, `${folder}/textureAtlas/ships/ships.json`, Phaser.Loader.TEXTURE_ATLAS_JSON_HASH);
 
+        game.load.image('enemy_bullet',`${folder}/images/bullet.png`)
         // load music into buffer
         // game.load.audio('music-main', ['src/assets/game/demo1/music/zombies-in-space.ogg']);
         // game.load.audio('powerupfx', ['src/assets/game/demo1/sound/Powerup4.ogg']);
@@ -179,9 +185,27 @@ class PhaserGameObject {
           unpauseGame();
         }, this);
 
+
+        buildTransitionScreen()
+        buildBackground()
+        buildScore()
+        buildMenuAndButtons();
+
+
+        buildHealthbar_player()
+        buildPow_player()
+        buildPortrait_player()
+        buildHealthbar_boss()
+      }
+      /******************/
+
+      /******************/
+      function buildTransitionScreen(){
+        let game = phaserMaster.game();
+            game.physics.startSystem(Phaser.Physics.ARCADE);
         // animate in
         utilityManager.buildOverlayBackground('#ffffff', '#ffffff', 19, true)
-        utilityManager.buildOverlayGrid(240, 132, 20, 'logo_small.png')
+        utilityManager.buildOverlayGrid(240, 132, 20, 'logo_small')
 
         // create boundry
         let boundryObj = phaserBitmapdata.addGradient({name: 'boundryObj', start: '#ffffff', end: '#ffffff', width: 5, height: 5, render: false})
@@ -190,8 +214,12 @@ class PhaserGameObject {
         game.physics.enable([leftBoundry,rightBoundry], Phaser.Physics.ARCADE);
         leftBoundry.body.immovable = true;
         rightBoundry.body.immovable = true;
+      }
+      /******************/
 
-        let background = phaserSprites.addTilespriteFromAtlas({ name: 'background', group: 'spaceGroup', x: 0, y: 0, width: game.canvas.width, height: game.canvas.height, atlas: 'atlas_large', filename: 'spacebg.png' });
+      /******************/
+      function buildBackground(){
+        let background = phaserSprites.addTilespriteFromAtlas({ name: 'background', group: 'backgrounds', x: 0, y: 0, width: game.canvas.width, height: game.canvas.height, atlas: 'atlas_large', filename: 'spacebg' });
             background.count = 0;
             background.onUpdate = function () {
                 this.count += 0.005;
@@ -199,16 +227,26 @@ class PhaserGameObject {
             };
         phaserGroup.add(0, background)
 
-        // particles (from atlas)
-        let emitter = phaserMaster.let('emitter', game.add.emitter(game, 0, 0, 5000))
-            emitter.makeParticles('atlas_main', 'particle.png');
-            emitter.gravity = 0;
-            phaserGroup.layer(1).add(emitter)
+        let nebula1 = phaserSprites.addTilespriteFromAtlas({ name: 'nebula1', group: 'backgrounds', x: 0, y: 0, width: game.canvas.width, height: game.canvas.height, atlas: 'atlas_large', filename: 'Nebula1' });
+            nebula1.count = 0;
+            nebula1.onUpdate = function () {
+                this.count += 0.005;
+                this.tilePosition.x -= Math.sin(this.count) * 0.2;
+            };
 
-        // stars
+        let nebula2 = phaserSprites.addTilespriteFromAtlas({ name: 'nebula2', group: 'backgrounds', x: 0, y: 0, width: game.canvas.width, height: game.canvas.height, atlas: 'atlas_large', filename: 'Nebula2' });
+            nebula2.count = 0;
+            nebula2.onUpdate = function () {
+                this.count += 0.005;
+                this.tilePosition.y += 0.2
+                this.tilePosition.x += 0.2
+            };
+        phaserGroup.addMany(0, [nebula1, nebula2])
+
+        // // stars
         //let stars = phaserBmd.addGradient({name: 'starBmp', group: 'blockBmpGroup', start: '#ffffff', end: '#ffffff', width: 1, height: 1, render: false})
         for (let i = 0; i < 25; i++){
-            let star = phaserSprites.addFromAtlas({x: game.rnd.integerInRange(0, game.world.width), y:game.rnd.integerInRange(0, game.world.height), name: `star_${i}`, group: 'movingStarField', filename: `stars_layer_${game.rnd.integerInRange(1, 3)}.png`, atlas: 'atlas_main', visible: true})
+            let star = phaserSprites.addFromAtlas({x: game.rnd.integerInRange(0, game.world.width), y:game.rnd.integerInRange(0, game.world.height), name: `star_${i}`, group: 'starfield', filename: `stars_layer_${game.rnd.integerInRange(1, 3)}`, atlas: 'atlas_main', visible: true})
                 star.starType = game.rnd.integerInRange(1, 3);
                 star.scale.setTo(star.starType/2, star.starType/2);
                 star.onUpdate = function(){
@@ -247,323 +285,331 @@ class PhaserGameObject {
                 phaserGroup.layer(4 - star.starType).add(star)
         }
 
-        let nebula1 = phaserSprites.addTilespriteFromAtlas({ name: 'nebula1', group: 'spaceGroup', x: 0, y: 0, width: game.canvas.width, height: game.canvas.height, atlas: 'atlas_large', filename: 'Nebula1.png' });
-            nebula1.count = 0;
-            nebula1.onUpdate = function () {
-                this.count += 0.005;
-                this.tilePosition.x -= Math.sin(this.count) * 0.2;
-            };
+      }
+      /******************/
 
-        let nebula2 = phaserSprites.addTilespriteFromAtlas({ name: 'nebula2', group: 'spaceGroup', x: 0, y: 0, width: game.canvas.width, height: game.canvas.height, atlas: 'atlas_large', filename: 'Nebula2.png' });
-            nebula2.count = 0;
-            nebula2.onUpdate = function () {
-                this.count += 0.005;
-                this.tilePosition.y += 0.2
-                this.tilePosition.x += 0.2
-            };
+      /******************/
+      function buildMenuAndButtons(){
+          // BUILD MENU BUTTONS
+          let menuButton1 = phaserSprites.addFromAtlas({ name: `menuButton1`, group: 'menuButtons', x: game.world.centerX, y: game.world.centerY + 125, atlas: 'atlas_main', filename: 'ui_button', visible: true });
+              menuButton1.anchor.setTo(0.5, 0.5)
+              menuButton1.init = () => {
+                menuButton1.visible = false
+              }
+              menuButton1.reveal = function(){
+                this.visible = true;
+              }
+          let menuButton1Text = phaserTexts.add({name: 'menuButton1Text', group: 'ui',  font: 'gem', x: menuButton1.x, y: menuButton1.y,  size: 14, default: ``})
+              menuButton1Text.anchor.setTo(0.5, 0.5)
 
-        let earth = phaserSprites.addFromAtlas({x: this.game.world.centerX, y: this.game.canvas.height + 400, name: `earth`, group: 'spaceGroup', filename: 'earth.png', atlas: 'atlas_main', visible: true})
-            earth.scale.setTo(2, 2)
-            earth.anchor.setTo(0.5, 0.5)
-            earth.onUpdate = function(){
-              earth.angle +=0.01
-            }
-            earth.fadeOut = function(){
-              this.game.add.tween(this).to( { y: this.y - 200 }, Phaser.Timer.SECOND*1, Phaser.Easing.Circular.In, true, 0, 0, false).autoDestroy = true;
-              this.game.add.tween(this.scale).to( { x:2.5, y: 2.5 }, Phaser.Timer.SECOND*1, Phaser.Easing.Circular.In, true, 0, 0, false).autoDestroy = true;
-            }
-            earth.selfDestruct = function(){
-              tweenTint(this, this.tint, 1*0xff0000, Phaser.Timer.SECOND*20);
-              setTimeout(() => {
-                this.tint = 1*0xff0000
-              }, Phaser.Timer.SECOND*20+1)
-              let endExplosion = setInterval(() => {
-                  weaponManager.createExplosion(game.rnd.integerInRange(0, this.game.canvas.width), game.rnd.integerInRange(this.game.canvas.height - 200, this.game.canvas.height), 0.25, 6)
-              }, 100)
-              phaserMaster.let('endExplosion', endExplosion)
-            }
+          let menuButton2 = phaserSprites.addFromAtlas({ name: `menuButton2`, group: 'menuButtons',  x: game.world.centerX, y: game.world.centerY + 175,  atlas: 'atlas_main', filename: 'ui_button', visible: true });
+              menuButton2.anchor.setTo(0.5, 0.5)
+              menuButton2.init = () => {
+                menuButton2.visible = false
+              }
+              menuButton2.reveal = function(){
+                this.visible = true;
+              }
+          let menuButton2Text = phaserTexts.add({name: 'menuButton2Text', group: 'ui',  font: 'gem', x: menuButton2.x, y: menuButton2.y,  size: 14, default: ``})
+              menuButton2Text.anchor.setTo(0.5, 0.5)
 
-            phaserGroup.addMany(2, [earth])
-            phaserGroup.addMany(1, [nebula1, nebula2])
+          let menuButtonCursor = phaserSprites.addFromAtlas({ name: `menuButtonCursor`, group: 'menuButtons', x: game.world.centerX - 125, atlas: 'atlas_main', filename: 'ui_cursor', visible: true });
+              menuButtonCursor.anchor.setTo(0.5, 0.5)
+              menuButtonCursor.init = () => {
+                menuButtonCursor.visible = false
+              }
+              menuButtonCursor.reveal = function(){
+                this.visible = true;
+              }
+              menuButtonCursor.updateLocation = function(val:number){
+                phaserMaster.forceLet('menuButtonSelection', val)
+                let button = phaserSprites.get(`menuButton${val}`)
+                this.y = button.y;
+              }
+              menuButtonCursor.updateLocation(1);
 
+          // add to layers
+          phaserGroup.addMany(12, [menuButton1, menuButton2, menuButtonCursor])
+      }
+      /******************/
 
-        //  UI
-        let timeContainer = phaserSprites.addFromAtlas({name: `timerContainer`, group: 'ui', filename: 'ui_container1.png', atlas: 'atlas_main', visible: false})
-            phaserSprites.centerOnPoint('timerContainer', this.game.world.centerX, -200)
-            timeContainer.reveal = function(){
-              this.visible = true
-              this.game.add.tween(this).to( { y: 5 }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, 0, 0, false).
-                onComplete.add(() => {
-                  let timeKeeper = phaserTexts.add({y: 36, x: this.game.world.centerX, name: 'timeKeeper', group: 'ui_text', font: 'gem', size: 42, default: `00`, visible: false})
-                      timeKeeper.anchor.setTo(0.5, 0.5)
-                      timeKeeper.reveal = function(){
-                        this.visible = true
-                        this.alpha = 0
-                        this.game.add.tween(this).to( { alpha: 1 }, Phaser.Timer.SECOND/2, Phaser.Easing.Linear.In, true, 0, 0, false);
-                        phaserGroup.add(15, this)
-                      }
-                      timeKeeper.onUpdate = function(){
-                        let {currentState} = phaserMaster.getState()
-                        let {elapsedTime, clock, roundTime} = phaserMaster.getOnly(['elapsedTime', 'clock', 'roundTime']);
-                        elapsedTime += (clock.elapsed * .001);
-                        phaserMaster.forceLet('elapsedTime', elapsedTime);
-                        let inSeconds = parseInt((roundTime - elapsedTime).toFixed(0))
-                        if(inSeconds >= 0){
-                             this.setText(`${inSeconds}`)
-                        }
-                        else{
+      /******************/
+      function buildScore(){
+        let game = phaserMaster.game();
 
-                          if(phaserSprites.getGroup('boss').length === 0 && currentState === 'READY'){
-                            phaserSprites.get('timerContainer').hide();
-                            this.hide()
-                            setTimeout(() => {
-                              bossContainer.reveal();
-                            }, 500)
-                            createBoss({
-                              x: game.rnd.integerInRange(100, game.canvas.width - 100),
-                              y: game.rnd.integerInRange(-50, -100),
-                              ix: game.rnd.integerInRange(-100, 100),
-                              iy: 5,
-                              layer: 4
-                            });
-                          }
-                        }
-                      }
-                      timeKeeper.hide = function(){
-                        this.game.add.tween(this).to( { alpha: 0 }, Phaser.Timer.SECOND/2, Phaser.Easing.Linear.Out, true, 0, 0, false);
-                      }
-                      timeKeeper.reveal();
-                })
+        let scoreContainer = phaserSprites.addFromAtlas({name: `scoreContainer`, group: 'uiScore', org: 'ui', filename: 'ui_roundContainer', atlas: 'atlas_main', visible: true})
+        scoreContainer.anchor.setTo(0.5, 0.5)
+        phaserSprites.centerOnPoint('scoreContainer', game.world.width/2 + scoreContainer.width/2, scoreContainer.height/2 + scoreContainer.height/2 + 20)
+        phaserGroup.addMany(10, [scoreContainer])
+        scoreContainer.setDefaultPositions()
+
+        //states
+        scoreContainer.init = () => {
+          scoreContainer.y  = -100
+        }
+        scoreContainer.reveal = () => {
+          let y = scoreContainer.getDefaultPositions().y
+          scoreContainer.setDefaultPositions();
+          game.add.tween(scoreContainer).to( { y: y }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, game.rnd.integerInRange(0, 500), 0, false).
+            onComplete.add(() => {})
+        }
+        scoreContainer.hide = () => {
+          game.add.tween(scoreContainer).to( { y: scoreContainer.getDefaultPositions().y }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, game.rnd.integerInRange(0, 500), 0, false).
+            onComplete.add(() => {})
+        }
 
 
-            }
-            timeContainer.hide = function(){
-              this.game.add.tween(this).to( { y: -200 }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, 500, 0, false)
-              phaserTexts.get('timeKeeper').hide();
-            }
+        // text
+        let scoreText = phaserTexts.add({name: `scoreText`, group: 'uiScore', font: 'gem', size: 18, default: '1100', visible: true})
+        scoreText.anchor.setTo(0.5, 0.5)
+        scoreContainer.addChild(scoreText)
 
-        let scoreContainer = phaserSprites.addFromAtlas({name: `scoreContainer`, group: 'ui', filename: 'ui_roundContainer.png', atlas: 'atlas_main', visible: false})
-            scoreContainer.anchor.setTo(0.5, 0.5)
-            scoreContainer.reveal = function(){
-              this.x = this.game.world.width - this.width/2 - 10
-              this.y = -200
-              this.visible = true
-              this.game.add.tween(this).to( { y: 20 }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, 0, 0, false).
-                onComplete.add(() => {
-                  scoreText.reveal(this.x, this.y);
-                })
-            }
-            scoreContainer.hide = function(){
-              this.game.add.tween(this).to( { y: -200 }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, 500, 0, false)
-              phaserTexts.get('scoreText').hide();
-            }
+        // text states
+        scoreText.init = () => {
+            scoreText.updateScore()
+        }
+        scoreText.updateScore = () => {
+          scoreText.setText(`${phaserMaster.get('gameData').score}`)
+        }
 
-        let scoreText = phaserTexts.add({name: 'scoreText', group: 'ui_text', font: 'gem', size: 14, default: `${gameData.score}`, alpha: 0})
-            scoreText.anchor.setTo(0.5, 0.5)
-            scoreText.onUpdate = function(){}
-            scoreText.updateScore = function(){
-              this.setText(`${phaserMaster.get('gameData').score}`)
-            }
-            scoreText.reveal = function(x:number, y:number){
-              this.x = scoreContainer.x
-              this.y = scoreContainer.y
-              this.game.add.tween(this).to( { alpha: 1 }, Phaser.Timer.SECOND/2, Phaser.Easing.Linear.In, true, 0, 0, false);
-            }
-            scoreText.hide = function(){
-              this.game.add.tween(this).to( { alpha: 0 }, Phaser.Timer.SECOND/2, Phaser.Easing.Linear.In, true, 0, 0, false);
-            }
+      }
+      /******************/
 
+      /******************/
+      function buildPortrait_player(){
+        let game = phaserMaster.game();
 
-        let statusContainer = phaserSprites.addFromAtlas({name: `statusContainer`, group: 'ui', filename: 'ui_statusContainer.png', atlas: 'atlas_main', visible: false})
-            statusContainer.reveal = function(){
-              this.x = -this.width;
-              this.y = this.game.world.height - this.height - 10
-              this.visible = true
-              this.game.add.tween(this).to( { x: 10 }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, 0, 0, false).
-                onComplete.add(() => {
-                  let healthBar = phaserSprites.addFromAtlas({x: statusContainer.x + 7, y: statusContainer.y + 22, name: `healthBar`, group: 'ui_overlay', filename: 'ui_shieldBar.png', atlas: 'atlas_main', visible: true})
-                  let maskhealth = phaserMaster.let('healthBar', phaserSprites.addBasicMaskToSprite(healthBar))
-                      maskhealth.y = healthBar.height
-                      updateShipHealthbar(gameData.player.health)
+        let container = phaserSprites.addEmptySprite({name: `portraitContainer`, group: 'player_portrait', org: 'ui'})
+        phaserSprites.centerOnPoint('portraitContainer', container.width/2 + 20, game.world.height - container.height/2 - 75)
+        phaserGroup.addMany(10, [container])
+        container.setDefaultPositions()
 
-                  let specialBar = phaserSprites.addFromAtlas({x: statusContainer.x + 30, y: statusContainer.y + 206, name: `specialBar`, group: 'ui_overlay', filename: 'ui_specialBar.png', atlas: 'atlas_main', visible: true})
-                  let maskspecial = phaserMaster.let('specialBar', phaserSprites.addBasicMaskToSprite(specialBar))
-                      maskspecial.y = specialBar.height;
-                      updateShipSpecial(100)
+        // children
+        let mockPortrait = phaserSprites.addFromAtlas({x: 3, y: 3, name: `mockPortrait`, filename: 'ui_portrait_1', atlas: 'atlas_main', visible: true})
+        container.addChild(mockPortrait)
 
-                  let specialWeapon = phaserSprites.addFromAtlas({x: statusContainer.x + 36, y: statusContainer.y + 305, name: `specialWeapon`, group: 'ui_overlay', filename: `${sw.spriteIcon}`, atlas: 'atlas_weapons', visible: false})
-                      specialWeapon.anchor.setTo(0.5, 0.5)
-                      specialWeapon.onUpdate = function(){
-                        this.angle += 2
-                      }
-                      specialWeapon.reveal= function(){
-                        this.visible = true
-                        specialWeapon.scale.setTo(2, 2)
-                        this.game.add.tween(this.scale).to( { x: 1.5, y:1.5 }, Phaser.Timer.SECOND, Phaser.Easing.Bounce.Out, true, 0, 0, false);
-                      }
-                      specialWeapon.hide= function(){
-                        this.visible = false;
-                      }
-                      specialWeapon.reveal()
-                      phaserGroup.addMany(14, [healthBar, specialBar, specialWeapon])
-                })
-            }
-            statusContainer.hide = function(){
-              updateShipSpecial(0)
-              updateShipHealthbar(0)
-              phaserSprites.getGroup('ui_overlay').map((obj) => {
-                obj.hide();
-              })
-              this.game.add.tween(this).to( { y: this.game.world.height + this.height }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, 500, 0, false)
-            }
+        let staticContainer = phaserSprites.addFromAtlas({name: `staticContainer`,  filename: 'portrait_static_1', atlas: 'atlas_main', visible: true, alpha: 0.4})
+        let staticAnimation = [...Phaser.Animation.generateFrameNames('portrait_static_', 1, 4), ...Phaser.Animation.generateFrameNames('portrait_static_', 3, 1)]
+        staticContainer.animations.add('static', staticAnimation, 1, true)
+        staticContainer.setStaticLevel = (type:string) => {
+          staticContainer.animations.stop('static')
+          let {framerate, alpha} = {framerate: 12, alpha: 0.5}
+          switch(type){
+              case 'HEAVY':
+                framerate = 18
+                alpha = 0.3
+              break
+              case 'MED':
+                framerate = 12
+                alpha = 0.2
+              break
+              case 'LIGHT':
+                framerate = 6
+                alpha = 0.1
+              break
+          }
+          staticContainer.alpha = alpha;
+          staticContainer.animations.play('static', framerate, true)
+        }
+        container.addChild(staticContainer)
 
-        let earthContainer = phaserSprites.addFromAtlas({name: `earthContainer`, group: 'ui', filename: 'ui_shield.png', atlas: 'atlas_main', visible: false})
-            earthContainer.reveal = function(){
-              this.x = this.game.world.width + this.width;
-              this.y = this.game.world.height - this.height - 10
-              this.visible = true
-              this.game.add.tween(this).to( { x: this.game.world.width - this.width - 10 }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, 0, 0, false).
-                onComplete.add(() => {
-                  this.defaultPosition.x = this.x
-                  this.defaultPosition.y = this.y
+        let portraitFrame = phaserSprites.addFromAtlas({name: `portraitFrame`, filename: 'ui_portraitContainer', atlas: 'atlas_main', visible: true})
+        container.addChild(portraitFrame)
 
-                  let earthBar = phaserSprites.addFromAtlas({x: earthContainer.x + 5, y: earthContainer.y + 5, name: `earthBar`, group: 'ui_overlay', filename: 'ui_healthBar.png', atlas: 'atlas_main', visible: true})
-                  let maskhealth = phaserMaster.let('earthBar', phaserSprites.addBasicMaskToSprite(earthBar))
-                      maskhealth.x = -earthBar.width;
-                  let population = gameData.population
-                  let damageTaken = 100 - ((population.killed/population.total) * 100)
-                  updateEarthbar(damageTaken)
-                })
-            }
-            earthContainer.hide = function(){
-              updateEarthbar(0)
-              this.game.add.tween(this).to( { y: this.game.world.height + this.height }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, 500, 0, false)
-            }
-            earthContainer.takeDamage = function(){
-              this.game.add.tween(this).to( { x: this.defaultPosition.x - 5 }, 50, Phaser.Easing.Bounce.In, true, 0, 0, false).
-                onComplete.add(() => {
-                  this.game.add.tween(this).to( { x: this.defaultPosition.x + 3 }, 50, Phaser.Easing.Bounce.Out, true, 0, 0, false)
-                    .onComplete.add(() => {
-                      this.game.add.tween(this).to( { x: this.defaultPosition.x }, 50, Phaser.Easing.Bounce.InOut, true, 0, 0, false)
-                    })
-                })
-            }
-
-        let bossContainer = phaserSprites.addFromAtlas({name: `bossContainer`, group: 'bosshealth', filename: 'ui_shield.png', atlas: 'atlas_main', visible: false})
-            bossContainer.anchor.setTo(0.5, 0.5)
-            bossContainer.reveal = function(){
-              this.x = this.game.world.centerX ;
-              this.y = -this.height;
-              this.visible = true
-              this.game.add.tween(this).to( { y: 20 }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, 0, 0, false).
-                onComplete.add(() => {
-                  this.defaultPosition.x = this.x
-                  this.defaultPosition.y = this.y
-
-                  let bossBar = phaserSprites.addFromAtlas({x: bossContainer.x - bossContainer.width/2 + 5, y: bossContainer.y - bossContainer.height/2 + 5, name: `bossBar`, group: 'bosshealth', filename: 'ui_BossHealthBar.png', atlas: 'atlas_main', visible: true})
-                  let maskhealth = phaserMaster.let('bossBar', phaserSprites.addBasicMaskToSprite(bossBar))
-                      maskhealth.x = -bossBar.width;
-                  updateBossBar(100)
-                })
-            }
-            bossContainer.hide = function(){
-              updateBossBar(0)
-              this.game.add.tween(this).to( { y: -this.height  }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, 500, 0, false)
-            }
+        //states
+        container.init = () => {
+          container.y  = container.y + 200
+        }
+        container.reveal = () => {
+          let y = container.getDefaultPositions().y
+          container.setDefaultPositions();
+          game.add.tween(container).to( { y: y }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, game.rnd.integerInRange(0, 500), 0, false).
+            onComplete.add(() => {})
+        }
+        container.hide = () => {
+          game.add.tween(container).to( { y: container.getDefaultPositions().y }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, game.rnd.integerInRange(0, 500), 0, false).
+            onComplete.add(() => {})
+        }
 
 
-          let portraitContainer = phaserSprites.addFromAtlas({x: 10, name: `portraitContainer`, group: 'ui', filename: 'ui_portraitContainer.png', atlas: 'atlas_main', visible: false})
-              portraitContainer.reveal = function(){
-                this.y = -this.height - 10
-                this.visible = true
-                this.game.add.tween(this).to( { y: 10 }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, 0, 0, false).
+
+      }
+      /******************/
+
+      /******************/
+      function buildHealthbar_player(){
+        let game = phaserMaster.game();
+        let healthbar_player = phaserSprites.addFromAtlas({y: 100, name: `healthbar_player`, group: 'player_healthbar', org:'ui', filename: 'healthbar_player', atlas: 'atlas_main', visible: true})
+        phaserSprites.centerOnPoint('healthbar_player', 300, game.world.height - healthbar_player.height/2 - 10)
+        phaserGroup.addMany(10, [healthbar_player])
+        healthbar_player.setDefaultPositions()
+
+        // children
+        // damagebar
+        let unit_damage_player = phaserSprites.addFromAtlas({x: 5, y: 3,  width: healthbar_player.width - 10, name: `unit_damage_player`, filename: 'unit_damage', atlas: 'atlas_main', visible: true})
+            unit_damage_player.maxHealth = unit_damage_player.width - 10;
+        healthbar_player.addChild(unit_damage_player)
+        unit_damage_player.init = () => {}
+        unit_damage_player.updateHealth = (remaining:number) => {
+          let healthRemaining = remaining/100
+          let {damageBar} = phaserMaster.getAll();
+          if(damageBar !== undefined){
+            damageBar.stop()
+          }
+          phaserMaster.forceLet('damageBar',game.add.tween(unit_damage_player).to( { width: unit_damage_player.maxHealth * healthRemaining }, 500, Phaser.Easing.Linear.In, true, 500, 0, false))
+        }
+
+        // healthbar
+        let unit_health_player = phaserSprites.addFromAtlas({x: 5, y: 3, width: healthbar_player.width - 10, name: `unit_health_player`, filename: 'unit_health', atlas: 'atlas_main', visible: true})
+            healthbar_player.maxHealth = healthbar_player.width - 10;
+        healthbar_player.addChild(unit_health_player)
+        unit_health_player.init = () => {
+          let {gameData} = phaserMaster.getOnly(['gameData']);
+          let health = gameData.player.health
+          updateShipHealthbar(health)
+        }
+        unit_health_player.updateHealth = (remaining:number) => {
+          let healthRemaining = remaining/100
+          unit_health_player.width = healthbar_player.maxHealth * healthRemaining;
+        }
+
+        // states
+        healthbar_player.init = () => {
+          healthbar_player.y  = healthbar_player.y + 200
+        }
+        healthbar_player.reveal = () => {
+          let y = healthbar_player.getDefaultPositions().y
+          healthbar_player.setDefaultPositions();
+          game.add.tween(healthbar_player).to( { y: y }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, game.rnd.integerInRange(0, 500), 0, false).
+            onComplete.add(() => {
+              healthbar_player.buildLives()
+            })
+        }
+        healthbar_player.hide = () => {
+          game.add.tween(healthbar_player).to( { y: healthbar_player.getDefaultPositions().y }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, game.rnd.integerInRange(0, 500), 0, false).
+            onComplete.add(() => {})
+        }
+
+
+        // life icons
+        healthbar_player.buildLives = () => {
+          let {gameData} = phaserMaster.getOnly(['gameData']);
+          for(let i = 0; i < gameData.player.lives; i++){
+              let lifeIcon = phaserSprites.addFromAtlas({x: 0 + (25 * i), y: -20, name: `life_icon_${game.rnd.integer()}`, group: 'playerLives', filename: 'ship_icon', atlas: 'atlas_main', alpha: 0})
+              healthbar_player.addChild(lifeIcon)
+              game.add.tween(lifeIcon).to( { alpha: 1 }, 250, Phaser.Easing.Linear.In, true, (i*250), 0, false)
+              lifeIcon.destroyIt = () => {
+                game.add.tween(lifeIcon).to( { y: lifeIcon.y - 10, alpha: 0 }, 250, Phaser.Easing.Linear.In, true, 1, 0, false).
                   onComplete.add(() => {
-                    let characterPortrait = phaserSprites.addFromAtlas({x: this.x + 2, y: this.y + 2, name: `characterPortrait`, group: 'ui_overlay', filename: 'ui_portrait_1.png', atlas: 'atlas_main', alpha: 0})
-                    characterPortrait.reveal = function(){
-                      this.game.add.tween(this).to( { alpha: 1}, Phaser.Timer.SECOND/2, Phaser.Easing.Linear.In, true, 0, 0, false)
-                    }
-                    characterPortrait.hide = function(){
-                      this.game.add.tween(this).to( { alpha: 0}, Phaser.Timer.SECOND/2, Phaser.Easing.Linear.In, true, 0, 0, false)
-                    }
-                    characterPortrait.reveal();
-
-
-                    for(let i = 0; i < gameData.player.lives; i++){
-                      let lifeIcon = phaserSprites.addFromAtlas({x: this.x + 12 + (i*20), y: this.y + this.height + 10, name: `lifeIcon_${i}`, group: 'ui_overlay', filename: 'ship_icon.png', atlas: 'atlas_main', alpha: 0})
-                      lifeIcon.anchor.setTo(0.5, 0.5)
-                      lifeIcon.reveal = function(){
-                        this.game.add.tween(this).to( { alpha: 1}, Phaser.Timer.SECOND/2, Phaser.Easing.Linear.In, true, 0, 0, false)
-                      }
-                      lifeIcon.hide = function(){
-                        this.game.add.tween(this).to( { alpha: 0}, Phaser.Timer.SECOND/2, Phaser.Easing.Linear.In, true, 0, 0, false)
-                      }
-                      lifeIcon.destroyIt = function(){
-                        phaserSprites.destroy(this.name)
-                      }
-                      lifeIcon.reveal()
-                    }
-
-
-
-                    phaserGroup.addMany(12, [characterPortrait])
+                    phaserSprites.destroy(lifeIcon.name)
                   })
               }
-              portraitContainer.hide = function(){
-                this.game.add.tween(this).to( { y: -this.height }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, 500, 0, false)
-              }
+          }
+        }
+        healthbar_player.loseLife = () => {
+          let lives = phaserSprites.getGroup('playerLives');
+          let life = lives[lives.length - 1]
+              life.destroyIt();
+        }
 
+        // let unit_health_player = phaserSprites.addFromAtlas({x: 5, y: 3, width: 150, name: `unit_health_player`, filename: 'unit_health', atlas: 'atlas_main', visible: true})
+        // healthbar_player.addChild(unit_health_player)
 
-              // BUILD MENU BUTTONS
-              let menuButton1 = phaserSprites.addFromAtlas({ name: `menuButton1`, group: 'ui_buttons', x: game.world.centerX, y: game.world.centerY + 125, atlas: 'atlas_main', filename: 'ui_button.png', visible: false });
-                  menuButton1.anchor.setTo(0.5, 0.5)
-                  menuButton1.reveal = function(){
-                    this.visible = true;
-                  }
-              let menuButton1Text = phaserTexts.add({name: 'menuButton1Text', group: 'ui',  font: 'gem', x: menuButton1.x, y: menuButton1.y,  size: 14, default: ``})
-                  menuButton1Text.anchor.setTo(0.5, 0.5)
+      }
+      /******************/
 
+      /******************/
+      function buildPow_player(){
+        let game = phaserMaster.game();
+        let powerbar = phaserSprites.addFromAtlas({name: `powerbar`, group: 'player_pow', org:'ui', filename: 'powerbar', atlas: 'atlas_main', visible: true})
+        phaserSprites.centerOnPoint('powerbar', game.world.width - 140, game.world.height - powerbar.height/2 - 10)
+        phaserGroup.addMany(10, [powerbar])
+        powerbar.setDefaultPositions()
 
-              let menuButton2 = phaserSprites.addFromAtlas({ name: `menuButton2`, group: 'ui_buttons', x: game.world.centerX, y: game.world.centerY + 175,  atlas: 'atlas_main', filename: 'ui_button.png', visible: false });
-                  menuButton2.anchor.setTo(0.5, 0.5)
-                  menuButton2.reveal = function(){
-                    this.visible = true;
-                  }
-              let menuButton2Text = phaserTexts.add({name: 'menuButton2Text', group: 'ui',  font: 'gem', x: menuButton2.x, y: menuButton2.y,  size: 14, default: ``})
-                  menuButton2Text.anchor.setTo(0.5, 0.5)
-              let menuButtonCursor = phaserSprites.addFromAtlas({ name: `menuButtonCursor`, group: 'ui_buttons', x: game.world.centerX - 125, atlas: 'atlas_main', filename: 'ui_cursor.png', visible: false });
-                  menuButtonCursor.anchor.setTo(0.5, 0.5)
-                  menuButtonCursor.reveal = function(){
-                    this.visible = true;
-                  }
-                  menuButtonCursor.updateLocation = function(val:number){
-                    phaserMaster.forceLet('menuButtonSelection', val)
-                    let button = phaserSprites.get(`menuButton${val}`)
-                    this.y = button.y;
-                  }
-                  menuButtonCursor.updateLocation(1);
+        // children
+        powerbar.setup = () => {
+          //setup bars
+          let useBar = 1
+          for(let i = 0; i < 30; i++){
+            if(i <= 5 && i > 0){ useBar = 1 }
+            if(i <= 10 && i > 5){ useBar = 2 }
+            if(i <= 15 && i > 10){ useBar = 3 }
+            if(i <= 20 && i > 15){ useBar = 4 }
+            if(i <= 25 && i > 20){ useBar = 5 }
+            if(i <= 30 && i > 25){ useBar = 6 }
+            let bar = phaserSprites.addFromAtlas({x:i * 8, y: 4, name: `powerbar_pow_${i}`, filename: `powerbar_level_${useBar}`, group: 'powerbar_bars', atlas: 'atlas_main', visible: false})
+            powerbar.addChild(bar)
+          }
 
+          // icon
+          let powerbar_pow = phaserSprites.addFromAtlas({x: -20, y: 0, name: `powerbar_pow`, filename: 'powerbar_pow', atlas: 'atlas_main', visible: true})
+          powerbar.addChild(powerbar_pow)
+        }
 
+        powerbar.updatePowerbar = () => {
+          let {gameData} = phaserMaster.getOnly(['gameData']);
+          let val = gameData.player.powerup
+          let bars = phaserSprites.getGroup('powerbar_bars');
+          for(let i = 0; i < val; i++ ){
+            bars[i].visible = true
+          }
+          for(let i = val; i < bars.length; i++ ){
+            bars[i].visible = false
+          }
+        }
 
-        // add to layers
-        phaserGroup.addMany(12, [menuButton1, menuButton2, menuButtonCursor])
-        phaserGroup.addMany(13, [timeContainer, statusContainer, scoreContainer, earthContainer, portraitContainer])
+        // states
+        powerbar.init = () => {
+          powerbar.y  = powerbar.y + 200
+          powerbar.setup()
+          powerbar.updatePowerbar()
+        }
+        powerbar.reveal = () => {
+          let y = powerbar.getDefaultPositions().y
+          powerbar.setDefaultPositions();
+          game.add.tween(powerbar).to( { y: y }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, game.rnd.integerInRange(0, 500), 0, false).
+            onComplete.add(() => {})
+        }
+        powerbar.hide = () => {
+          game.add.tween(powerbar).to( { y: powerbar.getDefaultPositions().y }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, game.rnd.integerInRange(0, 500), 0, false).
+            onComplete.add(() => {})
+        }
 
-        let overlaybmd = phaserBitmapdata.addGradient({name: 'overlaybmd', start: '#2f2f2f', end: '#2f2f2f', width: 5, height: 5, render: false})
-        let overlay = phaserSprites.add({x: 0, y: 0, name: `overlay`, width: game.canvas.width, height: game.canvas.height, reference: overlaybmd.cacheBitmapData, visible: true})
+      }
+      /******************/
 
-            overlay.fadeIn = function(duration:number, callback:any){
-              game.add.tween(this).to( { alpha: 1 }, duration, Phaser.Easing.Linear.In, true, 0, 0, false);
-              setTimeout(() => {
-                callback();
-              }, duration)
-            }
-            overlay.fadeOut = function(duration:number, callback:any){
-              game.add.tween(this).to( { alpha: 0 }, duration, Phaser.Easing.Linear.Out, true, 0, 0, false);
-              setTimeout(() => {
-                callback();
-              }, duration)
-            }
-            phaserGroup.addMany(10, [overlay])
+      /******************/
+      function buildHealthbar_boss(){
+        let game = phaserMaster.game();
+        let healthbar_boss = phaserSprites.addFromAtlas({ name: `healthbar_boss`, group: 'boss_healthbar', org:'ui', filename: 'healthbar_boss', atlas: 'atlas_main', visible: true})
+        phaserSprites.centerOnPoint('healthbar_boss', game.world.width/2, 75)
+        phaserGroup.addMany(10, [healthbar_boss])
+        healthbar_boss.setDefaultPositions()
+
+        // children
+        let unit_damage_boss = phaserSprites.addFromAtlas({x: 5, y: 3, width: 200, name: `unit_damage_boss`, filename: 'unit_damage', atlas: 'atlas_main', visible: true})
+        healthbar_boss.addChild(unit_damage_boss)
+
+        let unit_health_boss = phaserSprites.addFromAtlas({x: 5, y: 3, width: 150, name: `unit_health_boss`, filename: 'unit_health', atlas: 'atlas_main', visible: true})
+        healthbar_boss.addChild(unit_health_boss)
+
+        let bossbar_portrait = phaserSprites.addFromAtlas({x: 0, y: -2, name: `bossbar_portrait`, filename: 'bossbar_picture', atlas: 'atlas_main', visible: true})
+        healthbar_boss.addChild(bossbar_portrait)
+
+        // states
+        healthbar_boss.init = () => {
+          healthbar_boss.y  = -200
+        }
+        healthbar_boss.reveal = () => {
+          let y = healthbar_boss.getDefaultPositions().y
+          healthbar_boss.setDefaultPositions();
+          game.add.tween(healthbar_boss).to( { y: y }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, game.rnd.integerInRange(0, 500), 0, false).
+            onComplete.add(() => {})
+        }
+        healthbar_boss.hide = () => {
+          game.add.tween(healthbar_boss).to( { y: healthbar_boss.getDefaultPositions().y }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, game.rnd.integerInRange(0, 500), 0, false).
+            onComplete.add(() => {})
+        }
 
       }
       /******************/
@@ -574,35 +620,53 @@ class PhaserGameObject {
         let isDevMode = phaserMaster.get('devMode')
         let {overlay} = phaserSprites.getOnly(['overlay']);
         let {clock, roundTime} = phaserMaster.getOnly(['clock', 'roundTime']);
+        let skipAnimation = true
+
+        // run init on all ui elements to put them in their initial place
+        phaserSprites.getAll('ARRAY').map(obj => {
+          obj.init()
+        })
+
+        phaserTexts.getAll('ARRAY').map(obj => {
+          obj.init()
+        })
 
         overlayControls('WIPEOUT', () => {
+          utilityManager.overlayBGControls({transition: 'FADEOUT', delay: 0, speed: skipAnimation ? 1 : 250}, () => {
 
-          utilityManager.overlayBGControls({transition: 'FADEOUT', delay: 0, speed: 250}, () => {
-
-            // create player
-            let player = createPlayer();
-
-            overlay.fadeOut(isDevMode ? 0 : Phaser.Timer.SECOND/2, () => {
-
-                playSequence('SAVE THE WORLD', ()=>{
-                  player.moveToStart();
-                  game.time.events.add(isDevMode ? Phaser.Timer.SECOND*0 : Phaser.Timer.SECOND*1, () => {
-                  playSequence(`${roundTime} SECONDS GO`, () => {
-                      game.time.events.add(isDevMode ? Phaser.Timer.SECOND*0 : Phaser.Timer.SECOND/2, () => {
-                        phaserSprites.getGroup('ui').map((sprite) => {
-                          sprite.reveal()
-                          // change state
-                          phaserMaster.changeState('READY');
-                        })
-                      }).autoDestroy = true;
-
-                      // start clock
-                      clock.start()
-
-                    })
-                  })
-                })
+            phaserSprites.getGroup('ui').map(obj => {
+              obj.reveal()
             })
+
+            let player = createPlayer();
+                player.moveToStart();
+
+            clock.start()
+            phaserMaster.changeState('READY');
+
+
+            // // create player
+            // overlay.fadeOut(isDevMode ? 0 : Phaser.Timer.SECOND/2, () => {
+            //
+            //     playSequence('!', ()=>{
+            //       player.moveToStart();
+            //       game.time.events.add(isDevMode ? Phaser.Timer.SECOND*0 : Phaser.Timer.SECOND*1, () => {
+            //       playSequence(`!!`, () => {  //${roundTime} SECONDS GO
+            //           game.time.events.add(isDevMode ? Phaser.Timer.SECOND*0 : Phaser.Timer.SECOND/2, () => {
+            //             phaserSprites.getGroup('ui').map((sprite) => {
+            //               sprite.reveal()
+            //               // change state
+            //               phaserMaster.changeState('READY');
+            //             })
+            //           }).autoDestroy = true;
+            //
+            //           // start clock
+            //           clock.start()
+            //
+            //         })
+            //       })
+            //     })
+            // })
 
           })
         })
@@ -611,43 +675,47 @@ class PhaserGameObject {
 
       /******************/
       function overlayControls(transition:string, callback:any = ()=>{}){
-        utilityManager.overlayControls({transition: transition, delay: 1000, speed: 250, tileDelay: 5}, callback)
+        let skipAnimation = true
+        utilityManager.overlayControls(
+          { transition: transition,
+            delay: skipAnimation ? 0 : 1000,
+            speed: skipAnimation ? 0 : 250,
+            tileDelay: skipAnimation ? 0 : 5}, callback)
       }
       /******************/
 
       /******************/
       function updateShipHealthbar(remaining:number, immediate:boolean = false, duration:number = Phaser.Timer.SECOND/3){
-        let game = phaserMaster.game();
-        let bars = Math.ceil(30 * (remaining*.01))
-        let {healthBar, healthBarTween} = phaserMaster.getAll();
-        if(healthBarTween !== undefined){
-          healthBarTween.stop()
-        }
-        phaserMaster.forceLet('healthBarTween', game.add.tween(healthBar).to( { y: 231 - (7.7*bars) }, immediate ? 1 : duration, Phaser.Easing.Linear.Out, true, 0, 0, false))
+        let {staticContainer, unit_damage_player, unit_health_player} = phaserSprites.getOnly(['staticContainer', 'unit_damage_player', 'unit_health_player'])
+        if(remaining > 0 && remaining < 15){ staticContainer.setStaticLevel('HEAVY') }
+        if(remaining > 15 && remaining < 35){ staticContainer.setStaticLevel('MED') }
+        if(remaining > 35){ staticContainer.setStaticLevel('LIGHT') }
+        unit_damage_player.updateHealth(remaining)
+        unit_health_player.updateHealth(remaining)
       }
       /******************/
 
       /******************/
       function updateShipSpecial(remaining:number, immediate:boolean = false, duration:number = Phaser.Timer.SECOND/3){
-        let game = phaserMaster.game();
-        let bars = Math.ceil(6 * (remaining*.01))
-        let {specialBar, specialBarTween} = phaserMaster.getAll();
-        if(specialBarTween !== undefined){
-          specialBarTween.stop()
-        }
-        phaserMaster.forceLet('specialBarTween', game.add.tween(specialBar).to( { y: 48 - (8*bars) }, immediate ? 1 : duration, Phaser.Easing.Linear.Out, true, 0, 0, false))
+        // let game = phaserMaster.game();
+        // let bars = Math.ceil(6 * (remaining*.01))
+        // let {specialBar, specialBarTween} = phaserMaster.getAll();
+        // if(specialBarTween !== undefined){
+        //   specialBarTween.stop()
+        // }
+        // phaserMaster.forceLet('specialBarTween', game.add.tween(specialBar).to( { y: 48 - (8*bars) }, immediate ? 1 : duration, Phaser.Easing.Linear.Out, true, 0, 0, false))
       }
       /******************/
 
       /******************/
       function updateEarthbar(remaining:number, immediate:boolean = false, duration:number = Phaser.Timer.SECOND/3){
-        let game = phaserMaster.game();
-        let bars = (10 * (remaining*.01))
-        let {earthBar, earthBarTween} = phaserMaster.getAll();
-        if(earthBarTween !== undefined){
-          earthBarTween.stop()
-        }
-        phaserMaster.forceLet('earthBarTween', game.add.tween(earthBar).to( { x: -244 + (24.4*bars) }, immediate ? 1 : duration, Phaser.Easing.Linear.Out, true, 0, 0, false))
+        // let game = phaserMaster.game();
+        // let bars = (10 * (remaining*.01))
+        // let {earthBar, earthBarTween} = phaserMaster.getAll();
+        // if(earthBarTween !== undefined){
+        //   earthBarTween.stop()
+        // }
+        // phaserMaster.forceLet('earthBarTween', game.add.tween(earthBar).to( { x: -244 + (24.4*bars) }, immediate ? 1 : duration, Phaser.Easing.Linear.Out, true, 0, 0, false))
       }
       /******************/
 
@@ -664,22 +732,22 @@ class PhaserGameObject {
 
       /******************/
       function earthTakeDamage(val:number){
-        let {gameData} = phaserMaster.getAll();
-        let {currentState} = phaserMaster.getState();
-        let {earthContainer} = phaserSprites.getAll();
-
-        let population = gameData.population
-            population.killed += val
-        let damageTaken = 100 - ((population.killed/population.total) * 100)
-
-        if(damageTaken <= 0 && currentState !== 'GAMEOVER'){
-          gameOver();
-        }
-        else{
-          earthContainer.takeDamage();
-          updateEarthbar(damageTaken, true)
-          saveData('population', {total: population.total, killed: population.killed})
-        }
+        // let {gameData} = phaserMaster.getAll();
+        // let {currentState} = phaserMaster.getState();
+        // let {earthContainer} = phaserSprites.getAll();
+        //
+        // let population = gameData.population
+        //     population.killed += val
+        // let damageTaken = 100 - ((population.killed/population.total) * 100)
+        //
+        // if(damageTaken <= 0 && currentState !== 'GAMEOVER'){
+        //   gameOver();
+        // }
+        // else{
+        //   earthContainer.takeDamage();
+        //   //updateEarthbar(damageTaken, true)
+        //   saveData('population', {total: population.total, killed: population.killed})
+        // }
       }
       /******************/
 
@@ -706,6 +774,17 @@ class PhaserGameObject {
 
           game.time.events.add(Phaser.Timer.SECOND/2.5 * wordlist.length, callback, this).autoDestroy = true;
 
+      }
+      /******************/
+
+      /******************/
+      function addPowerup(){
+        let {gameData} = phaserMaster.getOnly(['gameData']);
+        let {powerbar} = phaserSprites.getOnly(['powerbar'])
+        let val = gameData.player.powerup + 1
+        if(val > 30){ val = 30 }
+        saveData('player', {health: gameData.player.health, lives: gameData.player.lives, powerup: val})
+        powerbar.updatePowerbar();
       }
       /******************/
 
@@ -739,15 +818,18 @@ class PhaserGameObject {
         let updateHealth = (health:number) => {
           let {gameData} = phaserMaster.getOnly(['gameData'])
           updateShipHealthbar(health)
-          saveData('player', {health: health, lives: gameData.player.lives})
+          saveData('player', {health: health, lives: gameData.player.lives, powerup: gameData.player.powerup})
         }
 
         let loseLife = (player:any) => {
           let {gameData} = phaserMaster.getOnly(['gameData'])
+          let {healthbar_player} = phaserSprites.getOnly(['healthbar_player'])
+
           gameData.player.lives--
-          phaserSprites.get(`lifeIcon_${gameData.player.lives}`).destroyIt();
+          healthbar_player.loseLife()
+
           if(gameData.player.lives > 0){
-            saveData('player', {health: 100, lives: gameData.player.lives})
+            saveData('player', {health: 100, lives: gameData.player.lives, powerup: 0})
             phaserControls.clearAllControlIntervals()
             phaserControls.disableAllInput()
             player.isDestroyed()
@@ -775,7 +857,7 @@ class PhaserGameObject {
                  gameData.score += 200
             saveData('score', gameData.score)
             let {scoreText} = phaserTexts.getOnly(['scoreText'])
-                scoreText.updateScore();
+                 scoreText.updateScore();
         }
         let onDamage = () => {}
         let onFail = () => { }
@@ -809,7 +891,7 @@ class PhaserGameObject {
                  gameData.score += 100
             saveData('score', gameData.score)
             let {scoreText} = phaserTexts.getOnly(['scoreText'])
-                scoreText.updateScore();
+                 scoreText.updateScore();
             for(let i = 0; i < 5; i++){
                createDebris({
                  x: enemy.x,
@@ -834,7 +916,7 @@ class PhaserGameObject {
                  gameData.score += 25
             saveData('score', gameData.score)
             let {scoreText} = phaserTexts.getOnly(['scoreText'])
-                scoreText.updateScore();
+                 scoreText.updateScore();
         }
         let onDamage = () => {}
         let onFail = () => { earthTakeDamage(1)  }
@@ -853,7 +935,7 @@ class PhaserGameObject {
                  gameData.score += 10000
             saveData('score', gameData.score)
             let {scoreText} = phaserTexts.getOnly(['scoreText'])
-                scoreText.updateScore();
+                 scoreText.updateScore();
             endLevel()
         }
         let onDamage = (boss) => {
@@ -905,9 +987,42 @@ class PhaserGameObject {
         player.fireWeapon()
         for(let i = 0; i < shots; i++){
           setTimeout(() => {
-            let onUpdate = (obj:any) => { targetCheck(obj, 'BULLET') }
+            let onUpdate = (obj:any) => {
+              //obj.x = player.x;
+              targetCheck(obj, 'BULLET')
+            }
             let onDestroy = () => {}
             weaponManager.createBullet({name: `bullet_${game.rnd.integer()}`, group: 'ship_weapons', x: player.x + (i * gap) - centerShots, y: player.y, spread: 0, layer: player.onLayer + 1}, onDestroy, onUpdate)
+         }, 25)
+        }
+      }
+      /******************/
+
+      /******************/
+      function fireSpread(){
+        let game = phaserMaster.game();
+        let {player} = phaserSprites.getOnly(['player']);
+        let {firepowerUp} = phaserMaster.getOnly(['firepowerUp'])
+        let {gap, shots} = {gap: 10, shots: 2 + (2 *2)}
+        let centerShots = (gap * (shots-1))/2
+
+        player.fireWeapon()
+        for(let i = 0; i < Math.floor(shots/2); i++){
+          setTimeout(() => {
+            let onUpdate = (obj:any) => {
+              targetCheck(obj, 'BULLET')
+            }
+            let onDestroy = () => {}
+            weaponManager.createBullet({name: `bullet_${game.rnd.integer()}`, group: 'ship_weapons', x: player.x, y: player.y, spread:(i*8), layer: player.onLayer + 1}, onDestroy, onUpdate)
+         }, 25)
+        }
+        for(let i = 1; i < Math.floor(shots/2); i++){
+          setTimeout(() => {
+            let onUpdate = (obj:any) => {
+              targetCheck(obj, 'BULLET')
+            }
+            let onDestroy = () => {}
+              weaponManager.createBullet({name: `bullet_${game.rnd.integer()}`, group: 'ship_weapons', x: player.x, y: player.y, spread:-(i*8), layer: player.onLayer + 1}, onDestroy, onUpdate)
          }, 25)
         }
       }
@@ -943,7 +1058,7 @@ class PhaserGameObject {
         for(let i = 0; i < shots; i++){
           let onUpdate = (obj:any) => { targetCheck(obj, 'MISSLE') }
           let onDestroy = (obj:any) => { impactExplosion(obj.x + obj.height, obj.y, 1, obj.damageAmount/2) }
-          weaponManager.createMissle({name: `missle_${game.rnd.integer()}`, group: 'ship_weapons', x: player.x + (i * gap) - centerShots, y: player.y - player.height/2, spread:(i % 2 === 0 ? -0.50 : 0.50), layer: player.onLayer + 1}, onDestroy, onUpdate)
+          weaponManager.createMissle({name: `missle_${game.rnd.integer()}`, group: 'ship_weapons', x: player.x, y: player.y - player.height/2, spread:(i % 2 === 0 ? -7 - (i*2): 7 +  (i*2)), layer: player.onLayer + 1}, onDestroy, onUpdate)
         }
       }
       /******************/
@@ -1077,7 +1192,7 @@ class PhaserGameObject {
         }
 
 
-        phaserSprites.getManyGroups(['spaceGroup', 'movingStarField', 'ship_weapons', 'ship_secondary_weapons', 'impactExplosions', 'playership', 'enemy_bullets']).map(obj => {
+        phaserSprites.getManyGroups(['backgrounds', 'starfield', 'ship_weapons', 'ship_secondary_weapons', 'impactExplosions', 'playership', 'enemy_bullets']).map(obj => {
           obj.onUpdate()
         })
 
@@ -1142,17 +1257,19 @@ class PhaserGameObject {
                 fireMissles();
                 break
               case 'BULLET':
-                fireBullet();
+                fireSpread();
+                //fireBullet();
+                break
             }
           }
 
           if(phaserControls.checkWithDelay( {isActive: true, key: 'B', delay: secondaryWeapon.cooldown} )){
             if(specialWeapon !== undefined){
               // reset speciaal timer and start charge animation
-              updateShipSpecial(0, true)
-              game.time.events.add(50, () => {
-                updateShipSpecial(100, false, secondaryWeapon.cooldown-50)
-              }).autoDestroy = true;
+              // updateShipSpecial(0, true)
+              // game.time.events.add(50, () => {
+              //   updateShipSpecial(100, false, secondaryWeapon.cooldown-50)
+              // }).autoDestroy = true;
             }
 
             switch(secondaryWeapon.reference){
@@ -1273,7 +1390,7 @@ class PhaserGameObject {
             })
 
             // destroy all aliens
-            phaserSprites.getGroup('movingStarField').map((star) => {
+            phaserSprites.getGroup('starfield').map((star) => {
               star.fadeOut()
             })
 
@@ -1292,7 +1409,7 @@ class PhaserGameObject {
 
                 game.add.tween(blueBackground).to( { alpha: 1 }, Phaser.Timer.SECOND, Phaser.Easing.Linear.In, true, 0, 0, false).
                   onComplete.add(() => {
-                    let background = phaserSprites.addTilespriteFromAtlas({ name: 'victory_bg', group: 'spaceGroup', x: 0, y: 0, width: game.canvas.width, height: game.canvas.height, atlas: 'atlas_large', filename: 'victory_bg.png', alpha: 1 });
+                    let background = phaserSprites.addTilespriteFromAtlas({ name: 'victory_bg', group: 'spaceGroup', x: 0, y: 0, width: game.canvas.width, height: game.canvas.height, atlas: 'atlas_large', filename: 'victory_bg', alpha: 1 });
                         background.onUpdate = function () {
                             this.tilePosition.x -= 3
                         };
@@ -1319,7 +1436,7 @@ class PhaserGameObject {
         let gameData = phaserMaster.get('gameData');
 
 
-        let victoryScreenContainer = phaserSprites.addFromAtlas({y: game.world.centerY - 100, name: `victoryScreenContainer`, group: 'ui_clear', filename: 'ui_clear.png', atlas: 'atlas_main', visible: false})
+        let victoryScreenContainer = phaserSprites.addFromAtlas({y: game.world.centerY - 100, name: `victoryScreenContainer`, group: 'ui_clear', filename: 'ui_clear', atlas: 'atlas_main', visible: false})
             victoryScreenContainer.anchor.setTo(0.5, 0.5)
             victoryScreenContainer.reveal = function(){
               this.x = -this.width - 100
@@ -1327,7 +1444,7 @@ class PhaserGameObject {
               this.game.add.tween(this).to( { x: this.game.world.centerX }, Phaser.Timer.SECOND*1, Phaser.Easing.Bounce.Out, true, 0, 0, false).
                 onComplete.add(() => {
 
-                  let scoreContainer = phaserSprites.addFromAtlas({x: this.game.world.centerX, y: this.game.world.centerY, name: `scoreContainer2`, group: 'ui', filename: 'ui_roundContainer.png', atlas: 'atlas_main', visible: true})
+                  let scoreContainer = phaserSprites.addFromAtlas({x: this.game.world.centerX, y: this.game.world.centerY, name: `scoreContainer2`, group: 'ui', filename: 'ui_roundContainer', atlas: 'atlas_main', visible: true})
                       scoreContainer.anchor.setTo(0.5, 0.5)
                   let scoreText = phaserTexts.add({name: 'scoreText2', group: 'ui_text', x:scoreContainer.x, y: scoreContainer.y,  font: 'gem', size: 14, default: `${gameData.score}`})
                       scoreText.anchor.setTo(0.5, 0.5)
@@ -1374,7 +1491,7 @@ class PhaserGameObject {
                                           phaserTexts.destroy('popCount')
 
                                           for(let i = 0; i < medalsEarned; i++){
-                                            let medal = phaserSprites.addFromAtlas({ name: `medal_${i}`, group: 'medals', x: victoryScreenContainer.x + (i*20) - 80, y: victoryScreenContainer.y + 20, width: game.canvas.width, height: game.canvas.height, atlas: 'atlas_main', filename: 'medal_gold.png', alpha: 0 });
+                                            let medal = phaserSprites.addFromAtlas({ name: `medal_${i}`, group: 'medals', x: victoryScreenContainer.x + (i*20) - 80, y: victoryScreenContainer.y + 20, width: game.canvas.width, height: game.canvas.height, atlas: 'atlas_main', filename: 'medal_gold', alpha: 0 });
                                                 medal.reveal = function(){
                                                   this.scale.setTo(2, 2)
                                                   this.game.add.tween(this.scale).to( { x: 1, y: 1}, 100, Phaser.Easing.Linear.Out, true, 0)

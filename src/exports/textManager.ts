@@ -37,6 +37,7 @@ export class PHASER_TEXT_MANAGER {
           newText.visible = params.visible;
           newText.alpha = params.alpha;
 
+          newText.init = function(){}
           newText.show = function(){
             this.visible = true
           }

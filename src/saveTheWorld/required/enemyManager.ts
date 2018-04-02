@@ -38,16 +38,57 @@ export class ENEMY_MANAGER {
   /******************/
 
   /******************/
-  public fireBullet(enemy:any, tracking:Boolean = false){
-    let spriteAnimation = [...Phaser.Animation.generateFrameNames('e_bullet', 1, 1, '.png')]
+  private facePlayer(obj:any){
+    let game = this.game
+    let {player} = this.phaserSprites.getOnly(['player'])
+    return Math.ceil( (360 / (2 * Math.PI)) * game.math.angleBetween(obj.x, obj.y, player.x, player.y) - 90 ) * 1
+  }
+  /******************/
+
+  /******************/
+  private fireBullet(enemy:any, tracking:Boolean = false){
+    let spriteAnimation = [...Phaser.Animation.generateFrameNames('e_bullet', 1, 1)]
     // let ammo =  this.phaserSprites.addFromAtlas({x: x, y: y, name: `enemy_bullet_${this.game.rnd.integer()}`, group: 'enemy_bullets', atlas: this.atlas_weapons, filename: spriteAnimation[0]})
     //     ammo
+
+
+    for(let i = 0; i < 3; i++){
+      setTimeout(() => {
+        let onDestroy = () => {}
+        let onUpdate = (bullet:any) => {
+          this.collisionCheck(bullet, 2)
+        }
+        let bullet = this.weaponManager.createBullet({name: `enemy_bullet_${this.game.rnd.integer()}`, group: 'enemy_bullets', x: enemy.x, y: enemy.y, spread: (i*8), layer: enemy.onLayer + 1}, onDestroy, onUpdate)
+            bullet.body.velocity.y = 300;
+     }, 25)
+    }
+
+
+  }
+  /******************/
+
+  /******************/
+  private fireSpread(enemy:any, size:number){
     let onDestroy = () => {}
     let onUpdate = (bullet:any) => {
       this.collisionCheck(bullet, 2)
     }
-    let bullet = this.weaponManager.createBullet({name: `enemy_bullet_${this.game.rnd.integer()}`, group: 'enemy_bullets', x: enemy.x, y: enemy.y, spread: 0, layer: enemy.onLayer + 1}, onDestroy, onUpdate)
+
+    let bullet = this.weaponManager.redBullet({name: `enemy_bullet_${this.game.rnd.integer()}`, group: 'enemy_bullets', x: enemy.x, y: enemy.y, spread: 0, layer: enemy.onLayer + 1}, onDestroy, onUpdate)
         bullet.body.velocity.y = 300;
+    for(let i = 1; i < size/2; i++){
+      setTimeout(() => {
+        let bullet = this.weaponManager.redBullet({name: `enemy_bullet_${this.game.rnd.integer()}`, group: 'enemy_bullets', x: enemy.x, y: enemy.y, spread: (i*8), layer: enemy.onLayer + 1}, onDestroy, onUpdate)
+            bullet.body.velocity.y = 300;
+     }, 25)
+    }
+    for(let i = 1; i < size/2; i++){
+      setTimeout(() => {
+        let bullet = this.weaponManager.redBullet({name: `enemy_bullet_${this.game.rnd.integer()}`, group: 'enemy_bullets', x: enemy.x, y: enemy.y, spread: -(i*8), layer: enemy.onLayer + 1}, onDestroy, onUpdate)
+            bullet.body.velocity.y = 300;
+     }, 25)
+    }
+
   }
   /******************/
 
@@ -55,29 +96,26 @@ export class ENEMY_MANAGER {
   public createSmallEnemy1(options:any, onDamage:any = () => {}, onDestroy:any = () => {}, onFail:any = () => {}, onUpdate:any = () => {}){
     let game = this.game
     let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
+
     //let enemy = enemyData.BULLET;
-    let enemy = phaserSprites.addFromAtlas({x: options.x, name: `enemy_${game.rnd.integer()}`, group:'enemies', atlas: atlas, filename: `small_1.png`, visible: true})
+    let enemy = phaserSprites.addFromAtlas({name: `enemy_${game.rnd.integer()}`, group:'enemies', atlas: atlas, filename: `small_1`, visible: true})
         enemy.anchor.setTo(0.5, 0.5);
         enemy.scale.setTo(1,1);
-        game.physics.enable(enemy, Phaser.Physics.ARCADE);
         enemy.atTarget = false;
         enemy.maxHealth = 100;
         enemy.health = enemy.maxHealth
         enemy.pierceResistence = 1;
         enemy.fallThreshold = game.rnd.integerInRange(0, 75)
-        enemy.cosWave = {data: game.math.sinCosGenerator(400, game.world.height * .80 , 0, 1).cos, count: 0}
-        enemy.sinWave = {data: game.math.sinCosGenerator(400, 200 , 1, 10).sin, count: 0}
+        enemy.cosWave = {data: game.math.sinCosGenerator(200, game.world.height * .50 , 0, 1).cos, count: 0}
+        enemy.sinWave = {data: game.math.sinCosGenerator(game.rnd.integerInRange(200, 300), game.rnd.integerInRange(0, 1) === 1 ? -50 : 50, 1, 3).sin, count: 0}
         enemy.fireDelay = 0
-        enemy.fireTimer = 500
-        enemy.inPlace = false;
+        enemy.fireTimer = 1000
         enemy.isDestroyed = false;
         enemy.onLayer = options.layer;
         phaserGroup.add(options.layer, enemy)
 
-        console.log(enemy.sinWave)
-
     // add hitboxes
-    let hitboxes = [`small_1_hitbox_1.png`]
+    let hitboxes = [`small_1_hitbox_1`]
     hitboxes.map(obj => {
       let e_hitbox = phaserSprites.addFromAtlas({name: `enemy_hitbox_${game.rnd.integer()}`, group:'enemy_hitboxes', atlas: atlas, filename: obj, alpha: this.showHitbox ? 0.75 : 0})
           e_hitbox.anchor.setTo(0.5, 0.5)
@@ -117,9 +155,9 @@ export class ENEMY_MANAGER {
 
        enemy.explodeInterval = setInterval(() => {
          this.weaponManager.createExplosion(enemy.x + game.rnd.integerInRange(-enemy.width/2, enemy.width/2), enemy.y + game.rnd.integerInRange(-enemy.height/2, enemy.height/2), 1, enemy.onLayer + 1)
-       }, 100)
+       }, 250)
 
-       enemy.game.add.tween(enemy).to( {y: enemy.y - 15, alpha: 0.5}, 750, Phaser.Easing.Linear.Out, true, 100, 0, false).
+       enemy.game.add.tween(enemy).to( {y: enemy.y + 100, alpha: 0.5}, 750, Phaser.Easing.Linear.Out, true, 100, 0, false).
          onComplete.add(() => {
             clearInterval(enemy.explodeInterval)
             onDestroy(enemy);
@@ -129,17 +167,20 @@ export class ENEMY_MANAGER {
        }
     }
 
+
+
     enemy.onUpdate = () => {
       onUpdate(enemy);
-      if(game.time.now > enemy.fireDelay && enemy.inPlace){
-          enemy.fireDelay = game.time.now + enemy.fireTimer
-          this.fireBullet(enemy, true)
-      }
 
+      //enemy.angle = this.facePlayer(enemy)
+      if(game.time.now > enemy.fireDelay && !enemy.isDestroyed && (enemy.y > enemy.game.canvas.height * .3) ){
+          enemy.fireDelay = game.time.now + enemy.fireTimer
+          this.fireSpread(enemy, 4)
+      }
 
       if(!enemy.isDestroyed){
         enemy.y = -(enemy.cosWave.data[enemy.cosWave.count]) - enemy.height
-        enemy.x = enemy.sinWave.data[enemy.sinWave.count] + 100
+        enemy.x = enemy.sinWave.data[enemy.sinWave.count] + options.x
         enemy.cosWave.count++
         enemy.sinWave.count++
         if(enemy.cosWave.count >= enemy.cosWave.data.length){
@@ -165,7 +206,7 @@ export class ENEMY_MANAGER {
     let game = this.game
     let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
     //let enemy = enemyData.BULLET;
-    let enemy = phaserSprites.addFromAtlas({x: options.x, name: `enemy_${game.rnd.integer()}`, group:'enemies', atlas: atlas, filename: `big_1.png`, visible: true})
+    let enemy = phaserSprites.addFromAtlas({x: options.x, name: `enemy_${game.rnd.integer()}`, group:'enemies', atlas: atlas, filename: `big_1`, visible: true})
         enemy.anchor.setTo(0.5, 0.5);
         enemy.scale.setTo(1,1);
         game.physics.enable(enemy, Phaser.Physics.ARCADE);
@@ -184,7 +225,7 @@ export class ENEMY_MANAGER {
         phaserGroup.add(options.layer, enemy)
 
     // add hitboxes
-    let hitboxes = [`big_1_hitbox_1.png`, `big_1_hitbox_2.png`]
+    let hitboxes = [`big_1_hitbox_1`, `big_1_hitbox_2`]
     hitboxes.map(obj => {
       let e_hitbox = phaserSprites.addFromAtlas({name: `enemy_hitbox_${game.rnd.integer()}`, group:'enemy_hitboxes', atlas: atlas, filename: obj, alpha: this.showHitbox ? 0.75 : 0})
           e_hitbox.anchor.setTo(0.5, 0.5)
@@ -267,7 +308,7 @@ export class ENEMY_MANAGER {
     let game = this.game
     let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
     //let enemy = enemyData.BULLET;
-    let enemy = phaserSprites.addFromAtlas({x: options.x, y: options.y, name: `enemy_${game.rnd.integer()}`, group:'enemies', atlas: atlas, filename: `asteroid_mid_layer_${game.rnd.integerInRange(1, 3)}.png`, visible: true})
+    let enemy = phaserSprites.addFromAtlas({x: options.x, y: options.y, name: `enemy_${game.rnd.integer()}`, group:'enemies', atlas: atlas, filename: `asteroid_mid_layer_${game.rnd.integerInRange(1, 3)}`, visible: true})
         enemy.anchor.setTo(0.5, 0.5);
         enemy.scale.setTo(1.5, 1.5);
         game.physics.enable(enemy, Phaser.Physics.ARCADE);
@@ -283,7 +324,7 @@ export class ENEMY_MANAGER {
         phaserGroup.add(options.layer, enemy)
 
     // add hitboxes
-    let hitboxes = [`1_hitbox_1.png`, `1_hitbox_2.png`]
+    let hitboxes = [`1_hitbox_1`, `1_hitbox_2`]
     hitboxes.map(obj => {
       let e_hitbox = phaserSprites.addFromAtlas({name: `enemy_hitbox_${game.rnd.integer()}`, group:'enemy_hitboxes', atlas: atlas, filename: obj, alpha: this.showHitbox ? 0.75 : 0})
           e_hitbox.anchor.setTo(0.5, 0.5)
@@ -398,7 +439,7 @@ export class ENEMY_MANAGER {
     let game = this.game
     let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
 
-    let enemy = phaserSprites.addFromAtlas({x: options.x, y: options.y, name: `enemy_${game.rnd.integer()}`, group:'enemies', atlas: atlas, filename: `asteroid_mid_layer_${game.rnd.integerInRange(1, 3)}.png`, visible: true})
+    let enemy = phaserSprites.addFromAtlas({x: options.x, y: options.y, name: `enemy_${game.rnd.integer()}`, group:'enemies', atlas: atlas, filename: `asteroid_mid_layer_${game.rnd.integerInRange(1, 3)}`, visible: true})
         enemy.anchor.setTo(0.5, 0.5);
         enemy.scale.setTo(1, 1);
         game.physics.enable(enemy, Phaser.Physics.ARCADE);
@@ -515,7 +556,7 @@ export class ENEMY_MANAGER {
     let game = this.game
     let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
     //let enemy = enemyData.BULLET;
-    let enemy = phaserSprites.addFromAtlas({x: options.x, y: options.y, name: `enemy_${game.rnd.integer()}`, group:'boss', atlas: atlas, filename: `asteroid_large_layer_${game.rnd.integerInRange(1, 3)}.png`, visible: true})
+    let enemy = phaserSprites.addFromAtlas({x: options.x, y: options.y, name: `enemy_${game.rnd.integer()}`, group:'boss', atlas: atlas, filename: `asteroid_large_layer_${game.rnd.integerInRange(1, 3)}`, visible: true})
         enemy.anchor.setTo(0.5, 0.5);
         game.physics.enable(enemy, Phaser.Physics.ARCADE);
         enemy.body.velocity.y = options.iy
