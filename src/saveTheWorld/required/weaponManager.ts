@@ -19,9 +19,6 @@ export class WEAPON_MANAGER {
     this.atlas = atlas
   }
 
-  public moveInDirection(object:any, angle:number) {
-  	object.x = object.x + angle * Math.cos(0);
-  }
 
 
   /******************/
@@ -32,7 +29,7 @@ export class WEAPON_MANAGER {
     let ammo =  phaserSprites.addFromAtlas({x: options.x, y: options.y, name: options.name, group: options.group, atlas: atlas, filename: 'enemy_bullet'})
         ammo.anchor.setTo(0.5, 0.5)
         game.physics.enable(ammo, Phaser.Physics.ARCADE);
-        ammo.body.velocity.y = 300;        
+        ammo.body.velocity.y = 300;
         ammo.angle =  options.spread
 
         ammo.removeIt = () => {
@@ -46,7 +43,7 @@ export class WEAPON_MANAGER {
         }
 
         ammo.onUpdate = () => {
-          this.moveInDirection(ammo, ammo.angle/4)
+
           if( (ammo.y < -50) || (ammo.y > ammo.game.canvas.height + 50) ){ ammo.destroyIt() }
           onUpdate(ammo)
        }
@@ -60,57 +57,38 @@ export class WEAPON_MANAGER {
   /******************/
 
   /******************/
-  public createBullet(options:any, onDestroy:any = () => {}, onUpdate:any = () => {}){
+  public createBullet(bulletPoolTotal:any = 2){
     let game = this.game
-    let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
-    let {weaponData, atlas_weapon} = phaserMaster.getAll(['weaponData', 'atlas_weapon']);
-    let {player} = phaserSprites.getOnly(['player'])
-    let weapon = weaponData.primaryWeapons.BULLET;
+    let {phaserMaster} = this;
+    let {weaponData} = phaserMaster.getAll(['weaponData']);
+    let data = weaponData.primaryWeapons.BULLET;
 
-    let ammo =  phaserSprites.addFromAtlas({x: options.x, y: options.y, name: options.name, group: options.group, atlas: atlas, filename: weapon.spriteAnimation[0]})
+    let weapon = game.add.weapon(bulletPoolTotal, this.atlas, data.spriteAnimation[0])
+        weapon.bulletKillType = Phaser.Weapon.KILL_CAMERA_BOUNDS ;
+        weapon.bulletSpeed = 1500;
+        weapon.bulletAngleOffset = 90
+        weapon.multiFire = true;
 
-        if(weapon.spriteAnimation.length > 1){
-          ammo.animations.add('animate', weapon.spriteAnimation, 1, true)
-          ammo.animations.play('animate', 30, true)
-        }
-        ammo.anchor.setTo(0.5, 0.5)
-        game.physics.enable(ammo, Phaser.Physics.ARCADE);
-        ammo.body.velocity.y = weapon.initialVelocity;
-        ammo.pierceStrength = weapon.pierceStrength
-        ammo.damageAmount = weapon.damage
-        ammo.angle =  options.spread
-
-        ammo.removeIt = () => {
-          phaserSprites.destroy(ammo.name)
-        }
-
-        ammo.destroyIt = () => {
-          this.orangeImpact(ammo.x + this.game.rnd.integerInRange(-5, 5), ammo.y + this.game.rnd.integerInRange(-5, 15), 1, options.layer + 1)
-          onDestroy(ammo)
-          phaserSprites.destroy(ammo.name)
+        weapon.checkOrientation = (angle:number) => {
+          if(angle < 180){
+            weapon.bulletSpeed = Math.abs(weapon.bulletSpeed);
+            weapon.bulletAngleOffset = Math.abs(weapon.bulletAngleOffset)
+          }
+          else{
+            weapon.bulletSpeed = -Math.abs(weapon.bulletSpeed);
+            weapon.bulletAngleOffset = -Math.abs(weapon.bulletAngleOffset)
+          }
         }
 
-        ammo.onUpdate = () => {
-          // if(ammo.angle > 0){
-          //   if(ammo.angle !== 0){
-          //     ammo.angle -= 5
-          //   }
-          // }
-          // if(ammo.angle < 0){
-          //   if(ammo.angle !== 0){
-          //     ammo.angle += 5
-          //   }
-          // }
-          this.moveInDirection(ammo, ammo.angle/4)
-          if( (ammo.y < -50) || (ammo.y > ammo.game.canvas.height + 50) ){ ammo.destroyIt() }
-          onUpdate(ammo)
-       }
+        // map destroy function into bullet
+        weapon.bullets.children.map( bullet => {
+          bullet.destroyIt = (layer:number) => {
+            bullet.kill()
+            this.orangeImpact(bullet.x + this.game.rnd.integerInRange(-5, 5), bullet.y + this.game.rnd.integerInRange(-5, 15), 1, layer)
+          }
+        })
 
-       if(options.layer !== undefined){
-         phaserGroup.add(options.layer, ammo)
-       }
-
-    return ammo;
+    return weapon
   }
   /******************/
 
@@ -165,7 +143,7 @@ export class WEAPON_MANAGER {
             }
           }
 
-          this.moveInDirection(ammo, ammo.angle/8)
+
           // ammo speeds up
           ammo.accelerate();
           // destroy ammo

@@ -46,51 +46,23 @@ export class ENEMY_MANAGER {
   /******************/
 
   /******************/
-  private fireBullet(enemy:any, tracking:Boolean = false){
-    let spriteAnimation = [...Phaser.Animation.generateFrameNames('e_bullet', 1, 1)]
-    // let ammo =  this.phaserSprites.addFromAtlas({x: x, y: y, name: `enemy_bullet_${this.game.rnd.integer()}`, group: 'enemy_bullets', atlas: this.atlas_weapons, filename: spriteAnimation[0]})
-    //     ammo
+  public bulletCollisionWithPlayer(ammo:any, damage:number){
+    let targets = [...this.phaserSprites.getGroup('playership')]
+    this.game.physics.arcade.overlap(targets, ammo.bullets, (target, bullet) => {
+      target.takeDamage(damage);
+      bullet.destroyIt()
+    });
 
-
-    for(let i = 0; i < 3; i++){
-      setTimeout(() => {
-        let onDestroy = () => {}
-        let onUpdate = (bullet:any) => {
-          this.collisionCheck(bullet, 2)
-        }
-        let bullet = this.weaponManager.createBullet({name: `enemy_bullet_${this.game.rnd.integer()}`, group: 'enemy_bullets', x: enemy.x, y: enemy.y, spread: (i*8), layer: enemy.onLayer + 1}, onDestroy, onUpdate)
-            bullet.body.velocity.y = 300;
-     }, 25)
-    }
-
-
+    // this.phaserSprites.getManyGroups(['playership']).map(target => {
+    //   target.game.physics.arcade.overlap(obj, target, (obj, target)=>{
+    //     target.takeDamage(damage);
+    //     obj.destroyIt()
+    //   }, null, obj);
+    // })
   }
   /******************/
 
-  /******************/
-  private fireSpread(enemy:any, size:number){
-    let onDestroy = () => {}
-    let onUpdate = (bullet:any) => {
-      this.collisionCheck(bullet, 2)
-    }
 
-    let bullet = this.weaponManager.redBullet({name: `enemy_bullet_${this.game.rnd.integer()}`, group: 'enemy_bullets', x: enemy.x, y: enemy.y, spread: 0, layer: enemy.onLayer + 1}, onDestroy, onUpdate)
-        bullet.body.velocity.y = 300;
-    for(let i = 1; i < size/2; i++){
-      setTimeout(() => {
-        let bullet = this.weaponManager.redBullet({name: `enemy_bullet_${this.game.rnd.integer()}`, group: 'enemy_bullets', x: enemy.x, y: enemy.y, spread: (i*8), layer: enemy.onLayer + 1}, onDestroy, onUpdate)
-            bullet.body.velocity.y = 300;
-     }, 25)
-    }
-    for(let i = 1; i < size/2; i++){
-      setTimeout(() => {
-        let bullet = this.weaponManager.redBullet({name: `enemy_bullet_${this.game.rnd.integer()}`, group: 'enemy_bullets', x: enemy.x, y: enemy.y, spread: -(i*8), layer: enemy.onLayer + 1}, onDestroy, onUpdate)
-            bullet.body.velocity.y = 300;
-     }, 25)
-    }
-
-  }
-  /******************/
 
   /******************/
   public createSmallEnemy1(options:any, onDamage:any = () => {}, onDestroy:any = () => {}, onFail:any = () => {}, onUpdate:any = () => {}){
@@ -101,7 +73,6 @@ export class ENEMY_MANAGER {
     let enemy = phaserSprites.addFromAtlas({name: `enemy_${game.rnd.integer()}`, group:'enemies', org: 'gameobjects', atlas: atlas, filename: `small_1`, visible: true})
         enemy.anchor.setTo(0.5, 0.5);
         enemy.scale.setTo(1,1);
-        enemy.atTarget = false;
         enemy.maxHealth = 100;
         enemy.health = enemy.maxHealth
         enemy.pierceResistence = 1;
@@ -112,9 +83,10 @@ export class ENEMY_MANAGER {
         enemy.fireTimer = 1000
         enemy.isDestroyed = false;
         enemy.onLayer = options.layer;
-        phaserGroup.add(options.layer, enemy)
+        enemy.weaponSystems = [];
+    phaserGroup.add(options.layer, enemy)
 
-    // add hitboxes
+    //----------------------------  HITBOX
     let hitboxes = [`small_1_hitbox_1`]
     hitboxes.map(obj => {
       let e_hitbox = phaserSprites.addFromAtlas({name: `enemy_hitbox_${game.rnd.integer()}`, group:'enemy_hitboxes', atlas: atlas, filename: obj, alpha: this.showHitbox ? 0.75 : 0})
@@ -122,60 +94,58 @@ export class ENEMY_MANAGER {
           game.physics.enable(e_hitbox, Phaser.Physics.ARCADE);
           enemy.addChild(e_hitbox)
     })
+    //----------------------------
 
-
-
-    enemy.damageIt = (val:number) => {
-      onDamage(enemy);
-      if(!enemy.atTarget){
-        enemy.health -= val;
-        enemy.tint = 1 * 0xff0000;
-        //this.weaponImpactAnimation(enemy, options, wpnType)
-        enemy.game.add.tween(enemy).to( {tint: 1 * 0xffffff}, 100, Phaser.Easing.Linear.Out, true, 0, 0, false);
-        if(enemy.health <= 0){
-          enemy.destroyIt()
+    //---------------------------- WEAPON SYSTEM
+    let ammo = this.weaponManager.createBullet();
+        ammo.onUpdate = () => {
+            this.bulletCollisionWithPlayer(ammo, 10)
         }
-      }
-    }
 
-    enemy.removeIt = () => {
-      phaserSprites.destroy(enemy.name);
-    }
-
-    // destroy it
-    enemy.destroyIt = () => {
-      // destroy hitboxes
-      enemy.children.map(obj => {
-        this.phaserSprites.destroy(obj.name);
-      })
-      if(!enemy.isDestroyed){
-       //enemy.body = null;
-       enemy.isDestroyed = true;
-       enemy.tint = 1 * 0xff0000;
-
-       enemy.explodeInterval = setInterval(() => {
-         this.weaponManager.createExplosion(enemy.x + game.rnd.integerInRange(-enemy.width/2, enemy.width/2), enemy.y + game.rnd.integerInRange(-enemy.height/2, enemy.height/2), 1, enemy.onLayer + 1)
-       }, 250)
-
-       enemy.game.add.tween(enemy).to( {y: enemy.y + 100, alpha: 0.5}, 750, Phaser.Easing.Linear.Out, true, 100, 0, false).
-         onComplete.add(() => {
-            clearInterval(enemy.explodeInterval)
-            onDestroy(enemy);
-            this.weaponManager.createExplosion(enemy.x, enemy.y, 1, options.layer + 1)
-            phaserSprites.destroy(enemy.name);
-         })
-       }
-    }
+    let animationSprites = [...Phaser.Animation.generateFrameNames('bullet_fire_', 1, 4)]
+    let framerate = 60;
+    let weaponSystem = this.phaserSprites.addFromAtlas({name: `enemy_weapons_${this.game.rnd.integer()}`, group: 'enemy_weapons', atlas: this.atlas_weapons,  filename: animationSprites[0], visible: true})
+        weaponSystem.anchor.setTo(0.5, 0.5)
+        weaponSystem.angle = 180;
+        weaponSystem.animations.add('fireWeapon', animationSprites, 1, true)
+        weaponSystem.sync = (enemy:any) => {
+          let {x, y} = enemy;
+          weaponSystem.x = x
+          weaponSystem.y = y
+        }
+        weaponSystem.destroyIt = () => {
+          let {x, y} = weaponSystem;
+          this.weaponManager.blueImpact(x, y, 1, enemy.onLayer)
+          this.phaserSprites.destroy(weaponSystem.name)
+        }
+        weaponSystem.onUpdate = () => {
+          ammo.onUpdate();
+        }
+        weaponSystem.fire = () => {
+          ammo.checkOrientation(weaponSystem)
+          ammo.bulletSpeed = -400;
+          ammo.fire(weaponSystem);
+          weaponSystem.animations.play('fireWeapon', framerate, false)
+        }
+    enemy.weaponSystems.push(weaponSystem)
+    //----------------------------
 
 
-
+    //----------------------------
     enemy.onUpdate = () => {
       onUpdate(enemy);
+
+      // update weapon (check for collison)
+      enemy.weaponSystems.map( weaponSystem => {
+        weaponSystem.onUpdate()
+      })
 
       //enemy.angle = this.facePlayer(enemy)
       if(game.time.now > enemy.fireDelay && !enemy.isDestroyed && (enemy.y > enemy.game.canvas.height * .3) ){
           enemy.fireDelay = game.time.now + enemy.fireTimer
-          this.fireSpread(enemy, 4)
+          enemy.weaponSystems.map(weaponsSystem => {
+            weaponSystem.fire()
+          })
       }
 
       if(!enemy.isDestroyed){
@@ -186,15 +156,63 @@ export class ENEMY_MANAGER {
         if(enemy.cosWave.count >= enemy.cosWave.data.length){
           enemy.removeIt();
         }
+
+        enemy.weaponSystems.map( obj => {
+          obj.sync(enemy)
+        })
+
       }
       else{
         enemy.inPlace = true
       }
     }
+    //----------------------------
 
-    enemy.removeIt = () => {
-      phaserSprites.destroy(enemy.name)
+    //----------------------------
+    enemy.damageIt = (val:number) => {
+      onDamage(enemy);
+      enemy.health -= val;
+      enemy.tint = 1 * 0xff0000;
+      enemy.game.add.tween(enemy).to( {tint: 1 * 0xffffff}, 100, Phaser.Easing.Linear.Out, true, 0, 0, false);
+      if(enemy.health <= 0){
+        enemy.destroyIt()
+      }
     }
+    //----------------------------
+
+    //----------------------------
+    enemy.removeIt = () => {
+      clearInterval(enemy.explodeInterval)
+      enemy.children.map(obj => {
+        this.phaserSprites.destroy(obj.name);
+      })
+      phaserSprites.destroy(enemy.name);
+    }
+    //----------------------------
+
+    //----------------------------
+    enemy.destroyIt = () => {
+     //enemy.body = null;
+     enemy.isDestroyed = true;
+     enemy.tint = 1 * 0xff0000;
+
+     enemy.weaponSystems.map(weaponSystem => {
+       weaponSystem.destroyIt()
+     })
+
+     enemy.explodeInterval = setInterval(() => {
+       this.weaponManager.createExplosion(enemy.x + game.rnd.integerInRange(-enemy.width/2, enemy.width/2), enemy.y + game.rnd.integerInRange(-enemy.height/2, enemy.height/2), 1, enemy.onLayer + 1)
+     }, 250)
+
+     enemy.game.add.tween(enemy).to( {y: enemy.y + 100, alpha: 0.5}, 750, Phaser.Easing.Linear.Out, true, 100, 0, false).
+       onComplete.add(() => {
+          onDestroy(enemy);
+          enemy.removeIt();
+       })
+    }
+    //----------------------------
+
+
 
 
     return enemy;
@@ -281,7 +299,7 @@ export class ENEMY_MANAGER {
       onUpdate(enemy);
       if(game.time.now > enemy.fireDelay && enemy.inPlace){
           enemy.fireDelay = game.time.now + enemy.fireTimer
-          this.fireBullet(enemy, true)
+          // this.fireBullet(enemy, true)
       }
 
 

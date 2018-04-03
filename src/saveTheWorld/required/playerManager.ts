@@ -41,25 +41,52 @@ export class PLAYER_MANAGER {
         player.isInvincible = false;
         player.isDead = false
         player.onLayer = params.layer
-        player.exhaustPoints = {
-          center: 40,
-          top: 25,
-          bottom: 50
-        }
+        player.weaponSystems = []
+        player.xCapture = []
+        player.yCapture = []
+
+
         game.physics.enable(player, Phaser.Physics.ARCADE);
         this.phaserGroup.add(params.layer, player)
         this.createShipExhaust(player, params);
 
-        // player.animations.add('shields', healFrames, 1, true)
-        // player.animations.play('shields', 10, true)
-
+        //------------------------
         player.onUpdate = () => {
-          onUpdate(player)
-          if(player.visible && !player.isDead){
-            player.createTrail();
+          // move
+          if(player.xCapture.length > 0){
+            player.x += player.xCapture[0]
+            player.xCapture.shift()
           }
-        }
+          if(player.yCapture.length > 0){
+            player.y += player.yCapture[0]
+            player.yCapture.shift()
+          }
+          player.checkLimits()
 
+          // update emitter
+          let {starMomentum} = this.phaserMaster.getOnly(['starMomentum'])
+          // update weapon (check for collison)
+          player.weaponSystems.map( weaponSystem => {
+            weaponSystem.onUpdate()
+          })
+
+          onUpdate(player)
+        }
+        //------------------------
+
+        //------------------------
+        player.restoreHealth = (val:number) => {
+          let {gameData} = this.phaserMaster.getOnly(['gameData'])
+          let health = gameData.player.health + val
+          if(health > 100){
+            health = 100
+          }
+          updateHealth(health)
+          // add health restoration animation
+        }
+        //------------------------
+
+        //------------------------
         player.takeDamage = (val:number) => {
           let {gameData} = this.phaserMaster.getOnly(['gameData'])
           let health = gameData.player.health - val
@@ -78,7 +105,9 @@ export class PLAYER_MANAGER {
             loseLife(player);
           }
         }
+        //------------------------
 
+        //------------------------
         player.isDestroyed = () => {
           player.isDead = true;
           this.weaponManager.createExplosion(player.x, player.y, 1, 6)
@@ -92,29 +121,9 @@ export class PLAYER_MANAGER {
               }, 1000)
             })
         }
+        //------------------------
 
-
-        player.createTrail = () => {
-          // let {currentState} = this.phaserMaster.getState();
-          // let trailCount = this.phaserSprites.getGroup(`${params.name}_trails`).length;
-          // if(trailCount < (currentState === 'ENDLEVEL') ? 20 : 10){
-          //   let trail = this.phaserSprites.addFromAtlas({name: `${params.name}_trail_${game.rnd.integer()}`, group:`${params.name}_trails`, x: player.x, y: player.y, filename: 'ship_body', atlas: 'atlas_main', visible: true})
-          //       trail.anchor.setTo(0.5, 0.5)
-          //       trail.scale.setTo(player.scale.x - 0.2, player.scale.y - 0.2)
-          //       trail.alpha = 0.4
-          //       trail.angle = player.angle;
-          //       trail.tint = 1 * 0x0000ff;
-          //       this.phaserGroup.add(params.layer - 1, trail)
-          //       trail.destroySelf = () => {
-          //         trail.game.add.tween(trail).to( { alpha: 0}, (currentState === 'ENDLEVEL') ? 600 : 250, Phaser.Easing.Linear.In, true, 0).
-          //           onComplete.add(() => {
-          //             this.phaserSprites.destroy(trail.name)
-          //           }, trail);
-          //       }
-          //       trail.destroySelf();
-          //  }
-        }
-
+        //------------------------
         player.selfDestruct = () => {
           player.isInvincible = true;
           this.phaserSprites.get('exhaust').destroyIt();
@@ -125,46 +134,59 @@ export class PLAYER_MANAGER {
             this.weaponManager.createExplosion(player.x, player.y, 0.5, 6)
           }, this);
         }
+        //------------------------
 
-        player.moveToStart = () => {
-          player.isDead = false;
-          player.angle = 0;
-          player.alpha = 1
-          player.visible = true;
-          player.isInvincible = true;
-          player.x = this.game.world.centerX
-          player.y = this.game.world.centerY + 550
-          game.add.tween(player).to( { y: game.world.centerY + 200 }, 1000, Phaser.Easing.Exponential.InOut, true, 0, 0, false).
-            onComplete.add(() => {
-              this.phaserControls.enableAllInput()
-              setTimeout(() => {
-                player.isInvincible = false;
-              }, 1000)
-            })
+        //------------------------
+        player.attachPerk = (type:string) => {
+          this.attachPerk(player, params, type)
         }
+        //------------------------
 
+        //------------------------
+        player.attachWeapon = (weaponType:string) => {
+          this.attachWeaponSprite(player, params, weaponType)
+        }
+        //------------------------
+
+        //------------------------
+        player.attachSubweapon = (weaponType:string) => {
+          this.attachSubWeaponSprite(player, params, weaponType)
+        }
+        //------------------------
+
+        //------------------------
         player.fireWeapon = () => {
-          this.phaserSprites.get(`${params.name}_ship_weapon`).fireWeapon()
+          player.weaponSystems.map( obj => {
+            obj.fire()
+          })
         }
+        //------------------------
 
+        //------------------------
         player.fireSubweapon = () => {
           this.phaserSprites.get(`${params.name}_ship_subweapon`).fireWeapon()
         }
+        //------------------------
 
+        //------------------------
         player.regenerateHealth = (active:Boolean = false) => {
           //console.log("regenerating health..." + active)
         }
+        //------------------------
 
+        //------------------------
         player.moveX = (val:number) => {
-          player.x += val
-          player.checkLimits()
+          player.xCapture[0] = val
         }
+        //------------------------
 
+        //------------------------
         player.moveY = (val:number) => {
-          player.y += val
-          player.checkLimits()
+          player.yCapture[0] = val
         }
+        //------------------------
 
+        //------------------------
         player.checkLimits = function(){
           if(this.y - this.height < 0){
             this.y = this.height
@@ -180,8 +202,34 @@ export class PLAYER_MANAGER {
           if(this.x > (this.game.canvas.width + this.width)){
             this.x = 0
           }
-        }
 
+          player.weaponSystems.map( obj => {
+            obj.sync(this)
+          })
+        }
+        //------------------------
+
+        //------------------------
+        player.moveToStart = (callback:any = () => {}) => {
+          player.isDead = false;
+          player.angle = 0;
+          player.alpha = 1
+          player.visible = true;
+          player.isInvincible = true;
+          player.x = this.game.world.centerX
+          player.y = this.game.world.centerY + 550
+          game.add.tween(player).to( { y: game.world.centerY + 200 }, 1000, Phaser.Easing.Exponential.InOut, true, 0, 0, false).
+            onComplete.add(() => {
+              this.phaserControls.enableAllInput()
+              setTimeout(() => {
+                player.isInvincible = false;
+                callback()
+              }, 1000)
+            })
+        }
+        //------------------------
+
+        //------------------------
         player.playEndSequence = (callback:any) => {
 
           player.isInvincible = true;
@@ -198,18 +246,9 @@ export class PLAYER_MANAGER {
                 }, player)
             }, player)
         }
+        //------------------------
 
-        player.attachPerk = (type:string) => {
-          this.attachPerk(player, params, type)
-        }
 
-        player.attachWeapon = (weaponType:string) => {
-          this.attachWeaponSprite(player, params, weaponType)
-        }
-
-        player.attachSubweapon = (weaponType:string) => {
-          this.attachSubWeaponSprite(player, params, weaponType)
-        }
 
       this.player = player;
       return player;
@@ -301,6 +340,7 @@ export class PLAYER_MANAGER {
         break
     }
 
+
     if(this.phaserSprites.get(`${params.name}_ship_subweapon`) !== undefined){
       this.phaserSprites.destroy(`${params.name}_ship_subweapon`)
     }
@@ -320,33 +360,95 @@ export class PLAYER_MANAGER {
   private attachWeaponSprite(player:any, params:any, weaponType:string){
     let animationSprites;
     let framerate
-    switch(weaponType){
-      case 'BULLET':
-        animationSprites = [...Phaser.Animation.generateFrameNames('bullet_fire_', 1, 4)]
-        framerate = 60;
-        break
-      case 'LASER':
-        animationSprites = [...Phaser.Animation.generateFrameNames('laser_fire_', 1, 6)]
-        framerate = 60;
-        break
-      case 'MISSLE':
-        animationSprites = [...Phaser.Animation.generateFrameNames('missle_fire_', 1, 6)]
-        framerate = 30;
-        break
+    let ammo
+    let gap;
+    let turrets = 2;
+    let powerupLvl = 3
+    let maxBulletsOnscreen;
+
+    // temporary
+    for(let i = 0; i < turrets; i++){
+
+      //-----------------
+      switch(weaponType){
+        case 'BULLET':
+          animationSprites = [...Phaser.Animation.generateFrameNames('bullet_fire_', 1, 4)]
+          framerate = 60;
+          gap = 40;
+          maxBulletsOnscreen = (turrets * powerupLvl * 10) < 50 ? (turrets * powerupLvl * 10) : 50
+          ammo = this.weaponManager.createBullet(maxBulletsOnscreen);
+          break
+        case 'LASER':
+          animationSprites = [...Phaser.Animation.generateFrameNames('laser_fire_', 1, 6)]
+          framerate = 60;
+          gap = 20;
+          maxBulletsOnscreen = (turrets * powerupLvl * 10) < 50 ? (turrets * powerupLvl * 10) : 50
+          ammo = this.weaponManager.createBullet(maxBulletsOnscreen);
+          break
+        case 'MISSLE':
+          animationSprites = [...Phaser.Animation.generateFrameNames('missle_fire_', 1, 6)]
+          framerate = 30;
+          gap = 20;
+          maxBulletsOnscreen = (turrets * powerupLvl * 10) < 50 ? (turrets * powerupLvl * 10) : 50
+          ammo = this.weaponManager.createBullet(maxBulletsOnscreen);
+          break
+      }
+
+      ammo.onUpdate = () => {
+        this.bulletCollisionWithEnemies(ammo, weaponType)
+      }
+      //-----------------
+
+      //-----------------  attach particle emitter
+      // let emitter = this.game.add.emitter();
+      //     emitter.makeParticles(this.atlas, `exhaust_trail`);
+      //     // emitter.setXSpeed(0, 0);
+      //     // emitter.setYSpeed(0, 0);
+      //     // emitter.setRotation(0, 0);
+      //     emitter.setAlpha(0.5, 0.2, 500);
+      //     emitter.setScale(1, 0.5, 1, 0.5, 500, Phaser.Easing.Quintic.Out);
+      //     emitter.fire = (x, y) => {
+      //       emitter.emitX = weaponSystem.x;
+      //       emitter.emitY = weaponSystem.y;
+      //       emitter.start(true, 500, null, 2);
+      //     }
+      // this.phaserGroup.add(params.layer + 1, emitter)
+      //-----------------
+
+      //-----------------
+      let weaponSystem = this.phaserSprites.addFromAtlas({name: `ship_weapon_${this.game.rnd.integer()}`, group: params.group, atlas: this.weaponAtlas,  filename: animationSprites[0], visible: true})
+          weaponSystem.anchor.setTo(0.5, 0.5)
+          weaponSystem.animations.add('fireWeapon', animationSprites, 1, true)
+          weaponSystem.ammo = ammo;
+          weaponSystem.offset = (gap * i) - ((gap/2) * (turrets-1))
+
+          weaponSystem.onUpdate = () => {
+            ammo.onUpdate();
+          }
+
+          weaponSystem.sync = (player) => {
+            let {x, y} = player;
+            weaponSystem.x = x + weaponSystem.offset
+            weaponSystem.y = y
+          }
+
+          weaponSystem.fire = () => {
+            //emitter.fire(weaponSystem.x, weaponSystem.y)
+            ammo.checkOrientation(weaponSystem.angle)
+            for(let n = 0; n < powerupLvl; n++){
+              ammo.fire(weaponSystem, null, weaponSystem + 1);
+              ammo.fire(weaponSystem, weaponSystem.x + (n * 20), weaponSystem.y - (200));
+              ammo.fire(weaponSystem, weaponSystem.x - (n * 20), weaponSystem.y - (200));
+            }
+            weaponSystem.animations.play('fireWeapon', framerate, false)
+          }
+
+      this.phaserGroup.add(params.layer - 1, weaponSystem)
+      //-----------------
+
+      player.weaponSystems.push(weaponSystem)
     }
 
-    if(this.phaserSprites.get(`${params.name}_ship_weapon`) !== undefined){
-      this.phaserSprites.destroy(`${params.name}_ship_weapon`)
-    }
-
-    let shipWeapon = this.phaserSprites.addFromAtlas({name: `${params.name}_ship_weapon`, group: params.group, atlas: this.weaponAtlas,  filename: animationSprites[0], visible: true})
-        shipWeapon.anchor.setTo(0.5, 0.5)
-        shipWeapon.animations.add('fireWeapon', animationSprites, 1, true)
-
-        shipWeapon.fireWeapon = () => {
-          shipWeapon.animations.play('fireWeapon', framerate, false)
-        }
-        player.addChild(shipWeapon)
   }
   /******************/
 
@@ -358,16 +460,25 @@ export class PLAYER_MANAGER {
         shipExhaust.animations.play('exhaust_animation', 30, true)
         shipExhaust.anchor.setTo(0.5, 0.5)
         player.addChild(shipExhaust)
-
-        shipExhaust.onUpdate = () => {
-
-        }
+        shipExhaust.onUpdate = () => {}
         shipExhaust.updateCords = (x, y) => {}
+        shipExhaust.destroyIt = () => {this.phaserSprites.destroy(shipExhaust.name)}
+  }
+  /******************/
 
-        shipExhaust.destroyIt = () => {
-          this.phaserSprites.destroy(shipExhaust.name)
-        }
+  /******************/
+  public bulletCollisionWithEnemies(ammo:any, type:any){
+    let enemies = [...this.phaserSprites.getGroup('enemy_hitboxes')]
+    this.game.physics.arcade.overlap(enemies, ammo.bullets, (enemy, bullet) => {
+      if(!enemy.parent.isDestroyed){
 
+
+        enemy.parent.damageIt(100)
+
+
+      }
+      bullet.destroyIt(enemy.parent.onLayer - 1)
+    });
   }
   /******************/
 
