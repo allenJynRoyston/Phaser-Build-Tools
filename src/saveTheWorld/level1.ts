@@ -170,10 +170,12 @@ class PhaserGameObject {
         phaserMaster.let('roundTime', 60)
         phaserMaster.let('clock', game.time.create(false))
         phaserMaster.let('elapsedTime', 0)
+        phaserMaster.let('inGameSeconds', 0)
         phaserMaster.let('devMode', false)
         phaserMaster.let('starMomentum', {x: 0, y:0})
         phaserMaster.let('pauseStatus', false)
         phaserMaster.let('bossHealth', 100)
+        phaserMaster.let('powerupTimer', 0)
 
         // weapon data
         let weaponData = phaserMaster.let('weaponData', game.cache.getJSON('weaponData'));
@@ -234,7 +236,7 @@ class PhaserGameObject {
             nebula1.count = 0;
             nebula1.onUpdate = () => {
                 nebula1.count += 0.005;
-                nebula1.tilePosition.x -= Math.sin(nebula1.count) * 0.2;
+                nebula1.tilePosition.x -= Math.sin(nebula1 .count) * 0.2;
             };
 
         let nebula2 = phaserSprites.addTilespriteFromAtlas({ name: 'nebula2', group: 'backgrounds', x: 0, y: 0, width: game.canvas.width, height: game.canvas.height, atlas: 'atlas_large', filename: 'Nebula2' });
@@ -537,9 +539,21 @@ class PhaserGameObject {
             let bar = phaserSprites.addFromAtlas({x:i * 8 + 5, y: 9, name: `powerbar_pow_${i}`, filename: `powerbar_level_${Math.floor(i/5) + 1}`, group: 'powerbar_bars', atlas: 'atlas_main', visible: true})
             bar.anchor.setTo(0.5, 0.5)
             bar.popOut = (delay:number) => {
-              bar.scale.setTo(1.5, 1.5)
-              game.add.tween(bar.scale).to( { x:1, y:1 }, 350, Phaser.Easing.Back.InOut, true, delay, 0, false)
+              setTimeout(() => {
+                bar.scale.setTo(1.5, 1.5)
+                game.add.tween(bar.scale).to( { x:1, y:1 }, 350, Phaser.Easing.Back.InOut, true, 1, 0, false)
+              }, delay)
             }
+
+            bar.popLost = () => {
+              game.add.tween(bar).to( { y: bar.y - 5, alpha: 0.5 }, 350, Phaser.Easing.Linear.In, true, 1, 0, false).
+                onComplete.add(() => {
+                  bar.y = bar.getDefaultPositions().y
+                  bar.alpha = 1
+                  bar.visible = false
+                })
+            }
+
             powerbar.addChild(bar)
           }
           // icon
@@ -551,12 +565,22 @@ class PhaserGameObject {
           let {gameData} = phaserMaster.getOnly(['gameData']);
           let val = gameData.player.powerup
           let bars = phaserSprites.getGroup('powerbar_bars');
-          for(let i = 0; i < val; i++ ){
+          for(let i = 0; i < bars.length; i++ ){
+
             bars[i].visible = true
             bars[i].popOut(i*35)
           }
           for(let i = val; i < bars.length; i++ ){
             bars[i].visible = false
+            bars[i].popLost(i*35)
+          }
+        }
+
+        powerbar.animateFull = () => {
+          let bars = phaserSprites.getGroup('powerbar_bars');
+          for(let i = 0; i < 30; i++ ){
+            bars[i].visible = true
+            bars[i].popOut(i*25)
           }
         }
 
@@ -686,7 +710,7 @@ class PhaserGameObject {
             // LEAVE FOR TESTING
             setTimeout(() => {
                 //addPowerup()
-                endLevel();
+                //endLevel();
             }, 1500)
 
 
@@ -814,9 +838,23 @@ class PhaserGameObject {
         let {gameData} = phaserMaster.getOnly(['gameData']);
         let {powerbar} = phaserSprites.getOnly(['powerbar'])
         let val = gameData.player.powerup + 1
-        if(val > 30){ val = 30 }
+        if(val > 30){
+          val = 30
+          powerbar.animateFull()
+        }
+        else{
+          saveData('player', {health: gameData.player.health, lives: gameData.player.lives, powerup: val})
+          powerbar.updatePowerbar();
+        }
+      }
+
+      function losePowerup(){
+        let {gameData} = phaserMaster.getOnly(['gameData']);
+        let {powerbar} = phaserSprites.getOnly(['powerbar'])
+        let val = gameData.player.powerup - 1
+        if(val < 0){ val = 0 }
         saveData('player', {health: gameData.player.health, lives: gameData.player.lives, powerup: val})
-        powerbar.updatePowerbar();
+        phaserSprites.get(`powerbar_pow_${val}`).popLost()
       }
       /******************/
 
@@ -827,24 +865,11 @@ class PhaserGameObject {
 
 
         let onUpdate = (player:any) => {
-            // let {currentState} = phaserMaster.getState();
-            // if(!player.isInvincible && (currentState !== 'ENDLEVEL')){
-            //   let hasCollided = false;
-            //   returnAllCollidables().map((target) => {
-            //     if(target.game !== null){
-            //       if(target.game.physics !== null){
-            //         target.game.physics.arcade.overlap(player, target, (player, target)=>{
-            //           hasCollided = true;
-            //           target.parent.damageIt(50);
-            //         }, null, player);
-            //       }
-            //     }
-            //   })
-            //   if(hasCollided){
-            //     player.isInvincible = true;
-            //     player.restoreHealth(25)
-            //   }
-            // }
+
+        }
+
+        let onDamage = (player:any) => {
+          losePowerup()
         }
 
         let updateHealth = (health:number) => {
@@ -871,11 +896,7 @@ class PhaserGameObject {
           }
         }
 
-        let player = playerManager.createShip({name: 'player', group: 'playership', org: 'gameobjects', layer: 8, shipId: gameData.pilot}, updateHealth, loseLife, onUpdate);
-
-        player.attachPerk(perk.reference)
-        player.attachWeapon(primaryWeapon.reference)
-        player.attachSubweapon(secondaryWeapon.reference)
+        let player = playerManager.createShip({name: 'player', group: 'playership', org: 'gameobjects', layer: 6, shipId: gameData.pilot, primaryWeapon: primaryWeapon.reference, secondaryWeapon: secondaryWeapon.reference, perk: perk.reference}, updateHealth, onDamage, loseLife, onUpdate);
 
         return player
       }
@@ -1007,27 +1028,7 @@ class PhaserGameObject {
       }
       /******************/
 
-      /******************/
-      function fireBullet(){
-        // let game = phaserMaster.game();
-         let {player} = phaserSprites.getOnly(['player']);
-        // let {gameData} = phaserMaster.getOnly(['gameData']);
-        // let {gap, shots} = {gap: 10, shots: 2 + (2 * Math.floor(gameData.player.powerup/5) + 1)}
-        // let centerShots = (gap * (shots-1))/2
 
-        player.fireWeapon()
-        // for(let i = 0; i < shots; i++){
-        //   setTimeout(() => {
-        //     let onUpdate = (obj:any) => {
-        //       //obj.x = player.x;
-        //       targetCheck(obj, 'BULLET')
-        //     }
-        //     let onDestroy = () => {}
-        //     weaponManager.createBullet({name: `bullet_${game.rnd.integer()}`, group: 'ship_weapons', x: player.x + (i * gap) - centerShots, y: player.y, spread: 0, layer: player.onLayer + 1}, onDestroy, onUpdate)
-        //  }, 25)
-        // }
-      }
-      /******************/
 
       /******************/
       function fireSpread(){
@@ -1078,19 +1079,19 @@ class PhaserGameObject {
 
       /******************/
       function fireMissles(){
-        let game = phaserMaster.game();
-        let {player} = phaserSprites.getOnly(['player']);
-        let {gameData} = phaserMaster.getOnly(['gameData']);
-        let {gap, shots} = {gap: 30, shots: 2 + (2 * Math.floor(gameData.player.powerup/5) + 1)}
-        let centerShots = (gap * (shots-1))/2
-
-        player.fireWeapon()
-        // always shoots two at a minimum
-        for(let i = 0; i < shots; i++){
-          let onUpdate = (obj:any) => { targetCheck(obj, 'MISSLE') }
-          let onDestroy = (obj:any) => { impactExplosion(obj.x + obj.height, obj.y, 1, obj.damageAmount/2) }
-          weaponManager.createMissle({name: `missle_${game.rnd.integer()}`, group: 'ship_weapons', x: player.x, y: player.y - player.height/2, spread:(i % 2 === 0 ? -7 - (i*2): 7 +  (i*2)), layer: player.onLayer + 1}, onDestroy, onUpdate)
-        }
+        // let game = phaserMaster.game();
+        // let {player} = phaserSprites.getOnly(['player']);
+        // let {gameData} = phaserMaster.getOnly(['gameData']);
+        // let {gap, shots} = {gap: 30, shots: 2 + (2 * Math.floor(gameData.player.powerup/5) + 1)}
+        // let centerShots = (gap * (shots-1))/2
+        //
+        // player.fireWeapon()
+        // // always shoots two at a minimum
+        // for(let i = 0; i < shots; i++){
+        //   let onUpdate = (obj:any) => { targetCheck(obj, 'MISSLE') }
+        //   let onDestroy = (obj:any) => { impactExplosion(obj.x + obj.height, obj.y, 1, obj.damageAmount/2) }
+        //   weaponManager.createMissle({name: `missle_${game.rnd.integer()}`, group: 'ship_weapons', x: player.x, y: player.y - player.height/2, spread:(i % 2 === 0 ? -7 - (i*2): 7 +  (i*2)), layer: player.onLayer + 1}, onDestroy, onUpdate)
+        // }
       }
       /******************/
 
@@ -1212,17 +1213,24 @@ class PhaserGameObject {
 
 
       /******************/
-      function director(elapsedTime){
+      function director(){
+
+        let {inGameSeconds} = phaserMaster.getOnly(['inGameSeconds'])
+             inGameSeconds += 0.5
+        phaserMaster.forceLet('inGameSeconds', inGameSeconds)
+
+        //console.log(inGameSeconds)
+
 
         // create a steady steam of aliens to shoot
-        // if(phaserSprites.getGroup('enemies').length < 5 && phaserSprites.getGroup('boss').length === 0){
-        //     createSmallEnemy({
-        //       x: game.rnd.integerInRange(0 + 100, game.canvas.width - 100),
-        //       y: game.rnd.integerInRange(100, 400),
-        //       iy: game.rnd.integerInRange(0, 80),
-        //       layer: 3
-        //     });
-        // }
+        if(inGameSeconds % 2 === 0){
+            createSmallEnemy({
+              x: game.rnd.integerInRange(0 + 100, game.canvas.width - 100),
+              y: game.rnd.integerInRange(100, 400),
+              iy: game.rnd.integerInRange(0, 80),
+              layer: 3
+            });
+        }
 
       }
       /******************/
@@ -1231,7 +1239,7 @@ class PhaserGameObject {
       function update() {
         let game = phaserMaster.game();
         let {currentState} = phaserMaster.getState();
-        let {starMomentum, primaryWeapon, secondaryWeapon, menuButtonSelection, elapsedTime} = phaserMaster.getOnly(['starMomentum', 'primaryWeapon', 'secondaryWeapon', 'menuButtonSelection', 'elapsedTime'])
+        let {starMomentum, primaryWeapon, secondaryWeapon, menuButtonSelection, elapsedTime, powerupTimer, gameData} = phaserMaster.getOnly(['starMomentum', 'primaryWeapon', 'secondaryWeapon', 'menuButtonSelection', 'elapsedTime', 'powerupTimer', 'gameData'])
         let {specialWeapon, player} = phaserSprites.getOnly(['specialWeapon', 'player']);
         let {DOWN, UP, LEFT, RIGHT, A, START} = phaserControls.getOnly(['DOWN', 'UP', 'LEFT', 'RIGHT', 'A', 'START'])
 
@@ -1246,8 +1254,17 @@ class PhaserGameObject {
 
         if(currentState === 'READY'){
 
+          // add to powerupbar every 2 seconds
+          if(game.time.now > powerupTimer){
+            phaserMaster.forceLet('powerupTimer', gameData.player.powerup < 30 ? game.time.now + (Phaser.Timer.SECOND*2) : game.time.now + (Phaser.Timer.SECOND/2) )
+            addPowerup();
+          }
 
-          director(elapsedTime)
+          // update director EVERY 1/2 second
+          if(game.time.now > elapsedTime){
+            phaserMaster.forceLet('elapsedTime', game.time.now + (Phaser.Timer.SECOND/2) )
+            director()
+          }
 
 
           phaserSprites.getManyGroups(['ui_overlay', 'enemies', 'boss', 'trashes']).map(obj => {
@@ -1288,18 +1305,7 @@ class PhaserGameObject {
 
 
           if(phaserControls.checkWithDelay({isActive: true, key: 'A', delay: primaryWeapon.cooldown - (A.state * primaryWeapon.rapidFireSpd) })){
-            switch(primaryWeapon.reference){
-              case 'LASER':
-                fireLasers()
-                break
-              case 'MISSLE':
-                fireMissles();
-                break
-              case 'BULLET':
-                fireSpread();
-                //fireBullet();
-                break
-            }
+            player.fireWeapon()
           }
 
           if(phaserControls.checkWithDelay( {isActive: true, key: 'B', delay: secondaryWeapon.cooldown} )){
