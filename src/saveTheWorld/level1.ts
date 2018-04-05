@@ -16,6 +16,7 @@ import {PHASER_GROUP_MANAGER} from './../exports/groupManager'
 import {WEAPON_MANAGER} from './required/weaponManager'
 import {ENEMY_MANAGER} from './required/enemyManager'
 import {PLAYER_MANAGER} from './required/playerManager'
+import {ITEMSPAWN_MANAGER} from './required/itemspawnManager'
 import {UTILITY_MANAGER} from './required/utilityManager'
 //endRemoveIf(gameBuild)
 
@@ -59,6 +60,7 @@ class PhaserGameObject {
             weaponManager = new WEAPON_MANAGER(),
             enemyManager = new ENEMY_MANAGER({showHitbox: false}),
             playerManager = new PLAYER_MANAGER(),
+            itemManager = new ITEMSPAWN_MANAGER(),
             utilityManager = new UTILITY_MANAGER();
 
       const store = options.store;
@@ -162,6 +164,7 @@ class PhaserGameObject {
         phaserGroup.assign(game, 20)
         phaserBitmapdata.assign(game)
         weaponManager.assign(game, phaserMaster, phaserSprites, phaserGroup, 'atlas_weapons')
+        itemManager.assign(game, phaserMaster, phaserSprites, phaserGroup, 'atlas_main')
         enemyManager.assign(game, phaserMaster, phaserSprites, phaserTexts, phaserGroup, weaponManager, 'atlas_enemies', 'atlas_weapons')
         playerManager.assign(game, phaserMaster, phaserSprites, phaserTexts, phaserGroup, phaserControls, weaponManager, 'atlas_ships', 'atlas_weapons')
         utilityManager.assign(game, phaserSprites, phaserBitmapdata, phaserGroup, 'atlas_main')
@@ -601,8 +604,33 @@ class PhaserGameObject {
             onComplete.add(() => {})
         }
 
+        // SPECIAL ATTACKS
+        let staticAnimation = [...Phaser.Animation.generateFrameNames('special_', 1, 5), 'special_1']
+        for(let i = 0; i < 8; i++){
+          let icon = phaserSprites.addFromAtlas({x:powerbar.width - 15 - (i * 30), y: -20, name: `special_icon_${i}`, group: 'special_icons', filename: `${staticAnimation[0]}`, atlas: 'atlas_main', visible: true})
+          icon.anchor.setTo(0.5, 0.5)
+          icon.animateInterval = game.time.now
+          icon.index = i;
+          icon.animations.add('animate', staticAnimation, 1, true)
+
+
+          icon.onUpdate = () => {
+            // add to powerupbar every 2 seconds
+            if(game.time.now > icon.animateInterval){
+              icon.animateInterval = game.time.now + 5000
+              setTimeout(() => {
+                icon.animations.play('animate', 10, false)
+              }, icon.index * 500)
+            }
+          }
+
+
+          powerbar.addChild(icon)
+        }
       }
       /******************/
+
+
 
       /******************/
       function buildHealthbar_boss(){
@@ -686,7 +714,7 @@ class PhaserGameObject {
         let isDevMode = phaserMaster.get('devMode')
         let {overlay} = phaserSprites.getOnly(['overlay']);
         let {clock, roundTime} = phaserMaster.getOnly(['clock', 'roundTime']);
-        let skipAnimation = false
+        let skipAnimation = true
 
         // run init on all ui elements to put them in their initial place
         phaserSprites.getAll('ARRAY').map(obj => {
@@ -696,6 +724,9 @@ class PhaserGameObject {
         phaserTexts.getAll('ARRAY').map(obj => {
           obj.init()
         })
+
+        // update specials
+        updateSpecials()
 
         overlayControls('WIPEOUT', () => {
           utilityManager.overlayBGControls({transition: 'FADEOUT', delay: 0, speed: skipAnimation ? 1 : 250}, () => {
@@ -709,38 +740,13 @@ class PhaserGameObject {
 
             // LEAVE FOR TESTING
             setTimeout(() => {
-                //addPowerup()
                 //endLevel();
+                addSpecial()
             }, 1500)
 
 
             clock.start()
             phaserMaster.changeState('READY');
-
-
-            //updateEnemyHealth(75)
-            // // create player
-            // overlay.fadeOut(isDevMode ? 0 : Phaser.Timer.SECOND/2, () => {
-            //
-            //     playSequence('!', ()=>{
-            //       player.moveToStart();
-            //       game.time.events.add(isDevMode ? Phaser.Timer.SECOND*0 : Phaser.Timer.SECOND*1, () => {
-            //       playSequence(`!!`, () => {  //${roundTime} SECONDS GO
-            //           game.time.events.add(isDevMode ? Phaser.Timer.SECOND*0 : Phaser.Timer.SECOND/2, () => {
-            //             phaserSprites.getGroup('ui').map((sprite) => {
-            //               sprite.reveal()
-            //               // change state
-            //               phaserMaster.changeState('READY');
-            //             })
-            //           }).autoDestroy = true;
-            //
-            //           // start clock
-            //           clock.start()
-            //
-            //         })
-            //       })
-            //     })
-            // })
 
           })
         })
@@ -749,7 +755,7 @@ class PhaserGameObject {
 
       /******************/
       function overlayControls(transition:string, callback:any = ()=>{}){
-        let skipAnimation = false
+        let skipAnimation = true
         utilityManager.overlayControls(
           { transition: transition,
             delay: skipAnimation ? 0 : 1000,
@@ -764,6 +770,14 @@ class PhaserGameObject {
         checkStaticLevels(remaining)
         unit_damage_player.updateHealth(remaining)
         unit_health_player.updateHealth(remaining)
+      }
+
+      function addHealth(amount:number){
+        let {gameData} = phaserMaster.getOnly(['gameData']);
+        let health = gameData.player.health + amount
+        if(health > 100){ health = 100  }
+        saveData('player', {health: health, lives: gameData.player.lives, powerup: gameData.player.powerup, special: gameData.player.special})
+        fillShipHealthbar(health)
       }
 
       function fillShipHealthbar(remaining:number){
@@ -843,18 +857,54 @@ class PhaserGameObject {
           powerbar.animateFull()
         }
         else{
-          saveData('player', {health: gameData.player.health, lives: gameData.player.lives, powerup: val})
+          saveData('player', {health: gameData.player.health, lives: gameData.player.lives, powerup: val, special: gameData.player.special})
           powerbar.updatePowerbar();
         }
       }
+      /******************/
 
+      /******************/
       function losePowerup(){
         let {gameData} = phaserMaster.getOnly(['gameData']);
         let {powerbar} = phaserSprites.getOnly(['powerbar'])
         let val = gameData.player.powerup - 1
         if(val < 0){ val = 0 }
-        saveData('player', {health: gameData.player.health, lives: gameData.player.lives, powerup: val})
+        saveData('player', {health: gameData.player.health, lives: gameData.player.lives, powerup: val, special: gameData.player.special})
         phaserSprites.get(`powerbar_pow_${val}`).popLost()
+      }
+      /******************/
+
+      /******************/
+      function addSpecial(){
+        let {gameData} = phaserMaster.getOnly(['gameData']);
+        let val = gameData.player.special + 1
+        if(val > 9){val = 9}
+        saveData('player', {health: gameData.player.health, lives: gameData.player.lives, powerup: gameData.player.powerup, special: val})
+        updateSpecials()
+      }
+      /******************/
+
+      /******************/
+      function loseSpecial(){
+        let {gameData} = phaserMaster.getOnly(['gameData']);
+        let val = gameData.player.special - 1
+        if(val < 0){val = 0}
+        saveData('player', {health: gameData.player.health, lives: gameData.player.lives, powerup: gameData.player.powerup, special: val})
+        updateSpecials()
+      }
+      /******************/
+
+      /******************/
+      function updateSpecials(){
+          let {gameData} = phaserMaster.getOnly(['gameData']);
+          let val = gameData.player.special
+          let icons = phaserSprites.getGroup('special_icons');
+          for(let i = 0; i < icons.length; i++ ){
+            icons[i].visible = true
+          }
+          for(let i = val; i < icons.length; i++ ){
+            icons[i].visible = false
+          }
       }
       /******************/
 
@@ -875,7 +925,7 @@ class PhaserGameObject {
         let updateHealth = (health:number) => {
           let {gameData} = phaserMaster.getOnly(['gameData'])
           updateShipHealthbar(health)
-          saveData('player', {health: health, lives: gameData.player.lives, powerup: gameData.player.powerup})
+          saveData('player', {health: health, lives: gameData.player.lives, powerup: gameData.player.powerup, special: gameData.player.special})
         }
 
         let loseLife = (player:any) => {
@@ -886,7 +936,7 @@ class PhaserGameObject {
           healthbar_player.loseLife()
 
           if(gameData.player.lives > 0){
-            saveData('player', {health: 100, lives: gameData.player.lives, powerup: 0})
+            saveData('player', {health: 100, lives: gameData.player.lives, powerup: 0, special: gameData.player.special})
             phaserControls.clearAllControlIntervals()
             phaserControls.disableAllInput()
             player.isDestroyed()
@@ -928,11 +978,11 @@ class PhaserGameObject {
             saveData('score', gameData.score)
             let {scoreText} = phaserTexts.getOnly(['scoreText'])
                 scoreText.updateScore();
+            spawnPowerup(enemy.x, enemy.y)
         }
         let onDamage = () => {}
-        let onFail = () => { }
         let onUpdate = () => {}
-        let enemy = enemyManager.createSmallEnemy1(options, onDamage, onDestroy, onFail, onUpdate)
+        let enemy = enemyManager.createSmallEnemy1(options, onDamage, onDestroy, onUpdate)
       }
       /******************/
 
@@ -1011,168 +1061,83 @@ class PhaserGameObject {
       /******************/
 
       /******************/
-      function targetCheck(obj:any, wpnType:string = null){
-        returnAllCollidables().map(target => {
-          if(target.game !== null){
-            if(target.game.physics !== null){
-              target.game.physics.arcade.overlap(obj, target, (obj, target)=>{
-                obj.pierceStrength -= target.parent.pierceResistence
-                target.parent.damageIt(obj.damageAmount, wpnType);
-                if(obj.pierceStrength <= 0){
-                  obj.destroyIt()
-                }
-              }, null, obj);
-            }
-          }
-        })
-      }
-      /******************/
-
-
-
-      /******************/
-      function fireSpread(){
-        let game = phaserMaster.game();
-        let {player} = phaserSprites.getOnly(['player']);
-        let {gameData} = phaserMaster.getOnly(['gameData']);
-        let {gap, shots} = {gap: 10, shots: 2 + (2 * Math.floor(gameData.player.powerup/5) + 1)}
-        let centerShots = (gap * (shots-1))/2
-
-        player.fireWeapon()
-        for(let i = 0; i < Math.floor(shots/2); i++){
-          setTimeout(() => {
-            let onUpdate = (obj:any) => {
-              targetCheck(obj, 'BULLET')
-            }
-            let onDestroy = () => {}
-            //weaponManager.createBullet({name: `bullet_${game.rnd.integer()}`, group: 'ship_weapons', x: player.x, y: player.y, spread:(i*8), layer: player.onLayer + 1}, onDestroy, onUpdate)
-         }, 25)
-        }
-        for(let i = 1; i < Math.floor(shots/2); i++){
-          setTimeout(() => {
-            let onUpdate = (obj:any) => {
-              targetCheck(obj, 'BULLET')
-            }
-            let onDestroy = () => {}
-              //weaponManager.createBullet({name: `bullet_${game.rnd.integer()}`, group: 'ship_weapons', x: player.x, y: player.y, spread:-(i*8), layer: player.onLayer + 1}, onDestroy, onUpdate)
-         }, 25)
-        }
-      }
-      /******************/
-
-      /******************/
-      function fireLasers(){
-        // let game = phaserMaster.game();
-         let {player} = phaserSprites.getOnly(['player']);
-        // let {gameData} = phaserMaster.getOnly(['gameData']);
-        // let {gap, shots} = {gap: 30, shots: 1 + (1 * Math.floor(gameData.player.powerup/5) + 1)}
-        // let centerShots = (gap * (shots-1))/2
-
-        player.fireWeapon()
-        // for(let i = 0; i < shots; i++){
-        //   let onUpdate = (obj:any) => { targetCheck(obj, 'LASER') }
-        //   let onDestroy = () => {}
-        //   weaponManager.createLaser({name: `laser_${game.rnd.integer()}`, group: 'ship_weapons', x: player.x + (i * gap) - centerShots, y: player.y - player.height/2, spread: 0, layer: player.onLayer + 1}, onDestroy, onUpdate)
-        //  }
-      }
-      /******************/
-
-      /******************/
-      function fireMissles(){
-        // let game = phaserMaster.game();
-        // let {player} = phaserSprites.getOnly(['player']);
-        // let {gameData} = phaserMaster.getOnly(['gameData']);
-        // let {gap, shots} = {gap: 30, shots: 2 + (2 * Math.floor(gameData.player.powerup/5) + 1)}
-        // let centerShots = (gap * (shots-1))/2
-        //
-        // player.fireWeapon()
-        // // always shoots two at a minimum
-        // for(let i = 0; i < shots; i++){
-        //   let onUpdate = (obj:any) => { targetCheck(obj, 'MISSLE') }
-        //   let onDestroy = (obj:any) => { impactExplosion(obj.x + obj.height, obj.y, 1, obj.damageAmount/2) }
-        //   weaponManager.createMissle({name: `missle_${game.rnd.integer()}`, group: 'ship_weapons', x: player.x, y: player.y - player.height/2, spread:(i % 2 === 0 ? -7 - (i*2): 7 +  (i*2)), layer: player.onLayer + 1}, onDestroy, onUpdate)
-        // }
-      }
-      /******************/
-
-      /******************/
       function createClusterbomb(){
-        let game = phaserMaster.game();
-        let {player} = phaserSprites.getOnly(['player']);
-
-        let onUpdate = (obj:any) => {  targetCheck(obj) }
-        let onDestroy = (obj:any) => {
-             for(let i = 0; i < obj.bomblets; i++){
-               createBomblet({
-                 x: obj.x,
-                 y: obj.y,
-                 ix: game.rnd.integerInRange(-400, 400),
-                 iy: game.rnd.integerInRange(-400, 100),
-                 damage: obj.damageAmount/4,
-                 group: 'ship_weapons',
-                 layer: 2
-               })
-            }
-        }
-
-        player.fireSubweapon()
-        weaponManager.createClusterbomb({name: `clusterbomb_${game.rnd.integer()}`, group: 'ship_secondary_weapons', x: player.x, y: player.y, layer: player.onLayer + 1}, onDestroy, onUpdate)
+        // let game = phaserMaster.game();
+        // // let {player} = phaserSprites.getOnly(['player']);
+        // //
+        // // let onUpdate = (obj:any) => {  targetCheck(obj) }
+        // // let onDestroy = (obj:any) => {
+        // //      for(let i = 0; i < obj.bomblets; i++){
+        // //        createBomblet({
+        // //          x: obj.x,
+        // //          y: obj.y,
+        // //          ix: game.rnd.integerInRange(-400, 400),
+        // //          iy: game.rnd.integerInRange(-400, 100),
+        // //          damage: obj.damageAmount/4,
+        // //          group: 'ship_weapons',
+        // //          layer: 2
+        // //        })
+        // //     }
+        // // }
+        // //
+        // // player.fireSubweapon()
+        // // weaponManager.createClusterbomb({name: `clusterbomb_${game.rnd.integer()}`, group: 'ship_secondary_weapons', x: player.x, y: player.y, layer: player.onLayer + 1}, onDestroy, onUpdate)
       }
       /******************/
 
       /******************/
       function createTriplebomb(){
-        let game = phaserMaster.game();
-        let {player} = phaserSprites.getOnly(['player']);
-
-        let onUpdate = (obj:any) => { targetCheck(obj) }
-        let onDestroy = (obj:any) => {}
-
-        for(let i = 0; i < 3; i++){
-          setTimeout(() => {
-            player.fireSubweapon()
-            weaponManager.createTriplebomb({name: `triplebomb_${game.rnd.integer()}`, group: 'ship_secondary_weapons', x: player.x, y: player.y, layer: player.onLayer + 1}, onDestroy, onUpdate)
-          }, i * 300)
-        }
+        // let game = phaserMaster.game();
+        // let {player} = phaserSprites.getOnly(['player']);
+        //
+        // let onUpdate = (obj:any) => { targetCheck(obj) }
+        // let onDestroy = (obj:any) => {}
+        //
+        // for(let i = 0; i < 3; i++){
+        //   setTimeout(() => {
+        //     player.fireSubweapon()
+        //     weaponManager.createTriplebomb({name: `triplebomb_${game.rnd.integer()}`, group: 'ship_secondary_weapons', x: player.x, y: player.y, layer: player.onLayer + 1}, onDestroy, onUpdate)
+        //   }, i * 300)
+        // }
 
       }
       /******************/
 
       /******************/
       function createTurret(){
-        let game = phaserMaster.game();
-        let {player} = phaserSprites.getOnly(['player']);
-
-        let onInit = (obj:any) => {
-          let {gap, shots} = {gap: 10, shots: 3}
-          let centerShots = (gap * (shots-1))/2
-          obj.fireInterval = setInterval(() => {
-            for(let i = 0; i < shots; i++){
-              let onUpdate = (obj:any) => { targetCheck(obj) }
-              let onDestroy = () => {}
-              //weaponManager.createBullet({name: `bullet_${game.rnd.integer()}`, group: 'ship_secondary_weapons', x: obj.x + (i * gap) - centerShots, y: obj.y, spread: 0, layer: player.onLayer + 1}, onDestroy, onUpdate)
-            }
-          }, 200)
-          obj.fireInterval;
-        }
-        let onUpdate = (obj:any) => {
-          obj.x = player.x - obj.offset
-          obj.y = player.y
-        }
-        let onDestroy = (obj:any) => {}
-
-        player.fireSubweapon()
-        weaponManager.createTurret({name: `turret_${game.rnd.integer()}`, group: 'ship_secondary_weapons', x: player.x, y: player.y, offset: 50, layer: player.onLayer + 2}, onInit, onDestroy, onUpdate)
-        weaponManager.createTurret({name: `turret_${game.rnd.integer()}`, group: 'ship_secondary_weapons', x: player.x, y: player.y, offset: -50, layer: player.onLayer + 2}, onInit, onDestroy, onUpdate)
+        // let game = phaserMaster.game();
+        // let {player} = phaserSprites.getOnly(['player']);
+        //
+        // let onInit = (obj:any) => {
+        //   let {gap, shots} = {gap: 10, shots: 3}
+        //   let centerShots = (gap * (shots-1))/2
+        //   obj.fireInterval = setInterval(() => {
+        //     for(let i = 0; i < shots; i++){
+        //       let onUpdate = (obj:any) => { targetCheck(obj) }
+        //       let onDestroy = () => {}
+        //       //weaponManager.createBullet({name: `bullet_${game.rnd.integer()}`, group: 'ship_secondary_weapons', x: obj.x + (i * gap) - centerShots, y: obj.y, spread: 0, layer: player.onLayer + 1}, onDestroy, onUpdate)
+        //     }
+        //   }, 200)
+        //   obj.fireInterval;
+        // }
+        // let onUpdate = (obj:any) => {
+        //   obj.x = player.x - obj.offset
+        //   obj.y = player.y
+        // }
+        // let onDestroy = (obj:any) => {}
+        //
+        // player.fireSubweapon()
+        // weaponManager.createTurret({name: `turret_${game.rnd.integer()}`, group: 'ship_secondary_weapons', x: player.x, y: player.y, offset: 50, layer: player.onLayer + 2}, onInit, onDestroy, onUpdate)
+        // weaponManager.createTurret({name: `turret_${game.rnd.integer()}`, group: 'ship_secondary_weapons', x: player.x, y: player.y, offset: -50, layer: player.onLayer + 2}, onInit, onDestroy, onUpdate)
 
       }
       /******************/
 
       /******************/
       function createBomblet(options:any){
-        let onUpdate = (obj:any) => { targetCheck(obj) }
-        let onDestroy = (obj:any) => { impactExplosion(obj.x, obj.y, 0.5, obj.damageAmount)}
-        let bomblet = weaponManager.createBomblet(options, onDestroy, onUpdate)
+        // let onUpdate = (obj:any) => { targetCheck(obj) }
+        // let onDestroy = (obj:any) => { impactExplosion(obj.x, obj.y, 0.5, obj.damageAmount)}
+        // let bomblet = weaponManager.createBomblet(options, onDestroy, onUpdate)
       }
       /******************/
 
@@ -1184,16 +1149,9 @@ class PhaserGameObject {
 
       /******************/
       function impactExplosion(x, y, scale, damage){
-        let onUpdate = (obj:any) => { targetCheck(obj) }
-        let onDestroy = (obj:any) => { }
-        let impactExplosion = weaponManager.createImpactExplosion(x, y, scale, 6, damage, onDestroy, onUpdate)
-      }
-      /******************/
-
-      /******************/
-      function returnAllCollidables(){
-        return [...phaserSprites.getGroup('enemy_hitboxes')]
-        //,   ...phaserSprites.getGroup('trashes'), ...phaserSprites.getGroup('boss')
+        // let onUpdate = (obj:any) => { targetCheck(obj) }
+        // let onDestroy = (obj:any) => { }
+        // let impactExplosion = weaponManager.createImpactExplosion(x, y, scale, 6, damage, onDestroy, onUpdate)
       }
       /******************/
 
@@ -1211,6 +1169,32 @@ class PhaserGameObject {
       }
       /******************/
 
+      /******************/
+      function spawnHealthpack(x:number, y:number){
+        let onPickup = () => {
+          addHealth(25)
+        }
+        itemManager.spawnHealthpack(x, y, 6, onPickup)
+      }
+      /******************/
+
+      /******************/
+      function spawnPowerup(x:number, y:number){
+        let onPickup = () => {
+          addPowerup()
+        }
+        itemManager.spawnPowerup(x, y, 6, onPickup)
+      }
+      /******************/
+
+      /******************/
+      function spawnSpecial(x:number, y:number){
+        let onPickup = () => {
+          addSpecial()
+        }
+        itemManager.spawnSpecial(x, y, 6, onPickup)
+      }
+      /******************/
 
       /******************/
       function director(){
@@ -1221,16 +1205,19 @@ class PhaserGameObject {
 
         //console.log(inGameSeconds)
 
+        if(inGameSeconds % 5 === 0){
+          spawnSpecial(game.rnd.integerInRange(0 + 100, game.canvas.width - 100), 0)
+        }
 
         // create a steady steam of aliens to shoot
-        //if(inGameSeconds % 2 === 0){
+        if(inGameSeconds % 3 === 0){
             createSmallEnemy({
               x: game.rnd.integerInRange(0 + 100, game.canvas.width - 100),
               y: game.rnd.integerInRange(100, 400),
               iy: game.rnd.integerInRange(0, 80),
               layer: 3
             });
-        //}
+        }
 
       }
       /******************/
@@ -1246,7 +1233,7 @@ class PhaserGameObject {
 
 
         if(currentState !== 'VICTORYSTATE' && currentState !== 'GAMEOVERSTATE' && currentState !== 'ENDLEVEL'){
-          phaserSprites.getManyGroups(['backgrounds', 'starfield', 'ship_weapons', 'ship_secondary_weapons', 'impactExplosions', 'playership', 'enemy_bullets']).map(obj => {
+          phaserSprites.getManyGroups(['backgrounds', 'starfield', 'ship_weapons', 'ship_secondary_weapons', 'impactExplosions', 'playership', 'enemy_bullets', 'special_icons', 'itemspawns']).map(obj => {
             obj.onUpdate()
           })
         }
@@ -1309,28 +1296,28 @@ class PhaserGameObject {
           }
 
           if(phaserControls.checkWithDelay( {isActive: true, key: 'B', delay: secondaryWeapon.cooldown} )){
-            if(specialWeapon !== undefined){
-              // reset speciaal timer and start charge animation
-              // updateShipSpecial(0, true)
-              // game.time.events.add(50, () => {
-              //   updateShipSpecial(100, false, secondaryWeapon.cooldown-50)
-              // }).autoDestroy = true;
-            }
-
-            switch(secondaryWeapon.reference){
-              case 'CLUSTERBOMB':
-                createClusterbomb()
-                break
-              case 'TRIPLEBOMB':
-                createTriplebomb()
-                break
-              case 'TURRET':
-                createTurret()
-                break
-              case 'BLASTRADIUS':
-
-                break
-            }
+            // if(specialWeapon !== undefined){
+            //   // reset speciaal timer and start charge animation
+            //   // updateShipSpecial(0, true)
+            //   // game.time.events.add(50, () => {
+            //   //   updateShipSpecial(100, false, secondaryWeapon.cooldown-50)
+            //   // }).autoDestroy = true;
+            // }
+            //
+            // switch(secondaryWeapon.reference){
+            //   case 'CLUSTERBOMB':
+            //     createClusterbomb()
+            //     break
+            //   case 'TRIPLEBOMB':
+            //     createTriplebomb()
+            //     break
+            //   case 'TURRET':
+            //     createTurret()
+            //     break
+            //   case 'BLASTRADIUS':
+            //
+            //     break
+            // }
           }
         }
 

@@ -97,7 +97,7 @@ export class WEAPON_MANAGER {
         weapon.multiFire = true;
 
         if(data.spriteAnimation.length > 0){
-          weapon.bullets.callAll('animations.add', 'animations', 'fire', data.spriteAnimation, 0, true);
+          weapon.bullets.callAll('animations.add', 'animations', 'fire', data.spriteAnimation, 20, true);
           weapon.bullets.callAll('play', null, 'fire');
         }
 
@@ -106,6 +106,15 @@ export class WEAPON_MANAGER {
           case 'MISSLE':
             weapon.bulletSpeedVariance = 300;
             weapon.bulletAngleVariance = 10;
+            break
+          case 'SHOTGUN':
+            weapon.bulletSpeedVariance = 1000;
+            weapon.bulletAngleOffset = -10
+            weapon.bulletAngleVariance = 20;
+            break
+          case 'GATLING':
+            weapon.bulletSpeedVariance = 300;
+            weapon.bulletAngleVariance = 3;
             break
         }
 
@@ -126,7 +135,6 @@ export class WEAPON_MANAGER {
         // map bullet characteristics
         weapon.bullets.children.map( bullet => {
           bullet.pierce = data.pierce;
-
           bullet.destroyIt = (layer:number) => {
             bullet.kill()
           }
@@ -445,6 +453,33 @@ export class WEAPON_MANAGER {
   /******************/
 
 
+  /******************/
+  public pelletImpact(x:number, y:number, scale:number, layer:number){
+    let game = this.game
+    let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
+    let frames = Phaser.Animation.generateFrameNames('sparks_', 1, 3);
+    let explosion = phaserSprites.addFromAtlas({name: `impact_${game.rnd.integer()}`, group: 'impactExplosions',  x: x, y: y, atlas: atlas, filename: frames[0]})
+        explosion.scale.setTo(scale, scale)
+        explosion.anchor.setTo(0.5, 0.5)
+        game.physics.enable(explosion, Phaser.Physics.ARCADE);
+    let anim = explosion.animations.add('animate', frames, 60, false)
+        anim.onStart.add(() => {}, explosion);
+        anim.onComplete.add(() => {
+          phaserSprites.destroy(explosion.name)
+        }, explosion);
+        anim.play('animate')
+
+    explosion.onUpdate = () => {
+
+    }
+
+    if(layer !== undefined){
+      phaserGroup.add(layer, explosion)
+    }
+
+    return explosion;
+  }
+  /******************/
 
   /******************/
   public blueImpact(x:number, y:number, scale:number, layer:number){

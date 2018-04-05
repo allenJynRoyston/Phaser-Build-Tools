@@ -67,7 +67,7 @@ export class ENEMY_MANAGER {
 
 
   /******************/
-  public createSmallEnemy1(options:any, onDamage:any = () => {}, onDestroy:any = () => {}, onFail:any = () => {}, onUpdate:any = () => {}){
+  public createSmallEnemy1(options:any, onDamage:any = () => {}, onDestroy:any = () => {}, onUpdate:any = () => {}){
     let game = this.game
     let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
 

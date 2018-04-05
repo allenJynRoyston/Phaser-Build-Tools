@@ -315,6 +315,20 @@ export class PLAYER_MANAGER {
   /******************/
 
   /******************/
+  public createShipExhaust(player:any, params:any){
+    let shipExhaust = this.phaserSprites.addFromAtlas({name: `${params.name}_exhaust`, group: params.group,  x: player.x, y: player.y + player.height/2 + 10, atlas: this.atlas,  filename: 'exhaust_red_1', visible: true})
+        shipExhaust.animations.add('exhaust_animation', Phaser.Animation.generateFrameNames('exhaust_red_', 1, 8), 1, true)
+        shipExhaust.animations.play('exhaust_animation', 30, true)
+        shipExhaust.anchor.setTo(0.5, 0.5)
+        player.addChild(shipExhaust)
+        shipExhaust.onUpdate = () => {}
+        shipExhaust.updateCords = (x, y) => {}
+        shipExhaust.destroyIt = () => {this.phaserSprites.destroy(shipExhaust.name)}
+  }
+  /******************/
+
+
+  /******************/
   private attachPerk(player:any, params:any, type:string){
     let animationSprites;
     let framerate
@@ -380,37 +394,37 @@ export class PLAYER_MANAGER {
 
   /******************/
   private attachSubWeaponSprite(player:any, params:any, weaponType:string){
-    let animationSprites;
-    let framerate
-    let onLayer
-    switch(weaponType){
-      case 'CLUSTERBOMB':
-        animationSprites = [...Phaser.Animation.generateFrameNames('cannon_fire_', 1, 8)]
-        framerate = 20;
-        break
-      case 'TRIPLEBOMB':
-        animationSprites = [...Phaser.Animation.generateFrameNames('cannon2_fire_', 1, 7), ...['cannon2_fire_1']]
-        framerate = 60;
-        break
-      case 'TURRET':
-        animationSprites = ['turret_base']
-        framerate = 30;
-        break
-    }
-
-
-    if(this.phaserSprites.get(`${params.name}_ship_subweapon`) !== undefined){
-      this.phaserSprites.destroy(`${params.name}_ship_subweapon`)
-    }
-
-    let shipSubweapon = this.phaserSprites.addFromAtlas({name: `${params.name}_ship_subweapon`, group: params.group, atlas: this.weaponAtlas,  filename: animationSprites[0], visible: true})
-        shipSubweapon.anchor.setTo(0.5, 0.5)
-        shipSubweapon.animations.add('fireWeapon', animationSprites, 1, true)
-
-        shipSubweapon.fireWeapon = () => {
-          shipSubweapon.animations.play('fireWeapon', framerate, false)
-        }
-        player.addChild(shipSubweapon)
+    // let animationSprites;
+    // let framerate
+    // let onLayer
+    // switch(weaponType){
+    //   case 'CLUSTERBOMB':
+    //     animationSprites = [...Phaser.Animation.generateFrameNames('cannon_fire_', 1, 8)]
+    //     framerate = 20;
+    //     break
+    //   case 'TRIPLEBOMB':
+    //     animationSprites = [...Phaser.Animation.generateFrameNames('cannon2_fire_', 1, 7), ...['cannon2_fire_1']]
+    //     framerate = 60;
+    //     break
+    //   case 'TURRET':
+    //     animationSprites = ['turret_base']
+    //     framerate = 30;
+    //     break
+    // }
+    //
+    //
+    // if(this.phaserSprites.get(`${params.name}_ship_subweapon`) !== undefined){
+    //   this.phaserSprites.destroy(`${params.name}_ship_subweapon`)
+    // }
+    //
+    // let shipSubweapon = this.phaserSprites.addFromAtlas({name: `${params.name}_ship_subweapon`, group: params.group, atlas: this.weaponAtlas,  filename: animationSprites[0], visible: true})
+    //     shipSubweapon.anchor.setTo(0.5, 0.5)
+    //     shipSubweapon.animations.add('fireWeapon', animationSprites, 1, true)
+    //
+    //     shipSubweapon.fireWeapon = () => {
+    //       shipSubweapon.animations.play('fireWeapon', framerate, false)
+    //     }
+    //     player.addChild(shipSubweapon)
   }
   /******************/
 
@@ -430,8 +444,13 @@ export class PLAYER_MANAGER {
         case 'MISSLE':
           this.attachMissle(player, params, weaponType)
           break
+        case 'SHOTGUN':
+          this.attachShotgun(player, params, weaponType)
+          break
+        case 'GATLING':
+          this.attachGatling(player, params, weaponType)
+          break
       }
-
   }
   /******************/
 
@@ -458,7 +477,7 @@ export class PLAYER_MANAGER {
 
     //-----------------
     for(let i = 0; i < turrets; i++){
-      let weaponSystem = this.phaserSprites.addFromAtlas({name: `ship_weapon_${this.game.rnd.integer()}`, group: params.group, atlas: this.weaponAtlas,  filename: animationSprites[0], visible: false})
+      let weaponSystem = this.phaserSprites.addFromAtlas({name: `ship_weapon_${this.game.rnd.integer()}`, group: params.group, atlas: this.weaponAtlas,  filename: animationSprites[0]})
           weaponSystem.anchor.setTo(0.5, 0.5)
           weaponSystem.animations.add('fireWeapon', animationSprites, 1, true)
           weaponSystem.offset = (gap * i) - ((gap/2) * (turrets-1))
@@ -559,6 +578,83 @@ export class PLAYER_MANAGER {
   /******************/
 
   /******************/
+  public attachShotgun(player:any, params:any, weaponType:string){
+    let animationSprites = [...Phaser.Animation.generateFrameNames('bullet_fire_', 1, 4)]
+    let gap = 20;
+    let turrets = 1
+    //-----------------  attach particle emitter
+    // let emitter = this.game.add.emitter();
+    //     emitter.makeParticles(this.atlas, `exhaust_trail`);
+    //     // emitter.setXSpeed(0, 0);
+    //     // emitter.setYSpeed(0, 0);
+    //     // emitter.setRotation(0, 0);
+    //     emitter.setAlpha(0.5, 0.2, 500);
+    //     emitter.setScale(1, 0.5, 1, 0.5, 500, Phaser.Easing.Quintic.Out);
+    //     emitter.fire = (x, y) => {
+    //       emitter.emitX = weaponSystem.x;
+    //       emitter.emitY = weaponSystem.y;
+    //       emitter.start(true, 500, null, 2);
+    //     }
+    // this.phaserGroup.add(params.layer + 1, emitter)
+    //-----------------
+
+    //-----------------
+    for(let i = 0; i < turrets; i++){
+      let weaponSystem = this.phaserSprites.addFromAtlas({name: `ship_weapon_${this.game.rnd.integer()}`, group: params.group, atlas: this.weaponAtlas,  filename: animationSprites[0]})
+          weaponSystem.anchor.setTo(0.5, 0.5)
+          weaponSystem.animations.add('fireWeapon', animationSprites, 1, true)
+          weaponSystem.offset = (gap * i) - ((gap/2) * (turrets-1))
+          weaponSystem.index = i;
+
+          weaponSystem.onUpdate = () => {
+            ammo.onUpdate();
+          }
+
+          weaponSystem.sync = (player) => {
+            let {x, y} = player;
+            weaponSystem.x = x + weaponSystem.offset
+            weaponSystem.y = y
+          }
+
+          weaponSystem.destroyIt = () => {
+            let {x, y} = weaponSystem;
+            this.weaponManager.blueImpact(x, y, 1, player.onLayer)
+            this.phaserSprites.destroy(weaponSystem.name)
+          }
+
+          weaponSystem.fire = () => {
+            let {gameData} = this.phaserMaster.getOnly(['gameData']);
+            let powerupLvl = Math.floor(gameData.player.powerup / 5)
+            for(let n = 0; n < 10 + (5*(powerupLvl+1)); n++){
+              ammo.fire(weaponSystem, null, weaponSystem + 1);
+            }
+            weaponSystem.animations.play('fireWeapon', 60, false)
+          }
+
+      this.phaserGroup.add(params.layer + 1, weaponSystem)
+      //-----------------
+
+      //-----------------
+      let maxBulletsOnscreen = 60
+      let ammo = this.weaponManager.playerBullets(maxBulletsOnscreen, weaponType);
+      ammo.checkOrientation(weaponSystem.angle)
+      ammo.onUpdate = () => {
+        this.bulletCollisionWithEnemies(ammo, weaponType)
+      }
+      ammo.trackSprite(weaponSystem, 0, -20);
+      //-----------------
+
+
+
+      // attach to player
+      weaponSystem.ammo = ammo;
+      player.weaponSystems.push(weaponSystem)
+    }
+  }
+  /******************/
+
+
+  /******************/
   public attachBullet(player:any, params:any, weaponType:string){
     let animationSprites = [...Phaser.Animation.generateFrameNames('bullet_fire_', 1, 4)]
     let gap = 20;
@@ -581,7 +677,7 @@ export class PLAYER_MANAGER {
 
     //-----------------
     for(let i = 0; i < turrets; i++){
-      let weaponSystem = this.phaserSprites.addFromAtlas({name: `ship_weapon_${this.game.rnd.integer()}`, group: params.group, atlas: this.weaponAtlas,  filename: animationSprites[0], visible: false})
+      let weaponSystem = this.phaserSprites.addFromAtlas({name: `ship_weapon_${this.game.rnd.integer()}`, group: params.group, atlas: this.weaponAtlas,  filename: animationSprites[0]})
           weaponSystem.anchor.setTo(0.5, 0.5)
           weaponSystem.animations.add('fireWeapon', animationSprites, 1, true)
           weaponSystem.offset = (gap * i) - ((gap/2) * (turrets-1))
@@ -686,7 +782,7 @@ export class PLAYER_MANAGER {
 
     //-----------------
     for(let i = 0; i < turrets; i++){
-      let weaponSystem = this.phaserSprites.addFromAtlas({name: `ship_weapon_${this.game.rnd.integer()}`, group: params.group, atlas: this.weaponAtlas,  filename: animationSprites[0], visible: true})
+      let weaponSystem = this.phaserSprites.addFromAtlas({name: `ship_weapon_${this.game.rnd.integer()}`, group: params.group, atlas: this.weaponAtlas,  filename: animationSprites[0]})
           weaponSystem.anchor.setTo(0.5, 0.5)
           weaponSystem.animations.add('fireWeapon', animationSprites, 1, true)
           weaponSystem.offset = (gap * i) - ((gap/2) * (turrets-1))
@@ -754,7 +850,7 @@ export class PLAYER_MANAGER {
 
   /******************/
   public attachMissle(player:any, params:any, weaponType:string){
-    let animationSprites = [...Phaser.Animation.generateFrameNames('bullet_fire_', 1, 4)]
+    let animationSprites = [...Phaser.Animation.generateFrameNames('missle_fire_', 1, 4)]
     let {gameData} = this.phaserMaster.getOnly(['gameData']);
     let powerupLvl = Math.floor(gameData.player.powerup / 5)
     let turrets = powerupLvl === 5 ? 2 : 1
@@ -844,19 +940,113 @@ export class PLAYER_MANAGER {
   }
   /******************/
 
-
   /******************/
-  public createShipExhaust(player:any, params:any){
-    let shipExhaust = this.phaserSprites.addFromAtlas({name: `${params.name}_exhaust`, group: params.group,  x: player.x, y: player.y + player.height/2 + 10, atlas: this.atlas,  filename: 'exhaust_red_1', visible: true})
-        shipExhaust.animations.add('exhaust_animation', Phaser.Animation.generateFrameNames('exhaust_red_', 1, 8), 1, true)
-        shipExhaust.animations.play('exhaust_animation', 30, true)
-        shipExhaust.anchor.setTo(0.5, 0.5)
-        player.addChild(shipExhaust)
-        shipExhaust.onUpdate = () => {}
-        shipExhaust.updateCords = (x, y) => {}
-        shipExhaust.destroyIt = () => {this.phaserSprites.destroy(shipExhaust.name)}
+  public attachGatling(player:any, params:any, weaponType:string){
+    let animationSprites = [...Phaser.Animation.generateFrameNames('missle_fire_', 1, 4)]
+    let {gameData} = this.phaserMaster.getOnly(['gameData']);
+    let powerupLvl = Math.floor(gameData.player.powerup / 5)
+    let turrets = 1
+    let gap = 20;
+
+    //-----------------  attach particle emitter
+    // let emitter = this.game.add.emitter();
+    //     emitter.makeParticles(this.atlas, `exhaust_trail`);
+    //     // emitter.setXSpeed(0, 0);
+    //     // emitter.setYSpeed(0, 0);
+    //     // emitter.setRotation(0, 0);
+    //     emitter.setAlpha(0.5, 0.2, 500);
+    //     emitter.setScale(1, 0.5, 1, 0.5, 500, Phaser.Easing.Quintic.Out);
+    //     emitter.fire = (x, y) => {
+    //       emitter.emitX = weaponSystem.x;
+    //       emitter.emitY = weaponSystem.y;
+    //       emitter.start(true, 500, null, 2);
+    //     }
+    // this.phaserGroup.add(params.layer + 1, emitter)
+    //-----------------
+
+    //-----------------
+    for(let i = 0; i < turrets; i++){
+      let weaponSystem = this.phaserSprites.addFromAtlas({name: `ship_weapon_${this.game.rnd.integer()}`, group: params.group, atlas: this.weaponAtlas,  filename: animationSprites[0], visible: true})
+          weaponSystem.anchor.setTo(0.5, 0.5)
+          weaponSystem.animations.add('fireWeapon', animationSprites, 1, true)
+          weaponSystem.offset = (gap * i) - ((gap/2) * (turrets-1))
+
+          weaponSystem.onUpdate = () => {
+            ammo.onUpdate();
+          }
+
+          weaponSystem.sync = (player) => {
+            let {x, y} = player;
+            weaponSystem.x = x + weaponSystem.offset
+            weaponSystem.y = y
+          }
+
+          weaponSystem.destroyIt = () => {
+            let {x, y} = weaponSystem;
+            this.weaponManager.blueImpact(x, y, 1, player.onLayer)
+            this.phaserSprites.destroy(weaponSystem.name)
+          }
+
+          weaponSystem.fire = () => {
+            let {gameData} = this.phaserMaster.getOnly(['gameData']);
+            let powerupLvl = Math.floor(gameData.player.powerup / 5)
+            //emitter.fire(weaponSystem.x, weaponSystem.y)
+            ammo.fire(weaponSystem, null, weaponSystem + 1);
+            if(powerupLvl >= 1){
+              setTimeout(() => {
+                ammo.fire(weaponSystem, null, weaponSystem + 20);
+              }, 50)
+            }
+            if(powerupLvl >= 2){
+              setTimeout(() => {
+                ammo.fire(weaponSystem, null, weaponSystem - 20);
+              }, 100)
+            }
+            if(powerupLvl >= 3){
+              setTimeout(() => {
+                ammo.fire(weaponSystem, null, weaponSystem + 20);
+              }, 150)
+            }
+            if(powerupLvl >= 4){
+              setTimeout(() => {
+                ammo.fire(weaponSystem, null, weaponSystem - 20);
+              }, 200)
+            }
+            if(powerupLvl >= 5){
+              setTimeout(() => {
+                ammo.fire(weaponSystem, null, weaponSystem - 20);
+              }, 250)
+            }
+            if(powerupLvl >= 6){
+              setTimeout(() => {
+                ammo.fire(weaponSystem, null, weaponSystem - 20);
+              }, 300)
+            }
+            weaponSystem.animations.play('fireWeapon', 60, false)
+          }
+
+
+      this.phaserGroup.add(params.layer + 1, weaponSystem)
+      //-----------------
+
+      //-----------------
+      let maxBulletsOnscreen = 45
+      let ammo = this.weaponManager.playerBullets(maxBulletsOnscreen, weaponType);
+      ammo.checkOrientation(weaponSystem.angle)
+      ammo.onUpdate = () => {
+        this.bulletCollisionWithEnemies(ammo, weaponType)
+      }
+
+      //-----------------
+
+      // attach to player
+      weaponSystem.ammo = ammo;
+      player.weaponSystems.push(weaponSystem)
+    }
   }
   /******************/
+
+
 
   /******************/
   public bulletCollisionWithEnemies(ammo:any, type:any){
@@ -867,12 +1057,18 @@ export class PLAYER_MANAGER {
         let {weaponData} = this.phaserMaster.getOnly(['weaponData'])
         let wpn = weaponData.primaryWeapons[type]
 
-        if(!e.isDamaged && !e.isDestroyed){
+        if((!e.isDamaged && !e.isDestroyed) || (wpn.ignoreDamageState && !e.isDestroyed)){
           if(type === 'LASER'){
             this.weaponManager.electricDischarge(bullet.x, bullet.y - bullet.height, 1, e.onLayer + 1)
           }
           if(type === 'SPREAD'){
             this.weaponManager.blueImpact(bullet.x, bullet.y - bullet.height, 1, e.onLayer + 1)
+          }
+          if(type === 'SHOTGUN'){
+            this.weaponManager.pelletImpact(bullet.x, bullet.y - bullet.height, 1, e.onLayer + 1)
+          }
+          if(type === 'GATLING'){
+            this.weaponManager.pelletImpact(bullet.x, bullet.y - bullet.height, 1, e.onLayer + 1)
           }
           if(type === 'BULLET'){
             this.weaponManager.orangeImpact(bullet.x, bullet.y - bullet.height, 1, e.onLayer + 1)
