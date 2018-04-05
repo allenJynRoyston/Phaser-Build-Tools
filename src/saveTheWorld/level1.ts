@@ -686,7 +686,7 @@ class PhaserGameObject {
         let isDevMode = phaserMaster.get('devMode')
         let {overlay} = phaserSprites.getOnly(['overlay']);
         let {clock, roundTime} = phaserMaster.getOnly(['clock', 'roundTime']);
-        let skipAnimation = true
+        let skipAnimation = false
 
         // run init on all ui elements to put them in their initial place
         phaserSprites.getAll('ARRAY').map(obj => {
@@ -749,7 +749,7 @@ class PhaserGameObject {
 
       /******************/
       function overlayControls(transition:string, callback:any = ()=>{}){
-        let skipAnimation = true
+        let skipAnimation = false
         utilityManager.overlayControls(
           { transition: transition,
             delay: skipAnimation ? 0 : 1000,
@@ -1223,14 +1223,14 @@ class PhaserGameObject {
 
 
         // create a steady steam of aliens to shoot
-        if(inGameSeconds % 2 === 0){
+        //if(inGameSeconds % 2 === 0){
             createSmallEnemy({
               x: game.rnd.integerInRange(0 + 100, game.canvas.width - 100),
               y: game.rnd.integerInRange(100, 400),
               iy: game.rnd.integerInRange(0, 80),
               layer: 3
             });
-        }
+        //}
 
       }
       /******************/
@@ -1240,7 +1240,7 @@ class PhaserGameObject {
         let game = phaserMaster.game();
         let {currentState} = phaserMaster.getState();
         let {starMomentum, primaryWeapon, secondaryWeapon, menuButtonSelection, elapsedTime, powerupTimer, gameData} = phaserMaster.getOnly(['starMomentum', 'primaryWeapon', 'secondaryWeapon', 'menuButtonSelection', 'elapsedTime', 'powerupTimer', 'gameData'])
-        let {specialWeapon, player} = phaserSprites.getOnly(['specialWeapon', 'player']);
+        let {specialWeapon, player, menuButtonCursor} = phaserSprites.getOnly(['specialWeapon', 'player', 'menuButtonCursor']);
         let {DOWN, UP, LEFT, RIGHT, A, START} = phaserControls.getOnly(['DOWN', 'UP', 'LEFT', 'RIGHT', 'A', 'START'])
 
 
@@ -1337,13 +1337,13 @@ class PhaserGameObject {
 
 
         if(currentState === 'VICTORYSTATE'){
-          if(UP.active){
-            phaserSprites.get('menuButtonCursor').updateLocation(1)
+          if(phaserControls.checkWithDelay({isActive: true, key: 'UP', delay: 100 })){
+            menuButtonCursor.updateLocation(1)
           }
-          if(DOWN.active){
-            phaserSprites.get('menuButtonCursor').updateLocation(2)
+          if(phaserControls.checkWithDelay({isActive: true, key: 'DOWN', delay: 100 })){
+            menuButtonCursor.updateLocation(2)
           }
-          if(START.active){
+          if(phaserControls.checkWithDelay({isActive: true, key: 'START', delay: 250 })){
             phaserMaster.changeState('LOCKED');
             phaserControls.disableAllInput()
             switch(menuButtonSelection){
@@ -1360,15 +1360,13 @@ class PhaserGameObject {
         }
 
         if(currentState === 'GAMEOVERSTATE'){
-          if(UP.active){
-            phaserSprites.get('menuButtonCursor').updateLocation(1)
+          if(phaserControls.checkWithDelay({isActive: true, key: 'UP', delay: 100 })){
+            menuButtonCursor.updateLocation(1)
           }
-          if(DOWN.active){
-            phaserSprites.get('menuButtonCursor').updateLocation(2)
+          if(phaserControls.checkWithDelay({isActive: true, key: 'DOWN', delay: 100 })){
+            menuButtonCursor.updateLocation(2)
           }
-          if(START.active){
-            clearInterval(phaserMaster.get('endExplosion'))
-            phaserMaster.changeState('LOCKED');
+          if(phaserControls.checkWithDelay({isActive: true, key: 'START', delay: 100 })){
             phaserControls.disableAllInput()
             switch(menuButtonSelection){
               case 1:
@@ -1561,11 +1559,8 @@ class PhaserGameObject {
         phaserMaster.changeState('GAMEOVER');
         let player = phaserSprites.get('player')
         let earth = phaserSprites.get('earth')
-
-        // hide UI text
-        phaserTexts.getGroup('ui_text').map(text => {
-          text.hide();
-        })
+        phaserControls.disableAllInput();
+        phaserMaster.changeState('GAMEOVERSTATE');
 
         phaserSprites.getGroup('ui').map(obj => {
           obj.hide();
@@ -1574,20 +1569,50 @@ class PhaserGameObject {
           obj.destroyIt()
         })
 
+        player.isDestroyed(false)
 
-        player.selfDestruct()
-        earth.selfDestruct()
 
-        playSequence('DUDE IT WAS THE FIRST LEVEL JEEZE', ()=>{
-          setTimeout(() => {
-            phaserMaster.changeState('GAMEOVERSTATE');
-            phaserSprites.getGroup('ui_buttons').map(obj => {
-              obj.reveal()
-            })
-            phaserTexts.get('menuButton1Text').setText('RETRY')
-            phaserTexts.get('menuButton2Text').setText('SAVE AND QUIT')
-          }, 1500)
-        })
+        // minor delay to capture them
+        setTimeout(() => {
+
+          let bmd = game.add.bitmapData(game.width, game.height);
+              bmd.drawFull(game.world);
+          var bmdImage = bmd.addToWorld(game.world.centerX + 100, game.world.centerY + 100, 0.5, 0.5, 2, 2);
+          phaserGroup.add(5, bmdImage)
+
+
+          phaserSprites.getManyGroups(['backgrounds', 'starfield', 'gameobjects']).map(obj => {
+            obj.destroy()
+          })
+
+          utilityManager.overlayBGControls({transition: 'FLASHWHITE', delay: 0, speed: 600}, () => {
+
+            bmdImage.scale.setTo(0.5, 0.5)
+            bmdImage.x = 0
+            bmdImage.y = 0
+
+            let newsPaper = phaserSprites.addFromAtlas({x: game.world.centerX, y: game.world.centerY, width: game.world.width, height: game.world.height, name: `newspaper`, group: 'gameobjects', filename: 'newspaper', atlas: 'atlas_main', visible: true})
+                newsPaper.anchor.setTo(0.5, 0.5)
+                newsPaper.scale.setTo(3, 3)
+                newsPaper.addChild(bmdImage)
+                phaserGroup.add(6, newsPaper)
+
+            tweenTint(bmdImage, 0x000000, 0xffffff, 3000, () => {
+              phaserControls.enableAllInput();
+
+              let {menuButton1Text, menuButton2Text} = phaserTexts.getOnly(['menuButton1Text', 'menuButton2Text'])
+              phaserSprites.getGroup('menuButtons').map(obj => {
+                obj.reveal()
+              })
+
+              phaserTexts.get('menuButton1Text').setText('RETRY')
+              phaserTexts.get('menuButton2Text').setText('SAVE AND QUIT')
+
+            });
+            game.add.tween(newsPaper.scale).to( { x: 1, y: 1 }, Phaser.Timer.SECOND*1.5, Phaser.Easing.Bounce.Out, true, 0, 0, false)
+            game.add.tween(newsPaper).to( { angle: 35, y: newsPaper.y - 50 }, Phaser.Timer.SECOND*1.5, Phaser.Easing.Linear.InOut, true, 0, 0, false)
+          })
+        }, 3000)
       }
       /******************/
 

@@ -73,7 +73,7 @@ export class PLAYER_MANAGER {
             player.checkLimits()
           }
 
-          player.alpha = player.isInvincible ? 0.5 : 1
+          player.alpha = (player.isInvincible && !player.isDead) ? 0.5 : 1
 
           // update emitter
           let {starMomentum} = this.phaserMaster.getOnly(['starMomentum'])
@@ -127,7 +127,7 @@ export class PLAYER_MANAGER {
         //------------------------
 
         //------------------------
-        player.isDestroyed = () => {
+        player.isDestroyed = (respawn:boolean = true) => {
           // change player states
           player.isDead = true;
           player.isInvincible = true;
@@ -141,10 +141,12 @@ export class PLAYER_MANAGER {
             onComplete.add(() => {
               this.weaponManager.createExplosion(player.x, player.y, 1, 6)
               player.visible = false;
-              setTimeout(() => {
-                updateHealth(100)
-                player.moveToStart();
-              }, 1000)
+              if(respawn){
+                setTimeout(() => {
+                  updateHealth(100)
+                  player.moveToStart();
+                }, 1000)
+              }
             })
         }
         //------------------------
@@ -162,18 +164,23 @@ export class PLAYER_MANAGER {
         }
         //------------------------
 
-        //------------------------
-        player.selfDestruct = () => {
-          player.isInvincible = true;
-          this.phaserSprites.get('exhaust').destroyIt();
-          //game.add.tween(player.scale).to( { x: 0.25, y: 0.25}, 3400, Phaser.Easing.Linear.In, true, 0).
-          game.add.tween(player).to( { angle: 720}, 3400, Phaser.Easing.Linear.In, true, 0).
-          onComplete.add(() => {
-            this.phaserSprites.destroy(player.name)
-            this.weaponManager.createExplosion(player.x, player.y, 0.5, 6)
-          }, this);
-        }
-        //------------------------
+        // //------------------------
+        // player.selfDestruct = () => {
+        //
+        //   player.isDead = true;
+        //   player.isInvincible = true;
+        //
+        //   // destroy weapon systems
+        //   player.destroyWeaponSystems();
+        //   //this.phaserSprites.get('exhaust').destroyIt();
+        //   //game.add.tween(player.scale).to( { x: 0.25, y: 0.25}, 3400, Phaser.Easing.Linear.In, true, 0).
+        //   game.add.tween(player).to( { angle: 720}, 3400, Phaser.Easing.Linear.In, true, 0).
+        //   onComplete.add(() => {
+        //     this.phaserSprites.destroy(player.name)
+        //     this.weaponManager.createExplosion(player.x, player.y, 0.5, 6)
+        //   }, this);
+        // }
+        // //------------------------
 
         //------------------------
         player.attachPerk = (type:string) => {

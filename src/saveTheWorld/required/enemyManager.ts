@@ -114,8 +114,8 @@ export class ENEMY_MANAGER {
         weaponSystem.destroyIt = () => {
           let {x, y} = weaponSystem;
           this.weaponManager.blueImpact(x, y, 1, enemy.onLayer)
-          weaponSystem.ammo.destroy()
           this.phaserSprites.destroy(weaponSystem.name)
+          setTimeout(() => {weaponSystem.ammo.destroy() }, 4000) // delay so bullets just don't dispapear when the enemy dies
         }
         weaponSystem.onUpdate = () => {
           ammo.onUpdate();
@@ -126,6 +126,7 @@ export class ENEMY_MANAGER {
             ammo.fire(weaponSystem, player.x, player.y);
           }
           else{
+
             ammo.checkOrientation(weaponSystem)
             ammo.fire(weaponSystem);
           }
@@ -136,6 +137,8 @@ export class ENEMY_MANAGER {
 
     //---------------------------- AMMO
     let ammo = this.weaponManager.enemyBullet(3);
+        ammo.bulletSpeedVariance = 100;
+        ammo.bulletAngleVariance = 20;
         ammo.onUpdate = () => {
             this.bulletCollisionWithPlayer(ammo, 10)
         }
