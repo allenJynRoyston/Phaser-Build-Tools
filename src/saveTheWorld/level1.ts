@@ -177,8 +177,10 @@ class PhaserGameObject {
         phaserMaster.let('devMode', false)
         phaserMaster.let('starMomentum', {x: 0, y:0})
         phaserMaster.let('pauseStatus', false)
-        phaserMaster.let('bossHealth', 100)
+        phaserMaster.let('bossHealth', null)
         phaserMaster.let('powerupTimer', 0)
+        phaserMaster.let('bossMode', false)           // turn on for when the boss is available
+        phaserMaster.let('showWarningBand', false)    // turn on to show warning band
 
         // weapon data
         let weaponData = phaserMaster.let('weaponData', game.cache.getJSON('weaponData'));
@@ -199,6 +201,7 @@ class PhaserGameObject {
         buildBackground()
         buildScore()
         buildMenuAndButtons();
+        buildBossWarning();
 
         buildHealthbar_player()
         buildPow_player()
@@ -338,6 +341,31 @@ class PhaserGameObject {
 
           // add to layers
           phaserGroup.addMany(12, [menuButton1, menuButton2, menuButtonCursor])
+      }
+      /******************/
+
+      /******************/
+      function buildBossWarning(){
+        let warningBand = phaserSprites.addTilespriteFromAtlas({ name: 'showWarningBand', group: 'boss_ui', x: 0, y: game.world.centerY - 100, width: game.canvas.width, height: 100, atlas: 'atlas_main', filename: 'warning_band', alpha: 0 });
+            warningBand.cosWave = {data: game.math.sinCosGenerator(150, 100 , 0, 1).cos, count: 0}
+            warningBand.onUpdate = () => {
+                let {showWarningBand} = phaserMaster.getOnly(['showWarningBand'])
+                if(showWarningBand){
+                  warningBand.cosWave.count++
+                  if(warningBand.cosWave.count > warningBand.cosWave.data.length - 1){ warningBand.cosWave.count = 0}
+                  warningBand.alpha = Math.round(warningBand.cosWave.data[warningBand.cosWave.count])
+                  warningBand.tilePosition.x += 10
+                }
+                else{
+                  if(warningBand.cosWave.count !== 0){
+                    warningBand.cosWave.count++
+                    if(warningBand.cosWave.count > warningBand.cosWave.data.length - 1){ warningBand.cosWave.count = 0}
+                    warningBand.alpha = Math.round(warningBand.cosWave.data[warningBand.cosWave.count])
+                    warningBand.tilePosition.x += 10
+                  }
+                }
+            };
+
       }
       /******************/
 
@@ -522,7 +550,6 @@ class PhaserGameObject {
 
         // let unit_health_player = phaserSprites.addFromAtlas({x: 5, y: 3, width: 150, name: `unit_health_player`, filename: 'unit_health', atlas: 'atlas_main', visible: true})
         // healthbar_player.addChild(unit_health_player)
-
       }
       /******************/
 
@@ -636,7 +663,7 @@ class PhaserGameObject {
       function buildHealthbar_boss(){
         let game = phaserMaster.game();
         let healthbar_boss = phaserSprites.addFromAtlas({ name: `healthbar_boss`, group: 'boss_healthbar',  filename: 'healthbar_boss', atlas: 'atlas_main', visible: true})
-        phaserSprites.centerOnPoint('healthbar_boss', game.world.width/2, 75)
+        phaserSprites.centerOnPoint('healthbar_boss', game.world.width/2, 25)
         phaserGroup.addMany(10, [healthbar_boss])
         healthbar_boss.setDefaultPositions()
 
@@ -693,7 +720,7 @@ class PhaserGameObject {
         healthbar_boss.reveal = () => {
           let y = healthbar_boss.getDefaultPositions().y
           healthbar_boss.setDefaultPositions();
-          game.add.tween(healthbar_boss).to( { y: y }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, game.rnd.integerInRange(0, 500), 0, false).
+          game.add.tween(healthbar_boss).to( { y: y  }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, game.rnd.integerInRange(0, 500), 0, false).
             onComplete.add(() => {
               fillEnemyhealth(phaserMaster.get('bossHealth'))
             })
@@ -919,7 +946,8 @@ class PhaserGameObject {
         }
 
         let onDamage = (player:any) => {
-          losePowerup()
+          shakeHealth();
+          losePowerup();
         }
 
         let updateHealth = (health:number) => {
@@ -1030,33 +1058,33 @@ class PhaserGameObject {
 
       /******************/
       function createBoss(options:any){
-        let game = phaserMaster.game();
-        let {bossContainer} = phaserSprites.getOnly(['bossContainer'])
-        let onDestroy = (enemy:any) => {
-            bossContainer.hide();
-            let {gameData} = phaserMaster.getOnly(['gameData'])
-                 gameData.score += 10000
-            saveData('score', gameData.score)
-            let {scoreText} = phaserTexts.getOnly(['scoreText'])
-                 scoreText.updateScore();
-            endLevel()
-        }
-        let onDamage = (boss) => {
-          let remainingHealth = Math.round(boss.health/boss.maxHealth*100)
-          updateBossBar(remainingHealth)
-        }
-        let onFail = () => {
-          phaserMaster.changeState('ENDLEVEL');
-          bossContainer.hide();
-          setTimeout(() => {
-            let {currentState} = phaserMaster.getState();
-            if(currentState !== 'GAMEOVER'){
-              endLevel()
-            }
-          }, 1000)
-        }
-        let onUpdate = () => {}
-        let enemy = enemyManager.createGiantAsteroid(options, onDamage, onDestroy, onFail, onUpdate)
+        // let game = phaserMaster.game();
+        // let {bossContainer} = phaserSprites.getOnly(['bossContainer'])
+        // let onDestroy = (enemy:any) => {
+        //     bossContainer.hide();
+        //     let {gameData} = phaserMaster.getOnly(['gameData'])
+        //          gameData.score += 10000
+        //     saveData('score', gameData.score)
+        //     let {scoreText} = phaserTexts.getOnly(['scoreText'])
+        //          scoreText.updateScore();
+        //     endLevel()
+        // }
+        // let onDamage = (boss) => {
+        //   let remainingHealth = Math.round(boss.health/boss.maxHealth*100)
+        //   updateBossBar(remainingHealth)
+        // }
+        // let onFail = () => {
+        //   phaserMaster.changeState('ENDLEVEL');
+        //   bossContainer.hide();
+        //   setTimeout(() => {
+        //     let {currentState} = phaserMaster.getState();
+        //     if(currentState !== 'GAMEOVER'){
+        //       endLevel()
+        //     }
+        //   }, 1000)
+        // }
+        // let onUpdate = () => {}
+        // let enemy = enemyManager.createGiantAsteroid(options, onDamage, onDestroy, onFail, onUpdate)
       }
       /******************/
 
@@ -1156,6 +1184,54 @@ class PhaserGameObject {
       /******************/
 
       /******************/
+      function shakeWorld(){
+        game.camera.shake(0.005, 5000);
+      }
+      /******************/
+
+      /******************/
+      function shakeHealth(){
+        let healthbar = phaserSprites.get('healthbar_player')
+        // define the camera offset for the quake
+        // we need to move according to the camera's current position
+        let properties = {
+          x: healthbar.x + game.rnd.integerInRange(-2, 2),
+          y: healthbar.y + game.rnd.integerInRange(-2, 2)
+        };
+        // we make it a relly fast movement
+        let duration = 45;
+        let repeat = 1;
+        let ease = Phaser.Easing.Bounce.InOut;
+        let autoStart = false;
+        let delay = 1;
+        let yoyo = true;
+        let quake = game.add.tween(healthbar).to(properties, duration, ease, autoStart, delay, 4, yoyo);
+        quake.start();
+      }
+      /******************/
+
+      /******************/
+      function shakeUI(){
+        let layer = phaserGroup.layer(10)
+        // define the camera offset for the quake
+        // we need to move according to the camera's current position
+        let properties = {
+          x: layer.x + game.rnd.integerInRange(-5, 5),
+          y: layer.y + game.rnd.integerInRange(-5, 5)
+        };
+        // we make it a relly fast movement
+        let duration = 50;
+        let repeat = 2;
+        let ease = Phaser.Easing.Bounce.InOut;
+        let autoStart = false;
+        let delay = 1;
+        let yoyo = true;
+        let quake = game.add.tween(layer).to(properties, duration, ease, autoStart, delay, 4, yoyo);
+        quake.start();
+      }
+      /******************/
+
+      /******************/
       function pauseGame(){
         phaserMaster.get('clock').stop();
         phaserMaster.forceLet('pauseStatus', true)
@@ -1196,29 +1272,68 @@ class PhaserGameObject {
       }
       /******************/
 
+
+
+      /******************/
+      function incrementTime(duration:number){
+        let {inGameSeconds} = phaserMaster.getOnly(['inGameSeconds'])
+             inGameSeconds += duration
+        phaserMaster.forceLet('inGameSeconds', inGameSeconds)
+        return inGameSeconds
+      }
+      /******************/
+
       /******************/
       function director(){
+        let {bossMode} = phaserMaster.getOnly(['bossMode'])
+        let inGameSeconds = incrementTime(0.5)
 
-        let {inGameSeconds} = phaserMaster.getOnly(['inGameSeconds'])
-             inGameSeconds += 0.5
-        phaserMaster.forceLet('inGameSeconds', inGameSeconds)
-
-        //console.log(inGameSeconds)
-
-        if(inGameSeconds % 5 === 0){
-          spawnSpecial(game.rnd.integerInRange(0 + 100, game.canvas.width - 100), 0)
+        if(inGameSeconds === 30){
+          startBossBattle()
         }
 
-        // create a steady steam of aliens to shoot
-        if(inGameSeconds % 3 === 0){
-            createSmallEnemy({
-              x: game.rnd.integerInRange(0 + 100, game.canvas.width - 100),
-              y: game.rnd.integerInRange(100, 400),
-              iy: game.rnd.integerInRange(0, 80),
-              layer: 3
-            });
+        if(!bossMode){
+          if(inGameSeconds % 5 === 0){
+            spawnSpecial(game.rnd.integerInRange(0 + 100, game.canvas.width - 100), 0)
+          }
+
+          // create a steady steam of aliens to shoot
+          if(inGameSeconds % 3 === 0){
+              createSmallEnemy({
+                x: game.rnd.integerInRange(0 + 100, game.canvas.width - 100),
+                y: game.rnd.integerInRange(100, 400),
+                iy: game.rnd.integerInRange(0, 80),
+                layer: 3
+              });
+          }
         }
 
+      }
+      /******************/
+
+      /******************/
+      function startBossBattle(){
+         let game = phaserMaster.game();
+         let {scoreContainer, player, healthbar_boss} = phaserSprites.getOnly(['scoreContainer', 'player', 'healthbar_boss']);
+         phaserMaster.forceLet('bossMode', true)
+         phaserMaster.forceLet('showWarningBand', true)
+         shakeWorld()
+
+         // get boss info - assign
+         let boss = {
+          name: 'BOSS',
+          health: 100
+        }
+         phaserMaster.forceLet('bossHealth', boss.health)
+
+         player.moveTo(game.world.centerX, game.world.centerY + game.world.centerY/2, 4000, () => {
+           game.time.events.add(Phaser.Timer.SECOND * 2, () => {
+             scoreContainer.hide();
+             healthbar_boss.reveal()
+
+             phaserMaster.forceLet('showWarningBand', false)
+           }, this).autoDestroy = true;
+         })
       }
       /******************/
 
@@ -1233,7 +1348,7 @@ class PhaserGameObject {
 
 
         if(currentState !== 'VICTORYSTATE' && currentState !== 'GAMEOVERSTATE' && currentState !== 'ENDLEVEL'){
-          phaserSprites.getManyGroups(['backgrounds', 'starfield', 'ship_weapons', 'ship_secondary_weapons', 'impactExplosions', 'playership', 'enemy_bullets', 'special_icons', 'itemspawns']).map(obj => {
+          phaserSprites.getManyGroups(['backgrounds', 'starfield', 'ship_weapons', 'ship_secondary_weapons', 'impactExplosions', 'playership', 'enemy_bullets', 'special_icons', 'itemspawns', 'boss_ui']).map(obj => {
             obj.onUpdate()
           })
         }

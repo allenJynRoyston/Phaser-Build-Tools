@@ -41,6 +41,7 @@ export class PLAYER_MANAGER {
         player.isInvincible = false;
         player.isDead = false
         player.isDamaged = false
+        player.isForceMoved = false
         player.ignoreBoundaries = null
         player.onLayer = params.layer
         player.primaryWeapon = params.primaryWeapon
@@ -73,7 +74,9 @@ export class PLAYER_MANAGER {
             player.checkLimits()
           }
 
-          player.alpha = (player.isInvincible && !player.isDead) ? 0.5 : 1
+          if(!player.isForceMoved){
+            player.alpha = (player.isInvincible && !player.isDead) ? 0.5 : 1
+          }
 
           // update emitter
           let {starMomentum} = this.phaserMaster.getOnly(['starMomentum'])
@@ -252,6 +255,22 @@ export class PLAYER_MANAGER {
           player.weaponSystems.map( obj => {
             obj.sync(this)
           })
+        }
+        //------------------------
+
+        //------------------------
+        player.moveTo = (x:number, y:number, duration:number, callback:any = () => {}) => {
+          player.isInvincible = true;
+          player.isForceMoved = true
+          // player.ignoreBoundaries = true
+          this.phaserControls.disableAllInput()
+          game.add.tween(player).to( { x: x, y: y }, duration, Phaser.Easing.Exponential.InOut, true, 0, 0, false).
+            onComplete.add(() => {
+              player.isInvincible = false;
+              player.isForceMoved = false
+              this.phaserControls.enableAllInput()
+              callback()
+            })
         }
         //------------------------
 
