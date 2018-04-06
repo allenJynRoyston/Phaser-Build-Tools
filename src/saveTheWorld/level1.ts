@@ -1298,7 +1298,7 @@ class PhaserGameObject {
           }
 
           // create a steady steam of aliens to shoot
-          if(inGameSeconds % 3 === 0){
+          if(inGameSeconds % 1 === 0){
               createSmallEnemy({
                 x: game.rnd.integerInRange(0 + 100, game.canvas.width - 100),
                 y: game.rnd.integerInRange(100, 400),
@@ -1342,13 +1342,13 @@ class PhaserGameObject {
         let game = phaserMaster.game();
         let {currentState} = phaserMaster.getState();
         let {starMomentum, primaryWeapon, secondaryWeapon, menuButtonSelection, elapsedTime, powerupTimer, gameData} = phaserMaster.getOnly(['starMomentum', 'primaryWeapon', 'secondaryWeapon', 'menuButtonSelection', 'elapsedTime', 'powerupTimer', 'gameData'])
-        let {specialWeapon, player, menuButtonCursor} = phaserSprites.getOnly(['specialWeapon', 'player', 'menuButtonCursor']);
+        let {player, menuButtonCursor} = phaserSprites.getOnly(['player', 'menuButtonCursor']);
         let {DOWN, UP, LEFT, RIGHT, A, START} = phaserControls.getOnly(['DOWN', 'UP', 'LEFT', 'RIGHT', 'A', 'START'])
 
 
 
         if(currentState !== 'VICTORYSTATE' && currentState !== 'GAMEOVERSTATE' && currentState !== 'ENDLEVEL'){
-          phaserSprites.getManyGroups(['backgrounds', 'starfield', 'ship_weapons', 'ship_secondary_weapons', 'impactExplosions', 'playership', 'enemy_bullets', 'special_icons', 'itemspawns', 'boss_ui']).map(obj => {
+          phaserSprites.getManyGroups(['backgrounds', 'starfield', 'impactExplosions', 'playership', 'enemy_bullets', 'special_icons', 'itemspawns', 'boss_ui']).map(obj => {
             obj.onUpdate()
           })
         }
@@ -1358,7 +1358,7 @@ class PhaserGameObject {
 
           // add to powerupbar every 2 seconds
           if(game.time.now > powerupTimer){
-            phaserMaster.forceLet('powerupTimer', gameData.player.powerup < 30 ? game.time.now + (Phaser.Timer.SECOND*2) : game.time.now + (Phaser.Timer.SECOND/2) )
+            phaserMaster.forceLet('powerupTimer', gameData.player.powerup < 30 ? game.time.now + (Phaser.Timer.SECOND*0.5) : game.time.now + (Phaser.Timer.SECOND/2) )
             addPowerup();
           }
 
@@ -1410,7 +1410,9 @@ class PhaserGameObject {
             player.fireWeapon()
           }
 
-          if(phaserControls.checkWithDelay( {isActive: true, key: 'B', delay: secondaryWeapon.cooldown} )){
+          if(phaserControls.checkWithDelay( {isActive: true, key: 'B', delay:  500} ) && gameData.player.special > 0){
+            loseSpecial()
+            player.fireSubweapon()
             // if(specialWeapon !== undefined){
             //   // reset speciaal timer and start charge animation
             //   // updateShipSpecial(0, true)

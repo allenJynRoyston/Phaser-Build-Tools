@@ -49,37 +49,6 @@ export class WEAPON_MANAGER {
         })
 
     return weapon
-
-    // let game = this.game
-    // let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
-    // let {weaponData, atlas_weapon} = phaserMaster.getAll(['weaponData', 'atlas_weapon']);
-    // let ammo =  phaserSprites.addFromAtlas({x: options.x, y: options.y, name: options.name, group: options.group, atlas: atlas, filename: 'enemy_bullet'})
-    //     ammo.anchor.setTo(0.5, 0.5)
-    //     game.physics.enable(ammo, Phaser.Physics.ARCADE);
-    //     ammo.body.velocity.y = 300;
-    //     ammo.angle =  options.spread
-    //
-    //     ammo.removeIt = () => {
-    //       phaserSprites.destroy(ammo.name)
-    //     }
-    //
-    //     ammo.destroyIt = () => {
-    //       this.orangeImpact(ammo.x + this.game.rnd.integerInRange(-5, 5), ammo.y + this.game.rnd.integerInRange(-5, 15), 1, options.layer + 1)
-    //       onDestroy(ammo)
-    //       phaserSprites.destroy(ammo.name)
-    //     }
-    //
-    //     ammo.onUpdate = () => {
-    //
-    //       if( (ammo.y < -50) || (ammo.y > ammo.game.canvas.height + 50) ){ ammo.destroyIt() }
-    //       onUpdate(ammo)
-    //    }
-    //
-    //    if(options.layer !== undefined){
-    //      phaserGroup.add(options.layer, ammo)
-    //    }
-    //
-    // return ammo;
   }
   /******************/
 
@@ -105,7 +74,7 @@ export class WEAPON_MANAGER {
         switch(type){
           case 'MISSLE':
             weapon.bulletSpeedVariance = 300;
-            weapon.bulletAngleVariance = 10;
+            weapon.bulletAngleVariance = 15;
             break
           case 'SHOTGUN':
             weapon.bulletSpeedVariance = 1000;
@@ -117,6 +86,10 @@ export class WEAPON_MANAGER {
             weapon.bulletAngleVariance = 3;
             break
         }
+
+        weapon.onKill.add((bullet:any) => {
+            //
+        })
 
         weapon.checkOrientation = (angle:number) => {
           if(angle < 180){
@@ -134,6 +107,7 @@ export class WEAPON_MANAGER {
 
         // map bullet characteristics
         weapon.bullets.children.map( bullet => {
+          bullet.weaponData = data;
           bullet.pierce = data.pierce;
           bullet.destroyIt = (layer:number) => {
             bullet.kill()
@@ -145,238 +119,267 @@ export class WEAPON_MANAGER {
   /******************/
 
 
-
-
-
-
-
   /******************/
-  public createClusterbomb(options:any, onDestroy:any = () => {}, onUpdate:any = () => {}){
+  public createClusterbomb(bulletPoolTotal:Number, onKill:any = () => {}){
     let game = this.game
     let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
     let {weaponData} = phaserMaster.getAll();
-    let weapon = weaponData.secondaryWeapons.CLUSTERBOMB;
+    let data = weaponData.secondaryWeapons.CLUSTERBOMB;
+    let bombletAmount = 25
 
-    let ammo = phaserSprites.addFromAtlas({x: options.x, y: options.y,  name: options.name, group: options.group, atlas: atlas, filename: weapon.spriteAnimation[0]})
-        if(weapon.spriteAnimation.length > 1){
-          ammo.animations.add('animate', weapon.spriteAnimation, 1, true)
-          ammo.animations.play('animate', 30, true)
+    let bomblets = this.createBomblet(bombletAmount);
+
+    // cluster bomb itself
+    let weapon = game.add.weapon(1, this.atlas, data.spriteAnimation[0])
+        weapon.bulletKillType = Phaser.Weapon.KILL_LIFESPAN ;
+        weapon.bulletSpeed = data.bulletSpeed;
+        weapon.multiFire = true;
+        weapon.bulletLifespan = 750
+
+        if(data.spriteAnimation.length > 0){
+          weapon.bullets.callAll('animations.add', 'animations', 'fire', data.spriteAnimation, 20, true);
+          weapon.bullets.callAll('play', null, 'fire');
         }
-        game.physics.enable(ammo, Phaser.Physics.ARCADE);
-        ammo.anchor.setTo(0.5, 0.5)
-        ammo.body.velocity.y = weapon.initialVelocity;
-        ammo.angle = 90;
-        ammo.hasDetonated = false;
-        ammo.bomblets  = weapon.bomblets
-        ammo.pierceStrength = weapon.pierceStrength
-        ammo.damageAmount = weapon.damage
 
-        setTimeout(() => {
-          if(!ammo.hasDetonated){
-            ammo.hasDetonated = true;
-            ammo.destroyIt();
+        weapon.onKill.add((bullet:any) => {
+          onKill()
+          bomblets.map(bomblet => {
+            bomblet.fire(bullet)
+          })
+          this.createImpactExplosion(bullet.x, bullet.y, 1.25, 8, data.damage)
+        })
+
+        // map bullet characteristics
+        weapon.bullets.children.map( bullet => {
+          bullet.weaponData = data;
+          bullet.pierce = data.pierce;
+          bullet.destroyIt = (layer:number) => {
+            bullet.kill()
           }
-        }, 800)
+        })
 
-        ammo.accelerate = () => {
-          if(ammo.body !== null){
-            if(ammo.body.velocity.y > -400){
-              ammo.body.velocity.y -= weapon.velocity;
+        this.phaserGroup.add(7, weapon.bullets )
+
+
+
+    return weapon
+
+  }
+  /******************/
+
+  public createBomblet(amount:number){
+    let game = this.game
+    let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
+    let {weaponData} = phaserMaster.getAll();
+    let data = {
+          reference: 'BOMBLET',
+          spriteAnimation: ["icon_sw_1"],
+          damage: 25,
+          pierce: false
+        }
+
+    let bomblets = [];
+
+    for(let i = 0; i < amount; i++){
+      let bomblet = game.add.weapon(1, this.atlas, data.spriteAnimation[0])
+          bomblet.bulletKillType = Phaser.Weapon.KILL_LIFESPAN ;
+          bomblet.bulletSpeed = 500 + game.rnd.integerInRange(50, 150)
+          bomblet.bulletAngleVariance = 140;
+          bomblet.bulletLifespan = game.rnd.integerInRange(50, 500)
+
+          if(data.spriteAnimation.length > 0){
+            bomblet.bullets.callAll('animations.add', 'animations', 'fire', data.spriteAnimation, 20, true);
+            bomblet.bullets.callAll('play', null, 'fire');
+          }
+
+          bomblet.onKill.add((bullet:any) => {
+            game.camera.shake(0.002, 500);
+            this.createImpactExplosion(bullet.x, bullet.y, 1.25, 8, data.damage)
+          })
+
+          // map bullet characteristics
+          bomblet.bullets.children.map( bullet => {
+            bullet.weaponData = data;
+            bullet.pierce = data.pierce;
+            bullet.destroyIt = (layer:number) => {
+              bullet.kill()
             }
-            ammo.body.velocity.x += options.spread
-          }
-        }
+          })
 
-        ammo.destroyIt = () => {
-          onDestroy(ammo)
-          this.createExplosion(ammo.x, ammo.y, 1.25, options.layer)
-          phaserSprites.destroy(ammo.name)
-        }
-
-
-        ammo.onUpdate = () => {
-          onUpdate(ammo)
-          ammo.angle += 5;
-          // ammo speeds up
-          ammo.accelerate();
-          // destroy ammo
-          if(ammo.y < -ammo.height){ ammo.destroyIt() }
-       }
-
-       if(options.layer !== undefined){
-         phaserGroup.add(options.layer, ammo)
-       }
-
-       return ammo;
-  }
-  /******************/
-
-  /******************/
-  public createTriplebomb(options:any, onDestroy:any = () => {}, onUpdate:any = () => {}){
-    let game = this.game
-    let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
-    let {weaponData} = phaserMaster.getAll();
-    let weapon = weaponData.secondaryWeapons.TRIPLEBOMB;
-
-    let ammo = phaserSprites.addFromAtlas({x: options.x, y: options.y,  name: options.name, group: options.group, atlas: atlas, filename: weapon.spriteAnimation[0]})
-        if(weapon.spriteAnimation.length > 1){
-          ammo.animations.add('animate', weapon.spriteAnimation, 1, true)
-          ammo.animations.play('animate', 30, true)
-        }
-        game.physics.enable(ammo, Phaser.Physics.ARCADE);
-        ammo.anchor.setTo(0.5, 0.5)
-        ammo.body.velocity.y = weapon.initialVelocity;
-        ammo.angle = 90;
-        ammo.hasDetonated = false;
-        ammo.damageAmount = weapon.damage
-        ammo.pierceStrength = weapon.pierceStrength;
-
-        ammo.accelerate = () => {
-          if(ammo.body !== null){
-            if(ammo.body.velocity.y > -500){
-              ammo.body.velocity.y -= weapon.velocity;
-            }
-            ammo.body.velocity.x += options.spread
-          }
-        }
-
-        ammo.removeIt = () => {
-          onDestroy(ammo)
-          phaserSprites.destroy(ammo.name)
-        }
-
-        ammo.destroyIt = () => {
-          onDestroy(ammo)
-          this.createExplosion(ammo.x, ammo.y, 1.25, options.layer)
-          phaserSprites.destroy(ammo.name)
-        }
-
-        ammo.onUpdate = () => {
-          onUpdate(ammo)
-          ammo.angle += 15;
-          // ammo speeds up
-          ammo.accelerate();
-          // destroy ammo
-          if(ammo.y < -ammo.height){ ammo.removeIt() }
-       }
-
-       if(options.layer !== undefined){
-         phaserGroup.add(options.layer, ammo)
-       }
-
-       return ammo;
-  }
-  /******************/
-
-  /******************/
-  public createTurret(options:any, onInit:any = () => {}, onDestroy:any = () => {}, onUpdate:any = () => {}){
-    let game = this.game
-    let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
-    let {weaponData} = phaserMaster.getAll();
-    let weapon = weaponData.secondaryWeapons.TURRET;
-
-    let turret =  phaserSprites.addFromAtlas({x: options.x, y: options.y, name: options.name, group: options.group, atlas: atlas, filename: weapon.spriteAnimation[0]})
-        if(weapon.spriteAnimation.length > 1){
-          turret.animations.add('animate', weapon.spriteAnimation, 1, true)
-          turret.animations.play('animate', 30, true)
-        }
-        turret.anchor.setTo(0.5, 0.5)
-        game.physics.enable(turret, Phaser.Physics.ARCADE);
-        phaserGroup.add(2, turret)
-        turret.offset = options.offset;
-
-        setTimeout(() => {
-          if(turret !== undefined){
-            turret.destroyIt();
-          }
-        }, weapon.lifespan)
-
-        onInit(turret);
-
-        turret.destroyIt = () => {
-          if(turret !== undefined){
-            onDestroy(turret)
-            this.createExplosion(turret.x, turret.y, 0.5, options.layer)
-            clearInterval(turret.fireInterval)
-            phaserSprites.destroy(turret.name)
-          }
-        }
-
-        turret.onUpdate = () => {
-          onUpdate(turret);
-        }
-
-        if(options.layer !== undefined){
-          phaserGroup.add(options.layer, turret)
-        }
-
-  }
-  /******************/
-
-  /******************/
-  public createBlastradius(options:any){
-    let game = this.game
-    let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
-    let {weaponData} = phaserMaster.getAll();
-    let weapon = weaponData.secondaryWeapons.BLASTRADIUS;
-
-    let blast = phaserSprites.addFromAtlas({x: options.x, y: options.y,  name: options.name, group: options.group, atlas: atlas, filename: weapon.spriteAnimation[0]})
-        blast.anchor.setTo(0.5, 0.5)
-        blast.scale.setTo(1, 1)
-    if(weapon.spriteAnimation.length > 1){
-      let anim = blast.animations.add('animate', weapon.spriteAnimation, 30, false)
-          anim.onStart.add(() => {
-
-          }, blast);
-          anim.onComplete.add(() => {
-            phaserSprites.destroy(blast.name)
-          }, blast);
-          anim.play('animate')
-
+          this.phaserGroup.add(7, bomblet.bullets )
+      bomblets.push(bomblet)
     }
-    game.physics.enable(blast, Phaser.Physics.ARCADE);
 
-    if(options.layer !== undefined){
-      phaserGroup.add(options.layer, blast)
-    }
+    return bomblets;
   }
-  /******************/
 
-  /******************/
-  public createBomblet(options:any, onDestroy:any = () => {}, onUpdate:any = () => {}){
-    let game = this.game
-    let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
-    let ammo =  phaserSprites.addFromAtlas({x: options.x, y: options.y, name: `bomblet_${game.rnd.integer()}`, group: options.group, atlas: atlas, filename: 'clusterBomb'})
-        ammo.anchor.setTo(0.5, 0.5)
-        ammo.scale.setTo(0.5, 0.5)
-        game.physics.enable(ammo, Phaser.Physics.ARCADE);
-        ammo.body.velocity.y = options.iy
-        ammo.body.velocity.x = options.ix
-        ammo.detonate = game.time.now + game.rnd.integerInRange(1250, 1800)
-        ammo.pierceStrength = 1
-        ammo.damageAmount = 100
+  //
+  // /******************/
+  // public createTriplebomb(options:any, onDestroy:any = () => {}, onUpdate:any = () => {}){
+  //   let game = this.game
+  //   let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
+  //   let {weaponData} = phaserMaster.getAll();
+  //   let weapon = weaponData.secondaryWeapons.TRIPLEBOMB;
+  //
+  //   let ammo = phaserSprites.addFromAtlas({x: options.x, y: options.y,  name: options.name, group: options.group, atlas: atlas, filename: weapon.spriteAnimation[0]})
+  //       if(weapon.spriteAnimation.length > 1){
+  //         ammo.animations.add('animate', weapon.spriteAnimation, 1, true)
+  //         ammo.animations.play('animate', 30, true)
+  //       }
+  //       game.physics.enable(ammo, Phaser.Physics.ARCADE);
+  //       ammo.anchor.setTo(0.5, 0.5)
+  //       ammo.body.velocity.y = weapon.initialVelocity;
+  //       ammo.angle = 90;
+  //       ammo.hasDetonated = false;
+  //       ammo.damageAmount = weapon.damage
+  //       ammo.pierceStrength = weapon.pierceStrength;
+  //
+  //       ammo.accelerate = () => {
+  //         if(ammo.body !== null){
+  //           if(ammo.body.velocity.y > -500){
+  //             ammo.body.velocity.y -= weapon.velocity;
+  //           }
+  //           ammo.body.velocity.x += options.spread
+  //         }
+  //       }
+  //
+  //       ammo.removeIt = () => {
+  //         onDestroy(ammo)
+  //         phaserSprites.destroy(ammo.name)
+  //       }
+  //
+  //       ammo.destroyIt = () => {
+  //         onDestroy(ammo)
+  //         this.createExplosion(ammo.x, ammo.y, 1.25, options.layer)
+  //         phaserSprites.destroy(ammo.name)
+  //       }
+  //
+  //       ammo.onUpdate = () => {
+  //         onUpdate(ammo)
+  //         ammo.angle += 15;
+  //         // ammo speeds up
+  //         ammo.accelerate();
+  //         // destroy ammo
+  //         if(ammo.y < -ammo.height){ ammo.removeIt() }
+  //      }
+  //
+  //      if(options.layer !== undefined){
+  //        phaserGroup.add(options.layer, ammo)
+  //      }
+  //
+  //      return ammo;
+  // }
+  // /******************/
+  //
+  // /******************/
+  // public createTurret(options:any, onInit:any = () => {}, onDestroy:any = () => {}, onUpdate:any = () => {}){
+  //   let game = this.game
+  //   let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
+  //   let {weaponData} = phaserMaster.getAll();
+  //   let weapon = weaponData.secondaryWeapons.TURRET;
+  //
+  //   let turret =  phaserSprites.addFromAtlas({x: options.x, y: options.y, name: options.name, group: options.group, atlas: atlas, filename: weapon.spriteAnimation[0]})
+  //       if(weapon.spriteAnimation.length > 1){
+  //         turret.animations.add('animate', weapon.spriteAnimation, 1, true)
+  //         turret.animations.play('animate', 30, true)
+  //       }
+  //       turret.anchor.setTo(0.5, 0.5)
+  //       game.physics.enable(turret, Phaser.Physics.ARCADE);
+  //       phaserGroup.add(2, turret)
+  //       turret.offset = options.offset;
+  //
+  //       setTimeout(() => {
+  //         if(turret !== undefined){
+  //           turret.destroyIt();
+  //         }
+  //       }, weapon.lifespan)
+  //
+  //       onInit(turret);
+  //
+  //       turret.destroyIt = () => {
+  //         if(turret !== undefined){
+  //           onDestroy(turret)
+  //           this.createExplosion(turret.x, turret.y, 0.5, options.layer)
+  //           clearInterval(turret.fireInterval)
+  //           phaserSprites.destroy(turret.name)
+  //         }
+  //       }
+  //
+  //       turret.onUpdate = () => {
+  //         onUpdate(turret);
+  //       }
+  //
+  //       if(options.layer !== undefined){
+  //         phaserGroup.add(options.layer, turret)
+  //       }
+  //
+  // }
+  // /******************/
+  //
+  // /******************/
+  // public createBlastradius(options:any){
+  //   let game = this.game
+  //   let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
+  //   let {weaponData} = phaserMaster.getAll();
+  //   let weapon = weaponData.secondaryWeapons.BLASTRADIUS;
+  //
+  //   let blast = phaserSprites.addFromAtlas({x: options.x, y: options.y,  name: options.name, group: options.group, atlas: atlas, filename: weapon.spriteAnimation[0]})
+  //       blast.anchor.setTo(0.5, 0.5)
+  //       blast.scale.setTo(1, 1)
+  //   if(weapon.spriteAnimation.length > 1){
+  //     let anim = blast.animations.add('animate', weapon.spriteAnimation, 30, false)
+  //         anim.onStart.add(() => {
+  //
+  //         }, blast);
+  //         anim.onComplete.add(() => {
+  //           phaserSprites.destroy(blast.name)
+  //         }, blast);
+  //         anim.play('animate')
+  //
+  //   }
+  //   game.physics.enable(blast, Phaser.Physics.ARCADE);
+  //
+  //   if(options.layer !== undefined){
+  //     phaserGroup.add(options.layer, blast)
+  //   }
+  // }
+  // /******************/
 
-        ammo.destroyIt = () => {
-          onDestroy(ammo)
-          this.createExplosion(ammo.x, ammo.y, 1, options.layer)
-          phaserSprites.destroy(ammo.name)
-        }
-
-        ammo.onUpdate = () => {
-          onUpdate(ammo)
-          ammo.angle += 5;
-          if(game.time.now > ammo.detonate){
-            ammo.destroyIt();
-          }
-       }
-
-       if(options.layer !== undefined){
-         phaserGroup.add(options.layer, ammo, options.layer)
-       }
-
-       return ammo;
-  }
-  /******************/
+  // /******************/
+  // public createBomblet(options:any, onDestroy:any = () => {}, onUpdate:any = () => {}){
+  //   let game = this.game
+  //   let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
+  //   let ammo =  phaserSprites.addFromAtlas({x: options.x, y: options.y, name: `bomblet_${game.rnd.integer()}`, group: options.group, atlas: atlas, filename: 'clusterBomb'})
+  //       ammo.anchor.setTo(0.5, 0.5)
+  //       ammo.scale.setTo(0.5, 0.5)
+  //       game.physics.enable(ammo, Phaser.Physics.ARCADE);
+  //       ammo.body.velocity.y = options.iy
+  //       ammo.body.velocity.x = options.ix
+  //       ammo.detonate = game.time.now + game.rnd.integerInRange(1250, 1800)
+  //       ammo.pierceStrength = 1
+  //       ammo.damageAmount = 100
+  //
+  //       ammo.destroyIt = () => {
+  //         onDestroy(ammo)
+  //         this.createExplosion(ammo.x, ammo.y, 1, options.layer)
+  //         phaserSprites.destroy(ammo.name)
+  //       }
+  //
+  //       ammo.onUpdate = () => {
+  //         onUpdate(ammo)
+  //         ammo.angle += 5;
+  //         if(game.time.now > ammo.detonate){
+  //           ammo.destroyIt();
+  //         }
+  //      }
+  //
+  //      if(options.layer !== undefined){
+  //        phaserGroup.add(options.layer, ammo, options.layer)
+  //      }
+  //
+  //      return ammo;
+  // }
+  // /******************/
 
 
   /******************/
@@ -423,14 +426,13 @@ export class WEAPON_MANAGER {
         explosion.animations.add('explosion', Phaser.Animation.generateFrameNames('explosions_Layer_', 1, 16), 1, true)
         explosion.animations.play('explosion', 30, true)
         explosion.damageAmount = damage;
-
         // destroy expolosion sprite
         game.time.events.add(Phaser.Timer.SECOND/2, () => {
           phaserSprites.destroy(explosion.name)
         }).autoDestroy = true;
 
         explosion.onDestroy = () => {
-
+          onDestroy();
         }
 
         explosion.onUpdate = () => {
