@@ -27,8 +27,8 @@ export class ITEMSPAWN_MANAGER {
         item.animations.add('animate', animation, 8, true)
         item.animations.play('animate')
         item.anchor.setTo(0.5, 0.5);
-        item.blinkLifespan = this.game.time.now + (Phaser.Timer.SECOND*10)
-        item.blinkLifespanInterval = this.game.time.now
+        item.blinkLifespan = this.game.time.returnTrueTime() + (Phaser.Timer.SECOND*10)
+        item.blinkLifespanInterval = this.game.time.returnTrueTime()
         item.blinkLifespanCount = 0
         this.game.physics.enable(item, Phaser.Physics.ARCADE);
         item.body.collideWorldBounds = true;
@@ -45,13 +45,13 @@ export class ITEMSPAWN_MANAGER {
         }
 
         item.onUpdate = () => {
-          if(this.game.time.now > item.blinkLifespan){
+          if(this.game.time.returnTrueTime() > item.blinkLifespan){
             item.destroyIt()
           }
 
-          if(this.game.time.now > (item.blinkLifespan - Phaser.Timer.SECOND*3)){
-            if(this.game.time.now > item.blinkLifespanInterval){
-              item.blinkLifespanInterval = this.game.time.now + 200 - (item.blinkLifespanCount * 5)
+          if(this.game.time.returnTrueTime() > (item.blinkLifespan - Phaser.Timer.SECOND*3)){
+            if(this.game.time.returnTrueTime() > item.blinkLifespanInterval){
+              item.blinkLifespanInterval = this.game.time.returnTrueTime() + 200 - (item.blinkLifespanCount * 5)
               item.alpha = item.blinkLifespanCount % 2 === 0 ? 0.25 : 1;
               item.blinkLifespanCount++
             }
@@ -76,8 +76,8 @@ export class ITEMSPAWN_MANAGER {
         item.animations.add('animate', animation, 8, true)
         item.animations.play('animate')
         item.anchor.setTo(0.5, 0.5);
-        item.blinkLifespan = this.game.time.now + (Phaser.Timer.SECOND*10)
-        item.blinkLifespanInterval = this.game.time.now
+        item.blinkLifespan = this.game.time.returnTrueTime() + (Phaser.Timer.SECOND*10)
+        item.blinkLifespanInterval = this.game.time.returnTrueTime()
         item.blinkLifespanCount = 0
         this.game.physics.enable(item, Phaser.Physics.ARCADE);
         item.body.collideWorldBounds = true;
@@ -94,13 +94,13 @@ export class ITEMSPAWN_MANAGER {
         }
 
         item.onUpdate = () => {
-          if(this.game.time.now > item.blinkLifespan){
+          if(this.game.time.returnTrueTime() > item.blinkLifespan){
             item.destroyIt()
           }
 
-          if(this.game.time.now > (item.blinkLifespan - Phaser.Timer.SECOND*3)){
-            if(this.game.time.now > item.blinkLifespanInterval){
-              item.blinkLifespanInterval = this.game.time.now + 200 - (item.blinkLifespanCount * 5)
+          if(this.game.time.returnTrueTime() > (item.blinkLifespan - Phaser.Timer.SECOND*3)){
+            if(this.game.time.returnTrueTime() > item.blinkLifespanInterval){
+              item.blinkLifespanInterval = this.game.time.returnTrueTime() + 200 - (item.blinkLifespanCount * 5)
               item.alpha = item.blinkLifespanCount % 2 === 0 ? 0.25 : 1;
               item.blinkLifespanCount++
             }
@@ -125,8 +125,8 @@ export class ITEMSPAWN_MANAGER {
         item.animations.add('animate', animation, 8, true)
         item.animations.play('animate')
         item.anchor.setTo(0.5, 0.5);
-        item.blinkLifespan = this.game.time.now + (Phaser.Timer.SECOND*10)
-        item.blinkLifespanInterval = this.game.time.now
+        item.blinkLifespan = this.game.time.returnTrueTime() + (Phaser.Timer.SECOND*10)
+        item.blinkLifespanInterval = this.game.time.returnTrueTime()
         item.blinkLifespanCount = 0
         this.game.physics.enable(item, Phaser.Physics.ARCADE);
         item.body.collideWorldBounds = true;
@@ -143,13 +143,14 @@ export class ITEMSPAWN_MANAGER {
         }
 
         item.onUpdate = () => {
-          if(this.game.time.now > item.blinkLifespan){
+
+          if(this.game.time.returnTrueTime() > item.blinkLifespan){
             item.destroyIt()
           }
 
-          if(this.game.time.now > (item.blinkLifespan - Phaser.Timer.SECOND*3)){
-            if(this.game.time.now > item.blinkLifespanInterval){
-              item.blinkLifespanInterval = this.game.time.now + 200 - (item.blinkLifespanCount * 5)
+          if(this.game.time.returnTrueTime() > (item.blinkLifespan - Phaser.Timer.SECOND*3)){
+            if(this.game.time.returnTrueTime() > item.blinkLifespanInterval){
+              item.blinkLifespanInterval = this.game.time.returnTrueTime() + 200 - (item.blinkLifespanCount * 5)
               item.alpha = item.blinkLifespanCount % 2 === 0 ? 0.25 : 1;
               item.blinkLifespanCount++
             }

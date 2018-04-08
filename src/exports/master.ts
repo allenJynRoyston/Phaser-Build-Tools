@@ -20,6 +20,16 @@ export class PHASER_MASTER {
     }
     this.currentState = this.states[0];
     this.variables = {}
+
+    setTimeout(() => {
+      this._game.time.pausedTimeTotal = 0
+      this._game.time.addToPausedTime = (duration:number) => {
+        this._game.time.pausedTimeTotal += duration;
+      }
+      this._game.time.returnTrueTime = () => {
+        return (this._game.time.now - this._game.time.pausedTimeTotal)
+      }
+    }, 1)
   }
 
   public let(key:string, value:any = null){

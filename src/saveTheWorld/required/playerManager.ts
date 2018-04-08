@@ -127,7 +127,7 @@ export class PLAYER_MANAGER {
 
         //------------------------
         player.clearAllEnemyBullets = (duration:number) => {
-          player.clearEnemyBulletsInterval = game.time.now + duration
+          player.clearEnemyBulletsInterval = game.time.returnTrueTime() + duration
         }
         //------------------------
 
@@ -1190,7 +1190,7 @@ export class PLAYER_MANAGER {
   public bulletCollisionDetection(){
     let enemies = [...this.phaserSprites.getGroup('enemy_hitboxes')]
 
-    // if(this.player.clearEnemyBulletsInterval > this.game.time.now){
+    // if(this.player.clearEnemyBulletsInterval > this.game.time.returnTrueTime()){
     //   let enemyBullets = enemies.map(enemy => {
     //     return enemy.parent.weaponSystems.map(weaponSystems => {
     //         return weaponSystems.ammo.bullets.children.map(bullet => {

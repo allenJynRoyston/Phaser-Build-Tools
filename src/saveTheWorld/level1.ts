@@ -193,8 +193,12 @@ class PhaserGameObject {
           pauseGame()
         }, this);
         game.onResume.add(() => {
+          game.time.addToPausedTime(game.time.pauseDuration )
           unpauseGame();
         }, this);
+
+
+
 
 
         buildTransitionScreen()
@@ -641,15 +645,15 @@ class PhaserGameObject {
         for(let i = 0; i < 8; i++){
           let icon = phaserSprites.addFromAtlas({x:powerbar.width - 15 - (i * 30), y: -20, name: `special_icon_${i}`, group: 'special_icons', filename: `${staticAnimation[0]}`, atlas: 'atlas_main', visible: true})
           icon.anchor.setTo(0.5, 0.5)
-          icon.animateInterval = game.time.now
+          icon.animateInterval = game.time.returnTrueTime()
           icon.index = i;
           icon.animations.add('animate', staticAnimation, 1, true)
 
 
           icon.onUpdate = () => {
             // add to powerupbar every 2 seconds
-            if(game.time.now > icon.animateInterval){
-              icon.animateInterval = game.time.now + 5000
+            if(game.time.returnTrueTime() > icon.animateInterval){
+              icon.animateInterval = game.time.returnTrueTime() + 5000
               game.time.events.add(icon.index * 500, () => {
                 icon.animations.play('animate', 10, false)
               }).autoDestroy = true
@@ -1261,18 +1265,17 @@ class PhaserGameObject {
           })
         }
 
-
         if(currentState === 'READY'){
 
           // add to powerupbar every 2 seconds
-          if(game.time.now > powerupTimer){
-            phaserMaster.forceLet('powerupTimer', gameData.player.powerup < 30 ? game.time.now + (Phaser.Timer.SECOND*0.5) : game.time.now + (Phaser.Timer.SECOND/2) )
+          if(game.time.returnTrueTime() > powerupTimer){
+            phaserMaster.forceLet('powerupTimer', gameData.player.powerup < 30 ? game.time.returnTrueTime() + (Phaser.Timer.SECOND*0.5) : game.time.returnTrueTime() + (Phaser.Timer.SECOND/2) )
             addPowerup();
           }
 
           // update director EVERY 1/2 second
-          if(game.time.now > elapsedTime){
-            phaserMaster.forceLet('elapsedTime', game.time.now + (Phaser.Timer.SECOND/2) )
+          if(game.time.returnTrueTime() > elapsedTime){
+            phaserMaster.forceLet('elapsedTime', game.time.returnTrueTime() + (Phaser.Timer.SECOND/2) )
             director()
           }
 

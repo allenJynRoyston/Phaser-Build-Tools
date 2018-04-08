@@ -174,8 +174,8 @@ export class ENEMY_MANAGER {
           weaponsSystem.angle =  this.facePlayer(enemy) - 180
         })
       //}
-      if(game.time.now > enemy.fireDelay && !enemy.isDestroyed && (enemy.y > enemy.game.canvas.height * .3) ){
-          enemy.fireDelay = game.time.now + enemy.fireTimer
+      if(game.time.returnTrueTime() > enemy.fireDelay && !enemy.isDestroyed && (enemy.y > enemy.game.canvas.height * .3) ){
+          enemy.fireDelay = game.time.returnTrueTime() + enemy.fireTimer
           enemy.weaponSystems.map(weaponsSystem => {
             weaponSystem.fire()
           })
@@ -244,14 +244,14 @@ export class ENEMY_MANAGER {
        weaponSystem.destroyIt()
      })
 
-     enemy.explodeInterval = setInterval(() => {
+     enemy.explodeInterval = game.time.events.loop( 250, () => {
        this.weaponManager.createExplosion(enemy.x + game.rnd.integerInRange(-enemy.width/2, enemy.width/2), enemy.y + game.rnd.integerInRange(-enemy.height/2, enemy.height/2), 1, enemy.onLayer + 1)
-     }, 250)
+     })
 
      enemy.game.add.tween(enemy).to( {y: enemy.y + 100, alpha: 0.5}, 750, Phaser.Easing.Linear.Out, true, 100, 0, false).
        onComplete.add(() => {
           onDestroy(enemy);
-          clearInterval(enemy.explodeInterval)
+          game.time.events.remove(enemy.explodeInterval)
           enemy.children.map(obj => {
             this.phaserSprites.destroy(obj.name);
           })
@@ -329,13 +329,13 @@ export class ENEMY_MANAGER {
        enemy.isDestroyed = true;
        enemy.tint = 1 * 0xff0000;
 
-       enemy.explodeInterval = setInterval(() => {
+       enemy.explodeInterval =  game.time.events.loop( 100, () => {
          this.weaponManager.createExplosion(enemy.x + game.rnd.integerInRange(-enemy.width/2, enemy.width/2), enemy.y + game.rnd.integerInRange(-enemy.height/2, enemy.height/2), 1, enemy.onLayer + 1)
-       }, 100)
+       })
 
        enemy.game.add.tween(enemy).to( {y: enemy.y - 15, alpha: 0.5}, 750, Phaser.Easing.Linear.Out, true, 100, 0, false).
          onComplete.add(() => {
-            clearInterval(enemy.explodeInterval)
+            game.time.events.remove(enemy.explodeInterval)
             onDestroy(enemy);
             this.weaponManager.createExplosion(enemy.x, enemy.y, 1, options.layer + 1)
             phaserSprites.destroy(enemy.name);
@@ -345,8 +345,8 @@ export class ENEMY_MANAGER {
 
     enemy.onUpdate = () => {
       onUpdate(enemy);
-      if(game.time.now > enemy.fireDelay && enemy.inPlace){
-          enemy.fireDelay = game.time.now + enemy.fireTimer
+      if(game.time.returnTrueTime() > enemy.fireDelay && enemy.inPlace){
+          enemy.fireDelay = game.time.returnTrueTime() + enemy.fireTimer
           // this.fireBullet(enemy, true)
       }
 
