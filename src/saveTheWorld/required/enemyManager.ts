@@ -28,9 +28,9 @@ export class ENEMY_MANAGER {
 
   /******************/
   public collisionCheck(obj:any, damage:number){
-    this.phaserSprites.getManyGroups(['playership']).map(target => {
+    this.phaserSprites.getManyGroups(['player_hitboxes']).map(target => {
       target.game.physics.arcade.overlap(obj, target, (obj, target)=>{
-        target.takeDamage(damage);
+        target.parent.takeDamage(damage);
         obj.destroyIt()
       }, null, obj);
     })
@@ -47,10 +47,10 @@ export class ENEMY_MANAGER {
 
   /******************/
   public bulletCollisionWithPlayer(ammo:any, damage:number){
-    let targets = [...this.phaserSprites.getGroup('playership')]
+    let targets = [...this.phaserSprites.getGroup('player_hitboxes')]
     this.game.physics.arcade.overlap(targets, ammo.bullets, (target, bullet) => {
       if(!target.isInvincible && !target.isDead && !target.isDamaged){
-        target.takeDamage(damage);
+        target.parent.takeDamage(damage);
         bullet.destroyIt()
       }
     });
@@ -652,7 +652,7 @@ export class ENEMY_MANAGER {
         // animate death and then explode
         game.time.events.add(Phaser.Timer.SECOND/2, () => {
           onDestroy(enemy);
-          this.weaponManager.createImpactExplosion(enemy.x, enemy.y, 2.5, options.layer + 1)
+          //this.weaponManager.createImpactExplosion(enemy.x, enemy.y, 2.5, options.layer + 1)
           phaserSprites.destroy(enemy.name);
         }, enemy).autoDestroy = true;
     }
