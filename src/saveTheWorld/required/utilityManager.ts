@@ -26,11 +26,11 @@ export class UTILITY_MANAGER {
         overlay.flash = (speed:number = 500, callback:any = () => {}) => {
           overlay.visible = true;
           overlay.alpha = 1
-          setTimeout(() => {
+          game.time.events.add( 250, () => {
             game.add.tween(overlay).to( { alpha: 0 }, speed, Phaser.Easing.Linear.In, true, 0, 0, false).
               onComplete.add(() => {})
             callback()
-          }, 250)
+          }).autoDestroy = true;
         }
         overlay.fadeIn = (speed:number = 500, callback:any = () => {}) => {
           overlay.visible = true;
@@ -86,7 +86,7 @@ export class UTILITY_MANAGER {
   public overlayBGControls(options, callback){
       let {transition, delay, speed} = options
       let {um_overlay__bg} = this.phaserSprites.getOnly(['um_overlay__bg'])
-      setTimeout(() => {
+      this.game.time.events.add( delay, () => {
         switch(transition) {
 
           //----------------
@@ -108,10 +108,11 @@ export class UTILITY_MANAGER {
           //----------------
         }
 
-      }, delay)
+      }).autoDestroy = true
   }
 
   public overlayControls(options, callback){
+    let game = this.game;
     let {transition, delay, speed, tileDelay} = options
     let grid = this.phaserSprites.getGroup('um_grid__bg');
     let odd = [];
@@ -119,7 +120,7 @@ export class UTILITY_MANAGER {
     let rowDelay = (tileDelay * grid.length) * 0.75
     let returnDelay = rowDelay + (tileDelay * grid.length)
 
-    setTimeout(() => {
+    game.time.events.add( delay, () => {
       switch(transition) {
 
         //----------------
@@ -133,22 +134,22 @@ export class UTILITY_MANAGER {
             }
           })
           even.map( (obj, index) => {
-            setTimeout(() => {
+            game.time.events.add( tileDelay * index, () => {
                 obj.scaleIn(speed)
-            }, tileDelay * index)
+            }).autoDestroy = true
           })
 
-          setTimeout(() => {
+          game.time.events.add( returnDelay, () => {
             odd.slice(0).reverse().map( (obj, index) => {
-              setTimeout(() => {
+              game.time.events.add( tileDelay * index, () => {
                   obj.scaleIn(speed)
-              }, tileDelay * index)
+              }).autoDestroy = true
             })
           }, rowDelay)
 
-          setTimeout(() => {
+          game.time.events.add( returnDelay, () => {
             callback();
-          }, returnDelay)
+          }).autoDestroy = true
           break
         //----------------
 
@@ -163,53 +164,53 @@ export class UTILITY_MANAGER {
             }
           })
           even.map( (obj, index) => {
-            setTimeout(() => {
+            game.time.events.add( tileDelay * index, () => {
                 obj.scaleOut(speed)
-            }, tileDelay * index)
+            }).autoDestroy = true
           })
 
-          setTimeout(() => {
+          game.time.events.add( returnDelay, () => {
             odd.slice(0).reverse().map( (obj, index) => {
-              setTimeout(() => {
+              game.time.events.add( tileDelay * index, () => {
                   obj.scaleOut(speed)
-              }, tileDelay * index)
+              }).autoDestroy = true
             })
           }, rowDelay)
 
-          setTimeout(() => {
+          game.time.events.add( returnDelay, () => {
             callback();
-          }, returnDelay)
+          }).autoDestroy = true
           break
         //----------------
 
         //----------------
         case 'FADEOUT':
           grid.map( (obj, index) => {
-            setTimeout(() => {
+            game.time.events.add( tileDelay * index, () => {
                 obj.fadeOut(speed)
-            }, tileDelay * index)
+            }).autoDestroy = true
           })
-          setTimeout(() => {
+          game.time.events.add( grid.length * tileDelay + speed, () => {
             callback()
-          }, grid.length * tileDelay + speed)
+          }).autoDestroy = true
           break
         //----------------
 
         //----------------
         case 'FADEIN':
           grid.map( (obj, index) => {
-            setTimeout(() => {
+            game.time.events.add( returnDelay, () => {
                 obj.fadeIn(speed)
             }, tileDelay * index)
           })
-          setTimeout(() => {
+          game.time.events.add( returnDelay, () => {
             callback()
           }, grid.length * tileDelay + speed)
           break
         //----------------
 
       }
-    }, delay)
+    }).autoDestroy = true
   }
 
 }

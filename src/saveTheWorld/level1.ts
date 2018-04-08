@@ -48,6 +48,7 @@ class PhaserGameObject {
       // initiate control class
       let game = new Phaser.Game(options.width, options.height, Phaser.WEBGL, el, { preload: preload, create: create, update: update});
           game.preserveDrawingBuffer = true;
+
       const phaserMaster = new PHASER_MASTER({game: game, resolution: {width: options.width, height: options.height}}),
             phaserControls = new PHASER_CONTROLS(),
             phaserMouse = new PHASER_MOUSE({showDebugger: false}),
@@ -573,10 +574,10 @@ class PhaserGameObject {
             let bar = phaserSprites.addFromAtlas({x:i * 8 + 5, y: 9, name: `powerbar_pow_${i}`, filename: `powerbar_level_${Math.floor(i/5) + 1}`, group: 'powerbar_bars', atlas: 'atlas_main', visible: true})
             bar.anchor.setTo(0.5, 0.5)
             bar.popOut = (delay:number) => {
-              setTimeout(() => {
+              game.time.events.add(delay, () => {
                 bar.scale.setTo(1.5, 1.5)
                 game.add.tween(bar.scale).to( { x:1, y:1 }, 350, Phaser.Easing.Back.InOut, true, 1, 0, false)
-              }, delay)
+              }).autoDestroy = true
             }
 
             bar.popLost = () => {
@@ -649,9 +650,9 @@ class PhaserGameObject {
             // add to powerupbar every 2 seconds
             if(game.time.now > icon.animateInterval){
               icon.animateInterval = game.time.now + 5000
-              setTimeout(() => {
+              game.time.events.add(icon.index * 500, () => {
                 icon.animations.play('animate', 10, false)
-              }, icon.index * 500)
+              }).autoDestroy = true
             }
           }
 
@@ -768,10 +769,10 @@ class PhaserGameObject {
                 player.moveToStart();
 
             // LEAVE FOR TESTING
-            setTimeout(() => {
+            game.time.events.add(Phaser.Timer.SECOND * 1*5, () => {
                 //endLevel();
                 addSpecial()
-            }, 1500)
+            }).autoDestroy = true;
 
 
             clock.start()
@@ -864,9 +865,9 @@ class PhaserGameObject {
                   phaserTexts.alignToCenter(this.name)
                   game.add.tween(this.scale).to( { x:0.5, y:0.5}, 350, Phaser.Easing.Linear.In, true, 0);
                   game.add.tween(this).to( { x: this.game.world.centerX, y: this.game.world.centerY, alpha: 0.75}, 350, Phaser.Easing.Linear.In, true, 0)
-                  setTimeout(() => {
+                  game.time.events.add(350, () => {
                     phaserTexts.destroy(this.name)
-                  }, 350)
+                  }).autoDestroy = true;
                 }
                 game.time.events.add((Phaser.Timer.SECOND/2.5 * index) + 100, splashText.startSplash, splashText).autoDestroy = true;
           })
@@ -968,10 +969,10 @@ class PhaserGameObject {
             saveData('player', {health: 100, lives: gameData.player.lives, powerup: 0, special: gameData.player.special})
             phaserControls.clearAllControlIntervals()
             phaserControls.disableAllInput()
-            setTimeout(() => {
+            game.time.events.add(Phaser.Timer.SECOND, () => {
               updateHealth(100)
               player.moveToStart();
-            }, 1000)
+            }).autoDestroy = true
           }
           else{
             gameOver();
@@ -1252,7 +1253,7 @@ class PhaserGameObject {
         let {player, menuButtonCursor} = phaserSprites.getOnly(['player', 'menuButtonCursor']);
         let {DOWN, UP, LEFT, RIGHT, A, START} = phaserControls.getOnly(['DOWN', 'UP', 'LEFT', 'RIGHT', 'A', 'START'])
 
-
+        //console.log(game.time.suggestedFps)
 
         if(currentState !== 'VICTORYSTATE' && currentState !== 'GAMEOVERSTATE' && currentState !== 'ENDLEVEL'){
           phaserSprites.getManyGroups(['backgrounds', 'starfield', 'playership', 'special_icons', 'itemspawns', 'boss_ui']).map(obj => {
@@ -1418,7 +1419,7 @@ class PhaserGameObject {
             //createExplosion(game.world.centerX, game.world.centerY, 4, 8)
 
             // minor delay to capture them
-            setTimeout(() => {
+            game.time.events.add(150, () => {
               let bmd = game.add.bitmapData(game.width, game.height);
                   bmd.drawFull(game.world);
               var bmdImage = bmd.addToWorld(game.world.centerX + 100, game.world.centerY + 100, 0.5, 0.5, 2, 2);
@@ -1457,7 +1458,7 @@ class PhaserGameObject {
                 game.add.tween(newsPaper.scale).to( { x: 1, y: 1 }, Phaser.Timer.SECOND*1.5, Phaser.Easing.Bounce.Out, true, 0, 0, false)
                 game.add.tween(newsPaper).to( { angle: 35, y: newsPaper.y - 50 }, Phaser.Timer.SECOND*1.5, Phaser.Easing.Linear.InOut, true, 0, 0, false)
               })
-            }, 150)
+            }).autoDestroy = true;
         })
       }
       /******************/
@@ -1578,7 +1579,7 @@ class PhaserGameObject {
         })
 
         // minor delay to capture them
-        setTimeout(() => {
+        game.time.events.add(Phaser.Timer.SECOND * 3, () => {
 
           let bmd = game.add.bitmapData(game.width, game.height);
               bmd.drawFull(game.world);
@@ -1617,7 +1618,7 @@ class PhaserGameObject {
             game.add.tween(newsPaper.scale).to( { x: 1, y: 1 }, Phaser.Timer.SECOND*1.5, Phaser.Easing.Bounce.Out, true, 0, 0, false)
             game.add.tween(newsPaper).to( { angle: 35, y: newsPaper.y - 50 }, Phaser.Timer.SECOND*1.5, Phaser.Easing.Linear.InOut, true, 0, 0, false)
           })
-        }, 3000)
+        }).autoDestroy = true;
       }
       /******************/
 
@@ -1635,9 +1636,9 @@ class PhaserGameObject {
             })
 
             overlayControls('WIPEIN', () => {
-              setTimeout(() => {
+              game.time.events.add(300, () => {
                 callback();
-              }, 500)
+              }).autoDestroy = true;
             })
           })
       }

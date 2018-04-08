@@ -199,17 +199,16 @@ export class PLAYER_MANAGER {
             player.animations.play('shipDamage', 45, false)
 
             player.isDamaged = true
-            setTimeout(() => {
+            game.time.events.add(250, () => {
               player.isDamaged = false
-            }, 250)
-
+            }, this).autoDestroy = true;
             player.tint = 1 * 0xff0000;
             player.alpha = 0.75
             player.game.add.tween(player).to( {tint: 1 * 0xffffff, alpha: 1}, 10, Phaser.Easing.Linear.Out, true, 100, 0, false).
               onComplete.add(() => {
-                setTimeout(() => {
+                game.time.events.add(500, () => {
                   player.isInvincible = false;
-                }, 500)
+                }, this).autoDestroy = true;
               })
           }
           else{
@@ -393,7 +392,7 @@ export class PLAYER_MANAGER {
           player.x = this.game.world.centerX
           player.y = this.game.world.height*2
 
-          setTimeout(() => {
+          game.time.events.add(150, () => {
               player.alpha = 1
               player.visible = true;
 
@@ -408,12 +407,12 @@ export class PLAYER_MANAGER {
 
                   player.animations.play('shipStart', 12, false)
 
-                  setTimeout(() => {
+                  game.time.events.add(1000, () => {
                     player.isInvincible = false;
                     callback()
-                  }, 1000)
+                  }).autoDestroy = true;
                 })
-          }, 100)
+          }).autoDestroy = true;
         }
         //------------------------
 
@@ -489,11 +488,11 @@ export class PLAYER_MANAGER {
         })
       }
 
-      setTimeout(() => {
+      this.game.time.events.add(1000, () => {
         if(shipPerk !== undefined){
           shipPerk.tweenFadeOut();
         }
-      },  500)
+      }).autoDestroy = true;
 
       shipPerk.animations.add('animate', animationSprites, 1, true)
       shipPerk.animations.play('animate', framerate, true)
@@ -1078,29 +1077,29 @@ export class PLAYER_MANAGER {
             ammo.fireAngle  = 270+weaponSystem.angle
             ammo.fire(weaponSystem, null, weaponSystem + 1);
             if(powerupLvl >= 1){
-              setTimeout(() => {
+              this.game.time.events.add(50, () => {
                 ammo.fire(weaponSystem, null, weaponSystem + 20);
-              }, 50)
+              }).autoDestroy = true;
             }
             if(powerupLvl >= 2){
-              setTimeout(() => {
+              this.game.time.events.add(100, () => {
                 ammo.fire(weaponSystem, null, weaponSystem - 20);
-              }, 100)
+              }).autoDestroy = true;
             }
             if(powerupLvl >= 3){
-              setTimeout(() => {
+              this.game.time.events.add(150, () => {
                 ammo.fire(weaponSystem, null, weaponSystem + 20);
-              }, 150)
+              }).autoDestroy = true;
             }
             if(powerupLvl >= 4){
-              setTimeout(() => {
+              this.game.time.events.add(200, () => {
                 ammo.fire(weaponSystem, null, weaponSystem - 20);
-              }, 200)
+              }).autoDestroy = true;
             }
             if(powerupLvl >= 5){
-              setTimeout(() => {
+              this.game.time.events.add(50, () => {
                 ammo.fire(weaponSystem, null, weaponSystem - 20);
-              }, 250)
+              }).autoDestroy = true;
             }
             if(animationSprites.length > 0){ weaponSystem.animations.play('fireWeapon', 60, false) }
           }

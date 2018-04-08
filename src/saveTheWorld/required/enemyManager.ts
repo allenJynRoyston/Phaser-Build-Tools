@@ -41,17 +41,21 @@ export class ENEMY_MANAGER {
   private facePlayer(obj:any){
     let game = this.game
     let {player} = this.phaserSprites.getOnly(['player'])
-    return Math.ceil( (360 / (2 * Math.PI)) * game.math.angleBetween(obj.x, obj.y, player.x, player.y) - 90 ) * 1
+    return Math.ceil( (360 / (2 * Math.PI)) * game.math.angleBetween(obj.x, obj.y, player.x, player.y) - 90 )
   }
   /******************/
 
   /******************/
-  public bulletCollisionWithPlayer(ammo:any, damage:number){
+  public bulletCollisionWithPlayer(enemy){
     let targets = [...this.phaserSprites.getGroup('player_hitboxes')]
-    this.game.physics.arcade.overlap(targets, ammo.bullets, (target, bullet) => {
+
+    let collidables = [...enemy.collidables.primaryWeapon]
+
+
+    this.game.physics.arcade.overlap(targets, collidables, (target, collidable) => {
       if(!target.isInvincible && !target.isDead && !target.isDamaged){
-        target.parent.takeDamage(damage);
-        bullet.destroyIt()
+        target.parent.takeDamage(collidable.damgeOnImpact);
+        collidable.destroyIt()
       }
     });
 
@@ -88,6 +92,10 @@ export class ENEMY_MANAGER {
         enemy.isDestroyed = false;
         enemy.onLayer = options.layer;
         enemy.weaponSystems = [];
+        enemy.collidables = {
+          primaryWeapon: [],
+          secondaryWeapon: []
+        }
     phaserGroup.add(options.layer, enemy)
 
     //----------------------------  HITBOX
@@ -98,6 +106,15 @@ export class ENEMY_MANAGER {
           game.physics.enable(e_hitbox, Phaser.Physics.ARCADE);
           enemy.addChild(e_hitbox)
     })
+    //----------------------------
+
+    //---------------------------- AMMO
+    let ammo = this.weaponManager.enemyBullet(3);
+        ammo.bulletSpeedVariance = 100;
+        ammo.bulletAngleVariance = 20;
+        ammo.bullets.children.map(bullet => {
+          bullet.damgeOnImpact = 10;
+        })
     //----------------------------
 
     //---------------------------- WEAPON SYSTEM
@@ -115,7 +132,9 @@ export class ENEMY_MANAGER {
           let {x, y} = weaponSystem;
           this.weaponManager.blueImpact(x, y, 1, enemy.onLayer)
           this.phaserSprites.destroy(weaponSystem.name)
-          setTimeout(() => {weaponSystem.ammo.destroy() }, 4000) // delay so bullets just don't dispapear when the enemy dies
+          game.time.events.add(Phaser.Timer.SECOND * 4, () => {
+            weaponSystem.ammo.destroy()
+          }, this).autoDestroy = true;
         }
         weaponSystem.onUpdate = () => {
           ammo.onUpdate();
@@ -133,30 +152,20 @@ export class ENEMY_MANAGER {
           weaponSystem.animations.play('fireWeapon', 24, false)
         }
     phaserGroup.add(options.layer + 1, weaponSystem )
-    //----------------------------
-
-    //---------------------------- AMMO
-    let ammo = this.weaponManager.enemyBullet(3);
-        ammo.bulletSpeedVariance = 100;
-        ammo.bulletAngleVariance = 20;
-        ammo.onUpdate = () => {
-            this.bulletCollisionWithPlayer(ammo, 10)
-        }
     weaponSystem.ammo = ammo
     enemy.weaponSystems.push(weaponSystem)
+
+    enemy.collidables.primaryWeapon = [];
+    enemy.collidables.primaryWeapon.push(ammo.bullets)
     //----------------------------
+
+
 
 
     //----------------------------
     enemy.onUpdate = () => {
       let player = phaserSprites.get('player')
-
       onUpdate(enemy);
-
-      // update weapon (check for collison)
-      enemy.weaponSystems.map( weaponSystem => {
-        weaponSystem.onUpdate()
-      })
 
 
       //if(!player.isInvincible && !player.isDead){
@@ -189,6 +198,10 @@ export class ENEMY_MANAGER {
       else{
         enemy.inPlace = true
       }
+
+      // collision detection
+      this.bulletCollisionWithPlayer(enemy)
+
     }
     //----------------------------
 
@@ -196,9 +209,9 @@ export class ENEMY_MANAGER {
     enemy.damageIt = (val:number) => {
       onDamage(enemy);
       enemy.isDamaged = true
-      setTimeout(() => {
+      game.time.events.add(150, () => {
         enemy.isDamaged = false
-      }, 150)
+      }, this).autoDestroy = true;
       enemy.health -= val;
       enemy.tint = 1 * 0xff0000;
       enemy.game.add.tween(enemy).to( {tint: 1 * 0xffffff}, 100, Phaser.Easing.Linear.Out, true, 0, 0, false);
@@ -426,14 +439,14 @@ export class ENEMY_MANAGER {
       enemy.atTarget = true;
       enemy.body = null;
       enemy.game.add.tween(enemy).to( {y: enemy.y + 60}, Phaser.Timer.SECOND*2, Phaser.Easing.Linear.In, true, 0).autoDestroy = true;
-      setTimeout(() => {
+      game.time.events.add(350, () => {
         this.game.add.tween(enemy.scale).to( {x: 0, y: 0}, Phaser.Timer.SECOND*1, Phaser.Easing.Linear.In, true, game.rnd.integerInRange(0, 500)).
           onComplete.add(() => {
             onFail(enemy);
             enemy.removeIt();
             this.weaponManager.createExplosion(enemy.x, enemy.y, 0.25, 6)
           }).autoDestroy = true;
-      }, 300)
+      }).autoDestroy = true
     }
 
     enemy.checkLocation = () => {
@@ -527,14 +540,14 @@ export class ENEMY_MANAGER {
           enemy.atTarget = true;
           enemy.body = null;
           enemy.game.add.tween(enemy).to( {y: enemy.y + 60}, Phaser.Timer.SECOND*2, Phaser.Easing.Linear.In, true, 0).autoDestroy = true;
-          setTimeout(() => {
+          game.time.events.add(350, () => {
             this.game.add.tween(enemy.scale).to( {x: 0, y: 0}, Phaser.Timer.SECOND*1, Phaser.Easing.Linear.In, true, game.rnd.integerInRange(0, 500)).
               onComplete.add(() => {
                 onFail(enemy);
                 enemy.removeIt();
                 this.weaponManager.createExplosion(enemy.x, enemy.y, 0.25, 6)
               }).autoDestroy = true;
-          }, 300)
+          }).autoDestroy = true
         }
 
         // destroy it
@@ -662,14 +675,14 @@ export class ENEMY_MANAGER {
       enemy.atTarget = true;
       enemy.body = null;
       enemy.game.add.tween(enemy).to( {y: enemy.y + 60}, Phaser.Timer.SECOND*2, Phaser.Easing.Linear.In, true, 0).autoDestroy = true;
-      setTimeout(() => {
+      game.time.events.add(350, () => {
         this.game.add.tween(enemy.scale).to( {x: 0, y: 0}, Phaser.Timer.SECOND*1, Phaser.Easing.Linear.In, true, game.rnd.integerInRange(0, 500)).
           onComplete.add(() => {
             onFail(enemy);
             enemy.removeIt();
             this.weaponManager.createExplosion(enemy.x, enemy.y, 0.25, 6)
           }).autoDestroy = true;
-      }, 300)
+      }).autoDestroy = true
     }
 
     enemy.checkLocation = () => {
