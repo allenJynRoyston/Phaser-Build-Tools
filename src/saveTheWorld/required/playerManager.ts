@@ -10,12 +10,13 @@ export class PLAYER_MANAGER {
   weaponManager:any;
   atlas:any;
   weaponAtlas:any
+  effectsManager:any;
   player:any
   constructor(){
 
   }
 
-  public assign(game:any, phaserMaster:any, phaserSprites:any, phaserTexts:any, phaserGroup:any, phaserControls:any, weaponManager:any, atlas:string, weaponAtlas:string){
+  public assign(game:any, phaserMaster:any, phaserSprites:any, phaserTexts:any, phaserGroup:any, phaserControls:any, weaponManager:any, effectsManager:any, atlas:string, weaponAtlas:string){
     this.game = game;
     this.phaserSprites = phaserSprites;
     this.phaserMaster = phaserMaster;
@@ -23,6 +24,7 @@ export class PLAYER_MANAGER {
     this.phaserGroup = phaserGroup;
     this.phaserControls = phaserControls;
     this.weaponManager = weaponManager;
+    this.effectsManager = effectsManager;
     this.atlas = atlas
     this.weaponAtlas = weaponAtlas
     this.player = null;
@@ -48,6 +50,7 @@ export class PLAYER_MANAGER {
         player.primaryWeapon = params.primaryWeapon
         player.secondaryWeapon = params.secondaryWeapon
         player.perk = params.perk
+        player.explodeInterval = null;
         player.weaponSystems = []
         player.subweaponSystems = []
         player.attachments = []
@@ -138,16 +141,18 @@ export class PLAYER_MANAGER {
           fullpower.visible = gameData.player.powerup >= 30 ? true : false;
 
           // movement
-          if(player.xCapture.length > 0){
-            player.x += player.xCapture[0]
-            player.xCapture.shift()
-          }
-          if(player.yCapture.length > 0){
-            player.y += player.yCapture[0]
-            player.yCapture.shift()
-          }
-          if(!player.ignoreBoundaries){
-            player.checkLimits()
+          if(!player.isDead){
+            if(player.xCapture.length > 0){
+              player.x += player.xCapture[0]
+              player.xCapture.shift()
+            }
+            if(player.yCapture.length > 0){
+              player.y += player.yCapture[0]
+              player.yCapture.shift()
+            }
+            if(!player.ignoreBoundaries){
+              player.checkLimits()
+            }
           }
           if(!player.isForceMoved){
             //player.alpha = (player.isInvincible && !player.isDead) ? 0.5 : 1
@@ -195,9 +200,7 @@ export class PLAYER_MANAGER {
           let health = gameData.player.health - val
           updateHealth(health)
           if(health > 0){
-
             player.animations.play('shipDamage', 45, false)
-
             player.isDamaged = true
             game.time.events.add(250, () => {
               player.isDamaged = false
@@ -213,7 +216,9 @@ export class PLAYER_MANAGER {
           }
           else{
             player.isDestroyed()
-            loseLife(player);
+            game.time.events.add(500, () => {
+              loseLife(player);
+            }).autoDestroy = true
           }
         }
         //------------------------
@@ -226,15 +231,23 @@ export class PLAYER_MANAGER {
 
           // destroy weapon systems
           player.destroyWeaponSystems();
-
-          // get last call
+          //
+          // // get last call
           player.onUpdate();
 
+          player.explodeInterval = game.time.events.loop( 250, () => {
+            this.effectsManager.createExplosion(player.x + game.rnd.integerInRange(-player.width/2, player.width/2), player.y + game.rnd.integerInRange(-player.height/2, player.height/2), 1, player.onLayer + 1)
+          })
+
           // play animation
-          this.weaponManager.createExplosion(player.x, player.y, 1, 6)
+          this.effectsManager.createExplosion(player.x, player.y, 1, 6)
           game.add.tween(this).to( { angle: game.rnd.integerInRange(-90, 90), alpha: 0}, 1000, Phaser.Easing.Linear.In, true, 0).
             onComplete.add(() => {
-              this.weaponManager.createExplosion(player.x, player.y, 1, 6)
+              this.weaponManager.createExplosionVacuum(player.x, player.y, 1.5, player.onLayer + 1, 10)
+              let debris = this.effectsManager.debris(100);
+              debris = debris;
+              debris.customFire(player)
+              game.time.events.remove(player.explodeInterval)
               player.visible = false;
             })
         }
@@ -551,7 +564,7 @@ export class PLAYER_MANAGER {
 
           weaponSystem.destroyIt = () => {
             let {x, y} = weaponSystem;
-            this.weaponManager.blueImpact(x, y, 1, player.onLayer)
+            this.effectsManager.blueImpact(x, y, 1, player.onLayer)
             this.phaserSprites.destroy(weaponSystem.name)
           }
 
@@ -676,7 +689,7 @@ export class PLAYER_MANAGER {
 
           weaponSystem.destroyIt = () => {
             let {x, y} = weaponSystem;
-            this.weaponManager.blueImpact(x, y, 1, player.onLayer)
+            this.effectsManager.blueImpact(x, y, 1, player.onLayer)
             this.phaserSprites.destroy(weaponSystem.name)
           }
 
@@ -755,7 +768,7 @@ export class PLAYER_MANAGER {
 
           weaponSystem.destroyIt = () => {
             let {x, y} = weaponSystem;
-            this.weaponManager.blueImpact(x, y, 1, player.onLayer)
+            this.effectsManager.blueImpact(x, y, 1, player.onLayer)
             this.phaserSprites.destroy(weaponSystem.name)
           }
 
@@ -865,7 +878,7 @@ export class PLAYER_MANAGER {
 
           weaponSystem.destroyIt = () => {
             let {x, y} = weaponSystem;
-            this.weaponManager.blueImpact(x, y, 1, player.onLayer)
+            this.effectsManager.blueImpact(x, y, 1, player.onLayer)
             this.phaserSprites.destroy(weaponSystem.name)
           }
 
@@ -967,7 +980,7 @@ export class PLAYER_MANAGER {
 
           weaponSystem.destroyIt = () => {
             let {x, y} = weaponSystem;
-            this.weaponManager.blueImpact(x, y, 1, player.onLayer)
+            this.effectsManager.blueImpact(x, y, 1, player.onLayer)
             this.phaserSprites.destroy(weaponSystem.name)
           }
 
@@ -1066,7 +1079,7 @@ export class PLAYER_MANAGER {
 
           weaponSystem.destroyIt = () => {
             let {x, y} = weaponSystem;
-            this.weaponManager.blueImpact(x, y, 1, player.onLayer)
+            this.effectsManager.blueImpact(x, y, 1, player.onLayer)
             this.phaserSprites.destroy(weaponSystem.name)
           }
 
@@ -1153,7 +1166,7 @@ export class PLAYER_MANAGER {
 
         weaponSystem.destroyIt = () => {
           let {x, y} = weaponSystem;
-          this.weaponManager.blueImpact(x, y, 1, player.onLayer)
+          this.effectsManager.blueImpact(x, y, 1, player.onLayer)
           this.phaserSprites.destroy(weaponSystem.name)
         }
 
@@ -1185,6 +1198,23 @@ export class PLAYER_MANAGER {
   }
   /******************/
   //------------------
+
+  /******************/
+  public damgePopup(target:any, amount:number){
+    let {x, y, width, height} = target;
+    let damageAmount = this.phaserTexts.add({name: `enemy_${this.game.rnd.integer()}`, group: 'ui',  font: 'gem', x: x + this.game.rnd.integerInRange(-20, 20), y: y + this.game.rnd.integerInRange(-20, 20),  size: 12, default: amount})
+    this.game.add.tween(damageAmount.scale).to( {x: 1.5, y:1.5}, 250, Phaser.Easing.Back.In, true, 0, 0, false)
+    this.game.add.tween(damageAmount).to( {y: damageAmount.y + 10}, 250, Phaser.Easing.Back.In, true, 0, 0, false).
+      onComplete.add(() => {
+        this.game.add.tween(damageAmount).to( {y: damageAmount.y - 10, alpha: 0}, 300, Phaser.Easing.Bounce.Out, true, 0, 0, false).
+          onComplete.add(() => {
+            this.phaserTexts.destroy(damageAmount.name)
+          })
+      })
+
+
+  }
+  /******************/
 
   /******************/
   public bulletCollisionDetection(){
@@ -1227,24 +1257,24 @@ export class PLAYER_MANAGER {
 
         if((!e.isDamaged && !e.isDestroyed) || (weaponData.ignoreDamageState && !e.isDestroyed)){
           if(weaponData.reference === 'LASER'){
-            this.weaponManager.electricDischarge(collidable.x, collidable.y - collidable.height, 1, e.onLayer + 1)
+            this.effectsManager.electricDischarge(collidable.x, collidable.y - collidable.height, 1, e.onLayer + 1)
           }
           if(weaponData.reference === 'SPREAD'){
-            this.weaponManager.blueImpact(collidable.x, collidable.y - collidable.height, 1, e.onLayer + 1)
+            this.effectsManager.blueImpact(collidable.x, collidable.y - collidable.height, 1, e.onLayer + 1)
           }
           if(weaponData.reference === 'SHOTGUN'){
-            this.weaponManager.pelletImpact(collidable.x, collidable.y - collidable.height, 1, e.onLayer + 1)
+            this.effectsManager.pelletImpact(collidable.x, collidable.y - collidable.height, 1, e.onLayer + 1)
           }
           if(weaponData.reference === 'GATLING'){
-            this.weaponManager.pelletImpact(collidable.x, collidable.y - collidable.height, 1, e.onLayer + 1)
+            this.effectsManager.pelletImpact(collidable.x, collidable.y - collidable.height, 1, e.onLayer + 1)
           }
           if(weaponData.reference === 'BULLET'){
-            this.weaponManager.orangeImpact(collidable.x, collidable.y - collidable.height, 1, e.onLayer + 1)
+            this.effectsManager.orangeImpact(collidable.x, collidable.y - collidable.height, 1, e.onLayer + 1)
           }
           if(weaponData.reference === 'MISSLE'){
-            this.weaponManager.createExplosionBasic(collidable.x, collidable.y - collidable.height, 1, e.onLayer + 1, Math.round(weaponData.damage/2))
+            this.effectsManager.createExplosionBasic(collidable.x, collidable.y - collidable.height, 1, e.onLayer + 1, Math.round(weaponData.damage/2))
           }
-
+          this.damgePopup(e, weaponData.damage)
           e.damageIt(weaponData.damage)
         }
 

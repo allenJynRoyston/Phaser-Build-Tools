@@ -15,6 +15,7 @@ import {PHASER_GROUP_MANAGER} from './../exports/groupManager'
 
 import {WEAPON_MANAGER} from './required/weaponManager'
 import {ENEMY_MANAGER} from './required/enemyManager'
+import {EFFECTS_MANAGER} from './required/effectsManager'
 import {PLAYER_MANAGER} from './required/playerManager'
 import {ITEMSPAWN_MANAGER} from './required/itemspawnManager'
 import {UTILITY_MANAGER} from './required/utilityManager'
@@ -58,6 +59,7 @@ class PhaserGameObject {
             phaserButtons = new PHASER_BUTTON_MANAGER(),
             phaserGroup = new PHASER_GROUP_MANAGER(),
             phaserBitmapdata = new PHASER_BITMAPDATA_MANAGER(),
+            effectsManager = new EFFECTS_MANAGER(),
             weaponManager = new WEAPON_MANAGER(),
             enemyManager = new ENEMY_MANAGER({showHitbox: false}),
             playerManager = new PLAYER_MANAGER(),
@@ -163,10 +165,11 @@ class PhaserGameObject {
         phaserButtons.assign(game)
         phaserGroup.assign(game, 20)
         phaserBitmapdata.assign(game)
-        weaponManager.assign(game, phaserMaster, phaserSprites, phaserGroup, 'atlas_weapons')
+        effectsManager.assign(game, phaserMaster, phaserSprites, phaserGroup, 'atlas_weapons')
+        weaponManager.assign(game, phaserMaster, phaserSprites, phaserGroup, effectsManager, 'atlas_weapons')
         itemManager.assign(game, phaserMaster, phaserSprites, phaserGroup, 'atlas_main')
-        enemyManager.assign(game, phaserMaster, phaserSprites, phaserTexts, phaserGroup, weaponManager, 'atlas_enemies', 'atlas_weapons')
-        playerManager.assign(game, phaserMaster, phaserSprites, phaserTexts, phaserGroup, phaserControls, weaponManager, 'atlas_ships', 'atlas_weapons')
+        enemyManager.assign(game, phaserMaster, phaserSprites, phaserTexts, phaserGroup, weaponManager, effectsManager, 'atlas_enemies', 'atlas_weapons')
+        playerManager.assign(game, phaserMaster, phaserSprites, phaserTexts, phaserGroup, phaserControls, weaponManager, effectsManager, 'atlas_ships', 'atlas_weapons')
         utilityManager.assign(game, phaserSprites, phaserBitmapdata, phaserGroup, 'atlas_main')
 
         // game variables
@@ -238,6 +241,8 @@ class PhaserGameObject {
 
         let background1 = phaserSprites.addTilespriteFromAtlas({ name: 'bg1', group: 'backgrounds', x: 0, y: 0, width: game.canvas.width, height: game.canvas.height, atlas: 'atlas_large', filename: 'Nebula3' });
             //background1.count = 0;
+            background1.tileScale.x = 0.5
+            background1.tileScale.y = 0.5
             background1.onUpdate = () =>  {
                 //background1.count += 0.005;
                 //Math.sin(background1.count) * 0.2;
@@ -245,15 +250,17 @@ class PhaserGameObject {
                 background1.tilePosition.x += starMomentum.x/4
             };
 
-        let background2 = phaserSprites.addTilespriteFromAtlas({ name: 'bg2', group: 'backgrounds', x: 0, y: 0, width: game.canvas.width, height: game.canvas.height, atlas: 'atlas_large', filename: 'Nebula1' });
+        let background2 = phaserSprites.addTilespriteFromAtlas({ name: 'bg2', group: 'backgrounds', x: 0, y: 0, width: game.canvas.width, height: game.canvas.height, atlas: 'atlas_large', filename: 'Nebula2' });
             background2.tilePosition.x = 500
+            background1.tileScale.x = 0.75
+            background1.tileScale.y = 0.75
             background2.onUpdate = () => {
                 background2.tilePosition.y += 5
                 background2.tilePosition.x += starMomentum.x/2
             };
         phaserGroup.addMany(1, [background1, background2])
 
-        let foreground1 = phaserSprites.addTilespriteFromAtlas({ name: 'fg1', group: 'backgrounds', x: 0, y: 0, width: game.canvas.width, height: game.canvas.height, atlas: 'atlas_large', filename: 'Nebula2', alpha: 0.25});
+        let foreground1 = phaserSprites.addTilespriteFromAtlas({ name: 'fg1', group: 'backgrounds', x: 0, y: 0, width: game.canvas.width, height: game.canvas.height, atlas: 'atlas_large', filename: 'Nebula2', alpha: 1});
             foreground1.tilePosition.x = 300
             foreground1.onUpdate = () => {
                 foreground1.tilePosition.y += 10
@@ -983,6 +990,7 @@ class PhaserGameObject {
           }
         }
 
+        console.log()
         let player = playerManager.createShip({name: 'player', group: 'playership', org: 'gameobjects', layer: 6, shipId: gameData.pilot, primaryWeapon: primaryWeapon.reference, secondaryWeapon: secondaryWeapon.reference, perk: perk.reference}, updateHealth, onDamage, loseLife, onUpdate);
 
         return player
@@ -991,23 +999,23 @@ class PhaserGameObject {
 
       /******************/
       function createBigEnemy(options){
-        let game = phaserMaster.game();
-        let onDestroy = (enemy:any) => {
-            let {gameData} = phaserMaster.getOnly(['gameData'])
-                 gameData.score += 200
-            saveData('score', gameData.score)
-            let {scoreText} = phaserTexts.getOnly(['scoreText'])
-                 scoreText.updateScore();
-        }
-        let onDamage = () => {}
-        let onFail = () => { }
-        let onUpdate = () => {}
-        let enemy = enemyManager.createBigEnemy1(options, onDamage, onDestroy, onFail, onUpdate)
+        // let game = phaserMaster.game();
+        // let onDestroy = (enemy:any) => {
+        //     let {gameData} = phaserMaster.getOnly(['gameData'])
+        //          gameData.score += 200
+        //     saveData('score', gameData.score)
+        //     let {scoreText} = phaserTexts.getOnly(['scoreText'])
+        //          scoreText.updateScore();
+        // }
+        // let onDamage = () => {}
+        // let onFail = () => { }
+        // let onUpdate = () => {}
+        // let enemy = enemyManager.createBigEnemy1(options, onDamage, onDestroy, onFail, onUpdate)
       }
       /******************/
 
       /******************/
-      function createSmallEnemy(options){
+      function createSmallEnemy1(options:any){
         let game = phaserMaster.game();
         let onDestroy = (enemy:any) => {
             let {gameData} = phaserMaster.getOnly(['gameData'])
@@ -1015,11 +1023,29 @@ class PhaserGameObject {
             saveData('score', gameData.score)
             let {scoreText} = phaserTexts.getOnly(['scoreText'])
                 scoreText.updateScore();
-            if(game.rnd.integerInRange(0, 10) < 2){ spawnPowerup(enemy.x, enemy.y) }
         }
         let onDamage = () => {}
         let onUpdate = () => {}
         let enemy = enemyManager.createSmallEnemy1(options, onDamage, onDestroy, onUpdate)
+      }
+      /******************/
+
+      /******************/
+      function createSmallEnemy2(options:any){
+        let game = phaserMaster.game();
+        let onDestroy = (enemy:any) => {
+            let {gameData} = phaserMaster.getOnly(['gameData'])
+                 gameData.score += 200
+            saveData('score', gameData.score)
+            let {scoreText} = phaserTexts.getOnly(['scoreText'])
+                scoreText.updateScore();
+            spawnPowerup(enemy.x, enemy.y)
+            spawnPowerup(enemy.x, enemy.y)
+            spawnPowerup(enemy.x, enemy.y)
+        }
+        let onDamage = () => {}
+        let onUpdate = () => {}
+        let enemy = enemyManager.createSmallEnemy2(options, onDamage, onDestroy, onUpdate)
       }
       /******************/
 
@@ -1210,8 +1236,17 @@ class PhaserGameObject {
           }
 
           // create a steady steam of aliens to shoot
-          if(inGameSeconds % 1 === 0){
-              createSmallEnemy({
+          if(inGameSeconds === 0.5 || inGameSeconds % 2 === 0){
+              createSmallEnemy2({
+                x: game.rnd.integerInRange(0 + 100, game.canvas.width - 100),
+                y: game.rnd.integerInRange(100, 400),
+                iy: game.rnd.integerInRange(0, 80),
+                layer: 3
+              });
+          }
+
+          if(inGameSeconds % 3 === 0){
+              createSmallEnemy1({
                 x: game.rnd.integerInRange(0 + 100, game.canvas.width - 100),
                 y: game.rnd.integerInRange(100, 400),
                 iy: game.rnd.integerInRange(0, 80),
@@ -1219,6 +1254,7 @@ class PhaserGameObject {
               });
           }
         }
+
 
       }
       /******************/
