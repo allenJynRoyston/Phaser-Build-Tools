@@ -61,6 +61,7 @@ export class PLAYER_MANAGER {
         player.xCapture = []
         player.yCapture = []
         player.clearEnemyBulletsInterval;
+        player.focusOn = null
 
         // add animations
         let shipStart = [...Phaser.Animation.generateFrameNames(`ship_start_`, 1, 7)]
@@ -74,7 +75,7 @@ export class PLAYER_MANAGER {
 
         // add physics
         game.physics.enable(player, Phaser.Physics.ARCADE);
-        this.phaserGroup.add(params.layer, player)
+        this.phaserGroup.add(this.phaserMaster.get('layers').PLAYER, player)
 
 
         // attach hitboxes
@@ -97,36 +98,38 @@ export class PLAYER_MANAGER {
         player.addChild(fullpower)
 
 
-        // attach exhaust
-        let exhaustAnimation = Phaser.Animation.generateFrameNames('exhaust_', 1, 3);
-        let bottomExhaust = this.phaserSprites.addFromAtlas({y: 45, name: `bottom_exhaust`, atlas: this.atlas,  filename: exhaustAnimation[0], alpha: 1})
-            bottomExhaust.anchor.setTo(0.5, 0.5)
-            bottomExhaust.animations.add('animate', exhaustAnimation, 1, true)
-            bottomExhaust.animations.play('animate', 12, true)
-            bottomExhaust.sync = (player) => {
-                let {x, y, alpha, isDead} = player;
-                bottomExhaust.x = x
-                bottomExhaust.y = y + 40
-                bottomExhaust.alpha = !isDead ? alpha : 0
-                bottomExhaust.visible = starMomentum.y >= 0 ? true : false
-            }
-        player.attachments.push(bottomExhaust)
-        this.phaserGroup.add(params.layer - 1, bottomExhaust)
-
-        let topExhaust = this.phaserSprites.addFromAtlas({y: 0, name: `top_exhaust`, atlas: this.atlas,  filename: exhaustAnimation[0], alpha: 1})
-            topExhaust.anchor.setTo(0.5, 0.5)
-            topExhaust.angle = 180;
-            topExhaust.animations.add('animate', exhaustAnimation, 1, true)
-            topExhaust.animations.play('animate', 12, true)
-            topExhaust.sync = (player) => {
-                let {x, y, alpha} = player;
-                topExhaust.x = x
-                topExhaust.y = y
-                topExhaust.alpha = !player.isDead ? alpha : 0
-                topExhaust.visible = starMomentum.y < 0 ? true : false
-            }
-        player.attachments.push(topExhaust)
-        this.phaserGroup.add(params.layer - 1, topExhaust)
+        // // attach exhaust
+        // let exhaustAnimation = Phaser.Animation.generateFrameNames('exhaust_', 1, 3);
+        // let bottomExhaust = this.phaserSprites.addFromAtlas({y: 45, name: `bottom_exhaust`, atlas: this.atlas,  filename: exhaustAnimation[0], alpha: 1})
+        //     bottomExhaust.anchor.setTo(0.5, 0.5)
+        //     bottomExhaust.animations.add('animate', exhaustAnimation, 1, true)
+        //     bottomExhaust.animations.play('animate', 12, true)
+        //     bottomExhaust.sync = (player) => {
+        //         let {x, y, angle, alpha, isDead} = player;
+        //         bottomExhaust.x = x
+        //         bottomExhaust.y = y + 40
+        //         bottomExhaust.angle = angle
+        //         bottomExhaust.alpha = !isDead ? alpha : 0
+        //         bottomExhaust.visible = starMomentum.y >= 0 ? true : false
+        //     }
+        // player.attachments.push(bottomExhaust)
+        // this.phaserGroup.add(this.phaserMaster.get('layers').PLAYER_UNDER, bottomExhaust)
+        //
+        // let topExhaust = this.phaserSprites.addFromAtlas({y: 0, name: `top_exhaust`, atlas: this.atlas,  filename: exhaustAnimation[0], alpha: 1})
+        //     topExhaust.anchor.setTo(0.5, 0.5)
+        //     topExhaust.angle = 180;
+        //     topExhaust.animations.add('animate', exhaustAnimation, 1, true)
+        //     topExhaust.animations.play('animate', 12, true)
+        //     topExhaust.sync = (player) => {
+        //         let {x, y, angle, alpha} = player;
+        //         topExhaust.x = x
+        //         topExhaust.y = y
+        //         topExhaust.angle = angle
+        //         topExhaust.alpha = !player.isDead ? alpha : 0
+        //         topExhaust.visible = starMomentum.y < 0 ? true : false
+        //     }
+        // player.attachments.push(topExhaust)
+        // this.phaserGroup.add(this.phaserMaster.get('layers').PLAYER_UNDER, topExhaust)
 
         //------------------------
         player.clearAllEnemyBullets = (duration:number) => {
@@ -135,10 +138,25 @@ export class PLAYER_MANAGER {
         //------------------------
 
         //------------------------
+        player.assignFocus = (enemy:any) => {
+          player.focusOn = enemy;
+        }
+
+        player.blurFocus = (enemy:any) => {
+          player.focusOn = null;
+        }
+        //------------------------
+
+        //------------------------
         player.onUpdate = () => {
 
           // fullpowered
           fullpower.visible = gameData.player.powerup >= 30 ? true : false;
+
+          // player faces enemy
+          if(!!player.focusOn){
+            player.angle = Math.ceil( (360 / (2 * Math.PI)) * game.math.angleBetween(player.x, player.y, player.focusOn.x, player.focusOn.y) + 90 )
+          }
 
           // movement
           if(!player.isDead){
@@ -225,16 +243,15 @@ export class PLAYER_MANAGER {
 
         //------------------------
         player.isDestroyed = (respawn:boolean = true) => {
+
+          if(!player.isDead){
           // change player states
           player.isDead = true;
           player.isInvincible = true;
-
           // destroy weapon systems
           player.destroyWeaponSystems();
-          //
           // // get last call
           player.onUpdate();
-
           player.explodeInterval = game.time.events.loop( 250, () => {
             this.effectsManager.createExplosion(player.x + game.rnd.integerInRange(-player.width/2, player.width/2), player.y + game.rnd.integerInRange(-player.height/2, player.height/2), 1, player.onLayer + 1)
           })
@@ -250,6 +267,7 @@ export class PLAYER_MANAGER {
               game.time.events.remove(player.explodeInterval)
               player.visible = false;
             })
+          }
         }
         //------------------------
 
@@ -368,15 +386,15 @@ export class PLAYER_MANAGER {
             this.y = this.height
           }
 
-          if(this.y + this.height > this.game.canvas.height){
-            this.y = this.game.canvas.height - this.height
+          if(this.y + this.height > this.game.world.height){
+            this.y = this.game.world.height - this.height
           }
 
           if(this.x < 0){
-            this.x = this.game.canvas.width + this.width
-          }
-          if(this.x > (this.game.canvas.width + this.width)){
             this.x = 0
+          }
+          if(this.x > (this.game.world.width + this.width)){
+            this.x = (this.game.world.width + this.width)
           }
         }
         //------------------------
@@ -557,14 +575,15 @@ export class PLAYER_MANAGER {
           }
 
           weaponSystem.sync = (player) => {
-            let {x, y} = player;
+            let {x, y, angle} = player;
             weaponSystem.x = x + weaponSystem.offset
             weaponSystem.y = y
+            weaponSystem.angle = angle
           }
 
           weaponSystem.destroyIt = () => {
-            let {x, y} = weaponSystem;
-            this.effectsManager.blueImpact(x, y, 1, player.onLayer)
+            //let {x, y} = weaponSystem;
+            //this.effectsManager.blueImpact(x, y, 1, player.onLayer)
             this.phaserSprites.destroy(weaponSystem.name)
           }
 
@@ -604,7 +623,7 @@ export class PLAYER_MANAGER {
 
           }
 
-      this.phaserGroup.add(params.layer + 1, weaponSystem)
+      this.phaserGroup.add(this.phaserMaster.get('layers').PLAYER_OVER, weaponSystem)
       //-----------------
 
       //-----------------
@@ -688,8 +707,8 @@ export class PLAYER_MANAGER {
           }
 
           weaponSystem.destroyIt = () => {
-            let {x, y} = weaponSystem;
-            this.effectsManager.blueImpact(x, y, 1, player.onLayer)
+            // let {x, y} = weaponSystem;
+            // this.effectsManager.blueImpact(x, y, 1, player.onLayer)
             this.phaserSprites.destroy(weaponSystem.name)
           }
 
@@ -703,7 +722,7 @@ export class PLAYER_MANAGER {
             if(animationSprites.length > 0){ weaponSystem.animations.play('fireWeapon', 60, false) }
           }
 
-      this.phaserGroup.add(params.layer + 1, weaponSystem)
+      this.phaserGroup.add(this.phaserMaster.get('layers').PLAYER_OVER, weaponSystem)
       //-----------------
 
       //-----------------
@@ -811,7 +830,7 @@ export class PLAYER_MANAGER {
 
           }
 
-      this.phaserGroup.add(params.layer + 1, weaponSystem)
+      this.phaserGroup.add(this.phaserMaster.get('layers').PLAYER_OVER, weaponSystem)
       //-----------------
 
       //-----------------
@@ -871,9 +890,10 @@ export class PLAYER_MANAGER {
           }
 
           weaponSystem.sync = (player) => {
-            let {x, y} = player;
+            let {x, y, angle} = player;
             weaponSystem.x = x + weaponSystem.offset
             weaponSystem.y = y
+            weaponSystem.angle = angle
           }
 
           weaponSystem.destroyIt = () => {
@@ -885,37 +905,58 @@ export class PLAYER_MANAGER {
           weaponSystem.fire = () => {
             let {gameData} = this.phaserMaster.getOnly(['gameData']);
             let powerupLvl = Math.floor( (gameData.player.powerup-1) / 5)
+            let coords;
             //emitter.fire(weaponSystem.x, weaponSystem.y)
-            ammo.fire(weaponSystem, null, weaponSystem + 1);
-            if(powerupLvl >= 0){
-              ammo.fire(weaponSystem, weaponSystem.x + (1 * 30), weaponSystem.y - (200));
-              ammo.fire(weaponSystem, weaponSystem.x - (1 * 30), weaponSystem.y - (200));
+
+            if(!!player.focusOn){
+
+              console.log( Phaser.Math.distance(player.x, player.y, player.focusOn.trackingbox.x, player.focusOn.trackingbox.y) )
+
+              ammo.fire(weaponSystem, player.focusOn.trackingbox.x, player.focusOn.trackingbox.y - 1)
+              coords = this.weaponManager.calculateSpread(75, player.focusOn.trackingbox)
+              ammo.fire(weaponSystem, coords.x1, coords.y1);
+              ammo.fire(weaponSystem, coords.x2, coords.y2);
+
+              coords = this.weaponManager.calculateSpread(125, player.focusOn.trackingbox)
+              ammo.fire(weaponSystem, coords.x1, coords.y1);
+              ammo.fire(weaponSystem, coords.x2, coords.y2);
+
+              coords = this.weaponManager.calculateSpread(200, player.focusOn.trackingbox)
+              ammo.fire(weaponSystem, coords.x1, coords.y1);
+              ammo.fire(weaponSystem, coords.x2, coords.y2);
+              // ammo.fire(weaponSystem, player.focusOn.x - (1 * angle), player.focusOn.y - angle);
+              // ammo.fire(weaponSystem, player.focusOn.x + (2 * (Math.abs(weaponSystem.angle-90) + 30) ), player.focusOn.y );
+              // ammo.fire(weaponSystem, player.focusOn.x - (2 * (Math.abs(weaponSystem.angle-90) - 30) ), player.focusOn.y );
             }
-            if(powerupLvl >= 1){
-              ammo.fire(weaponSystem, weaponSystem.x + (2 * 30), weaponSystem.y - (200));
-              ammo.fire(weaponSystem, weaponSystem.x - (2 * 30), weaponSystem.y - (200));
-            }
-            if(powerupLvl >= 2){
-              ammo.fire(weaponSystem, weaponSystem.x + (3 * 30), weaponSystem.y - (200));
-              ammo.fire(weaponSystem, weaponSystem.x - (3 * 30), weaponSystem.y - (200));
-            }
-            if(powerupLvl >= 3){
-              ammo.fire(weaponSystem, weaponSystem.x + (4 * 30), weaponSystem.y - (200));
-              ammo.fire(weaponSystem, weaponSystem.x - (4 * 30), weaponSystem.y - (200));
-            }
-            if(powerupLvl >= 4){
-              ammo.fire(weaponSystem, weaponSystem.x + (5 * 30), weaponSystem.y - (200));
-              ammo.fire(weaponSystem, weaponSystem.x - (5 * 30), weaponSystem.y - (200));
-            }
-            if(powerupLvl >= 5){
-              ammo.fire(weaponSystem, weaponSystem.x + (6 * 30), weaponSystem.y - (200));
-              ammo.fire(weaponSystem, weaponSystem.x - (6 * 30), weaponSystem.y - (200));
-            }
-            if(animationSprites.length > 0){ weaponSystem.animations.play('fireWeapon', 60, false) }
+            // if(powerupLvl >= 0){
+            //   ammo.fire(weaponSystem, weaponSystem.x + (1 * 30), weaponSystem.y - (200));
+            //   ammo.fire(weaponSystem, weaponSystem.x - (1 * 30), weaponSystem.y - (200));
+            // }
+            // if(powerupLvl >= 1){
+            //   ammo.fire(weaponSystem, weaponSystem.x + (2 * 30), weaponSystem.y - (200));
+            //   ammo.fire(weaponSystem, weaponSystem.x - (2 * 30), weaponSystem.y - (200));
+            // }
+            // if(powerupLvl >= 2){
+            //   ammo.fire(weaponSystem, weaponSystem.x + (3 * 30), weaponSystem.y - (200));
+            //   ammo.fire(weaponSystem, weaponSystem.x - (3 * 30), weaponSystem.y - (200));
+            // }
+            // if(powerupLvl >= 3){
+            //   ammo.fire(weaponSystem, weaponSystem.x + (4 * 30), weaponSystem.y - (200));
+            //   ammo.fire(weaponSystem, weaponSystem.x - (4 * 30), weaponSystem.y - (200));
+            // }
+            // if(powerupLvl >= 4){
+            //   ammo.fire(weaponSystem, weaponSystem.x + (5 * 30), weaponSystem.y - (200));
+            //   ammo.fire(weaponSystem, weaponSystem.x - (5 * 30), weaponSystem.y - (200));
+            // }
+            // if(powerupLvl >= 5){
+            //   ammo.fire(weaponSystem, weaponSystem.x + (6 * 30), weaponSystem.y - (200));
+            //   ammo.fire(weaponSystem, weaponSystem.x - (6 * 30), weaponSystem.y - (200));
+            // }
+            // if(animationSprites.length > 0){ weaponSystem.animations.play('fireWeapon', 60, false) }
           }
 
 
-      this.phaserGroup.add(params.layer + 1, weaponSystem)
+      this.phaserGroup.add(this.phaserMaster.get('layers').PLAYER_OVER, weaponSystem)
       //-----------------
 
       //-----------------
@@ -1014,7 +1055,7 @@ export class PLAYER_MANAGER {
           }
 
 
-      this.phaserGroup.add(params.layer + 1, weaponSystem)
+      this.phaserGroup.add(this.phaserMaster.get('layers').PLAYER_OVER, weaponSystem)
       //-----------------
 
       //-----------------
@@ -1118,7 +1159,7 @@ export class PLAYER_MANAGER {
           }
 
 
-      this.phaserGroup.add(params.layer + 1, weaponSystem)
+      this.phaserGroup.add(this.phaserMaster.get('layers').PLAYER_OVER, weaponSystem)
       //-----------------
 
       //-----------------
@@ -1174,7 +1215,7 @@ export class PLAYER_MANAGER {
           ammo.fireOffset(0, - 32)
         }
 
-        this.phaserGroup.add(params.layer + 1, weaponSystem)
+        this.phaserGroup.add(this.phaserMaster.get('layers').PLAYER_OVER, weaponSystem)
 
         //-----------------
         let maxBulletsOnscreen = 4

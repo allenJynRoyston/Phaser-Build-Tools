@@ -65,7 +65,7 @@ export class ITEMSPAWN_MANAGER {
           })
         }
 
-      this.phaserGroup.add(layer, item)
+      this.phaserGroup.add(this.phaserMaster.get('layers').ITEMDROPS, item)
   }
   /******************/
 
@@ -114,7 +114,7 @@ export class ITEMSPAWN_MANAGER {
           })
         }
 
-      this.phaserGroup.add(layer, item)
+      this.phaserGroup.add(this.phaserMaster.get('layers').ITEMDROPS, item)
   }
   /******************/
 
@@ -164,7 +164,7 @@ export class ITEMSPAWN_MANAGER {
           })
         }
 
-      this.phaserGroup.add(layer, item)
+      this.phaserGroup.add(this.phaserMaster.get('layers').ITEMDROPS, item)
   }
   /******************/
 

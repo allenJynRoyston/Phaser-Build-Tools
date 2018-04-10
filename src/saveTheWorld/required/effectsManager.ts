@@ -24,14 +24,21 @@ export class EFFECTS_MANAGER {
   public debris(bulletPoolTotal:any = 5){
     let game = this.game
     let {phaserMaster} = this;
+    let {onscreenDebrisCount} = phaserMaster.getOnly(['onscreenDebrisCount'])
     let animationSprites = Phaser.Animation.generateFrameNames('debrs__', 1, 9)
+    let onscreenCap = 200;
+
+    // debri will limit itself if too many on screen at one time
+    if(onscreenDebrisCount > onscreenCap){
+      bulletPoolTotal = 5
+    }
 
     let weapon = game.add.weapon(bulletPoolTotal, this.atlas, animationSprites[0])
         weapon.bulletKillType = Phaser.Weapon.KILL_CAMERA_BOUNDS ;
         weapon.bulletSpeed = 200
         weapon.bulletSpeedVariance = 500;
         weapon.multiFire = true;
-        this.phaserGroup.add(7, weapon.bullets )
+        this.phaserGroup.add(this.phaserMaster.get('layers').DEBRIS, weapon.bullets )
 
         // map animation on each individual bullet
         weapon.bullets.children.map( bullet => {
@@ -40,15 +47,20 @@ export class EFFECTS_MANAGER {
 
         // when called, will execute animation and then destroy each bullet before finally destroying the weapon object itself
         weapon.customFire = (target) => {
-        console.log(target)
           for(let i = 0; i < bulletPoolTotal; i++){
             weapon.fire(target, target.x + game.rnd.integerInRange(-360, 360), target.y + game.rnd.integerInRange(-360, 360))
           }
+          // add to debris count
+          onscreenDebrisCount += bulletPoolTotal
+          phaserMaster.forceLet('onscreenDebrisCount', onscreenDebrisCount)
           weapon.bullets.children.map( (bullet, index) => {
             game.time.events.add(index*15, () => {
               bullet.animations.play('explosion', 30, true)
               game.add.tween(bullet).to( { alpha: 0}, 500, Phaser.Easing.Linear.In, true, 500).
                 onComplete.add(() => {
+                  // remove from debri count
+                  onscreenDebrisCount--
+                  phaserMaster.forceLet('onscreenDebrisCount', onscreenDebrisCount)
                   bullet.destroy()
                 })
             }).autoDestroy = true;
@@ -92,9 +104,7 @@ export class EFFECTS_MANAGER {
           phaserSprites.destroy(explosion.name)
         }
 
-    if(layer !== undefined){
-      phaserGroup.add(layer, explosion)
-    }
+    phaserGroup.add(layer ===  undefined ? this.phaserMaster.get('layers').VISUALS : layer, explosion)
 
     return explosion;
   }
@@ -120,9 +130,7 @@ export class EFFECTS_MANAGER {
       phaserSprites.destroy(explosion.name)
     }
 
-    if(layer !== undefined){
-      phaserGroup.add(layer, explosion)
-    }
+    phaserGroup.add(layer ===  undefined ? this.phaserMaster.get('layers').BULLET_IMPACT : layer, explosion)
 
     game.physics.enable(explosion, Phaser.Physics.ARCADE);
     return explosion;
@@ -151,9 +159,7 @@ export class EFFECTS_MANAGER {
       phaserSprites.destroy(explosion.name)
     }
 
-    if(layer !== undefined){
-      phaserGroup.add(layer, explosion)
-    }
+    phaserGroup.add(layer ===  undefined ? this.phaserMaster.get('layers').BULLET_IMPACT : layer, explosion)
 
     return explosion;
   }
@@ -181,9 +187,7 @@ export class EFFECTS_MANAGER {
       phaserSprites.destroy(explosion.name)
     }
 
-    if(layer !== undefined){
-      phaserGroup.add(layer, explosion)
-    }
+    phaserGroup.add(layer ===  undefined ? this.phaserMaster.get('layers').BULLET_IMPACT : layer, explosion)
 
     return explosion;
   }
@@ -210,9 +214,7 @@ export class EFFECTS_MANAGER {
       phaserSprites.destroy(explosion.name)
     }
 
-    if(layer !== undefined){
-      phaserGroup.add(layer, explosion)
-    }
+    phaserGroup.add(layer ===  undefined ? this.phaserMaster.get('layers').BULLET_IMPACT : layer, explosion)
 
     return explosion;
   }

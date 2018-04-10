@@ -7,9 +7,12 @@ export class PHASER_MASTER {
   currentState:string;
   inputDelay:any;
   variables:any;
+  element:any;
 
   constructor(params:any){
     this._game = params.game;
+
+    this.element = params.element;
 
     this.resolution = params.resolution;
     // default gameStates
@@ -97,6 +100,10 @@ export class PHASER_MASTER {
 
   public getCurrentState(){
     return this.currentState;
+  }
+
+  public getElement(){
+    return this.element
   }
 
   public getStates(){

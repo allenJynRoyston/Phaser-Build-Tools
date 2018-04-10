@@ -447,369 +447,227 @@ export class ENEMY_MANAGER {
   /******************/
 
   /******************/
-  public createAsteroid(options:any, onDamage:any = () => {}, onDestroy:any = () => {}, onFail:any = () => {}, onUpdate:any = () => {}){
+  public createBoss1(options:any, onDamage:any = () => {}, onDestroy:any = () => {}, onUpdate:any = () => {}){
     let game = this.game
     let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
-    //let enemy = enemyData.BULLET;
-    let enemy = phaserSprites.addFromAtlas({x: options.x, y: options.y, name: `enemy_${game.rnd.integer()}`, group:'enemies',  org: 'gameobjects', atlas: atlas, filename: `asteroid_mid_layer_${game.rnd.integerInRange(1, 3)}`, visible: true})
-        enemy.anchor.setTo(0.5, 0.5);
-        enemy.scale.setTo(1.5, 1.5);
-        game.physics.enable(enemy, Phaser.Physics.ARCADE);
-        enemy.body.velocity.y = options.iy
-        enemy.body.velocity.x = options.ix
-        enemy.angleMomentum = game.rnd.integerInRange(-5, 5)
-        enemy.body.bounce.setTo(1, 1);
-        enemy.atTarget = false;
-        enemy.maxHealth = 150;
-        enemy.health = enemy.maxHealth
-        enemy.pierceResistence = 4;
-        enemy.fallThreshold = game.rnd.integerInRange(0, 75)
-        phaserGroup.add(options.layer, enemy)
 
-    // add hitboxes
-    let hitboxes = [`1_hitbox_1`, `1_hitbox_2`]
+    //let enemy = enemyData.BULLET;
+    let enemy = phaserSprites.addFromAtlas({name: `enemy_${game.rnd.integer()}`, group:'enemies', org: 'gameobjects', atlas: atlas, filename: `big_1`, visible: true, x: options.x})
+        enemy.anchor.setTo(0.5, 0.5);
+        enemy.scale.setTo(1,1);
+        enemy.maxHealth = 15000;
+        enemy.health = enemy.maxHealth
+        enemy.pierceResistence = 1;
+        enemy.fallThreshold = game.rnd.integerInRange(0, 75)
+        enemy.cosWave = {data: game.math.sinCosGenerator(400, game.world.height * .50 , 0, 1).cos, count: 0}
+        enemy.fireDelay = 0
+        enemy.fireTimer = 200
+        enemy.isInvincible = false;
+        enemy.isDamaged = false
+        enemy.isDestroyed = false;
+        enemy.onLayer = options.layer;
+        enemy.bulletCycle = {
+          count: 0,
+          total: 3,
+          delay: 500,
+          lock: false
+        }
+        enemy.weaponSystems = [];
+        enemy.collidables = {
+          primaryWeapon: [],
+          secondaryWeapon: []
+        }
+        enemy.trackinbox = null;
+    phaserGroup.add(options.layer, enemy)
+
+    //----------------------------  HITBOX
+    let hitboxes = [`big_1_hitbox_1`, `big_1_hitbox_2`]
     hitboxes.map(obj => {
       let e_hitbox = phaserSprites.addFromAtlas({name: `enemy_hitbox_${game.rnd.integer()}`, group:'enemy_hitboxes', atlas: atlas, filename: obj, alpha: this.showHitbox ? 0.75 : 0})
           e_hitbox.anchor.setTo(0.5, 0.5)
-          e_hitbox.destroyIt = (self:any) => {
-            self.body = null;
-            this.phaserSprites.destroy(self.name)
-          }
           game.physics.enable(e_hitbox, Phaser.Physics.ARCADE);
           enemy.addChild(e_hitbox)
     })
+    //----------------------------
 
-
-    enemy.damageIt = (val:number, wpnType:string = null) => {
-      onDamage(enemy);
-      if(!enemy.atTarget){
-        enemy.health -= val;
-        enemy.tint = 1 * 0xff0000;
-        enemy.game.add.tween(enemy).to( {tint: 1 * 0xffffff}, 100, Phaser.Easing.Linear.Out, true, 0, 0, false);
-        if(enemy.health <= 0){
-          enemy.destroyIt()
+    //----------------------------  create tracking box
+    let trackingbox = phaserSprites.addFromAtlas({name: `enemy_hitbox_${game.rnd.integer()}`, group:'enemy_hitboxes', width: enemy.width, height: enemy.height, atlas: atlas, filename: hitboxes[0], alpha: 0.5})
+        trackingbox.anchor.setTo(0.5, 0.5)
+        trackingbox.sync = () => {
+          let player = phaserSprites.get('player')
+          trackingbox.x = enemy.x
+          trackingbox.y = enemy.y
+          trackingbox.angle = Math.ceil( (360 / (2 * Math.PI)) * game.math.angleBetween(trackingbox.x, trackingbox.y, player.x, player.y) - 90 )
         }
-      }
-    }
+        enemy.trackingbox = trackingbox;
 
-    // destroy it
-    enemy.destroyIt = () => {
-        // animate it
-        let tween = {
-          angle: game.rnd.integerInRange(-720, 720),
-          x: enemy.x - game.rnd.integerInRange(-25, 25),
-          y: enemy.y - game.rnd.integerInRange(5, 25),
-          alpha: .5
+    //---------------------------- AMMO
+    let ammo = this.weaponManager.enemyBullet(9);
+    ammo.bullets.children.map(bullet => {
+      bullet.damgeOnImpact = 10;
+    })
+    //----------------------------
+
+    //---------------------------- WEAPON SYSTEM
+    let animationSprites = [...Phaser.Animation.generateFrameNames('bullet_fire_', 1, 4)]
+    let weaponSystem = this.phaserSprites.addFromAtlas({name: `enemy_weapons_${this.game.rnd.integer()}`, group: 'enemy_weapons', atlas: this.atlas_weapons,  filename: animationSprites[0], visible: true})
+        weaponSystem.anchor.setTo(0.5, 0.5)
+        weaponSystem.angle = 180;
+        weaponSystem.animations.add('fireWeapon', animationSprites, 1, true)
+        weaponSystem.sync = (enemy:any) => {
+          let {x, y} = enemy;
+          weaponSystem.x = x
+          weaponSystem.y = y
         }
-        enemy.game.add.tween(enemy).to( tween, game.rnd.integerInRange(150, 500), Phaser.Easing.Linear.Out, true, 0, 0, false);
-        enemy.body = null;
-       // animate death and then explode
-       game.time.events.add(Phaser.Timer.SECOND/2, () => {
-          onDestroy(enemy);
-          this.effectsManager.createExplosion(enemy.x, enemy.y, 1, options.layer + 1)
-        phaserSprites.destroy(enemy.name);
-       }, enemy).autoDestroy = true;
-    }
-
-    enemy.fallToPlanet = () => {
-      enemy.tint = 1 * 0x000000;
-      enemy.atTarget = true;
-      enemy.body = null;
-      enemy.game.add.tween(enemy).to( {y: enemy.y + 60}, Phaser.Timer.SECOND*2, Phaser.Easing.Linear.In, true, 0).autoDestroy = true;
-      game.time.events.add(350, () => {
-        this.game.add.tween(enemy.scale).to( {x: 0, y: 0}, Phaser.Timer.SECOND*1, Phaser.Easing.Linear.In, true, game.rnd.integerInRange(0, 500)).
-          onComplete.add(() => {
-            onFail(enemy);
-            enemy.removeIt();
-            this.effectsManager.createExplosion(enemy.x, enemy.y, 0.25, 6)
-          }).autoDestroy = true;
-      }).autoDestroy = true
-    }
-
-    enemy.checkLocation = () => {
-      enemy.angle += enemy.angleMomentum
-      if(enemy.angleMomentum > 0){
-        enemy.angleMomentum -= 0.002
-      }
-      if(enemy.angleMomentum < 0){
-        enemy.angleMomentum += 0.002
-      }
-      if(enemy.y > enemy.height){
-        if(enemy.body !== null){
-          enemy.body.collideWorldBounds = true;
+        weaponSystem.destroyIt = () => {
+          let {x, y} = weaponSystem;
+          this.effectsManager.blueImpact(x, y, 1, enemy.onLayer)
+          this.phaserSprites.destroy(weaponSystem.name)
+          game.time.events.add(Phaser.Timer.SECOND * 4, () => {
+            weaponSystem.ammo.destroy()
+          }, this).autoDestroy = true;
         }
-      }
-      if(enemy.y > this.game.canvas.height - (75 + enemy.fallThreshold)){
-        if(enemy.body !== null && !enemy.atTarget){
-          enemy.body.collideWorldBounds = false;
-          enemy.fallToPlanet();
-        }
-      }
-    }
 
+        weaponSystem.fire = () => {
+          let player = phaserSprites.get('player')
+          ammo.fire(weaponSystem, weaponSystem.x, weaponSystem.y + 100);
+          ammo.fire(weaponSystem, weaponSystem.x + 50, weaponSystem.y + 100);
+          ammo.fire(weaponSystem, weaponSystem.x - 50, weaponSystem.y + 100);
+          weaponSystem.animations.play('fireWeapon', 24, false)
+        }
+    phaserGroup.add(options.layer + 1, weaponSystem )
+    weaponSystem.ammo = ammo
+    enemy.weaponSystems.push(weaponSystem)
+
+    enemy.collidables.primaryWeapon = [];
+    enemy.collidables.primaryWeapon.push(ammo.bullets)
+    //----------------------------
+
+
+
+
+    //----------------------------
     enemy.onUpdate = () => {
+      let player = phaserSprites.get('player')
       onUpdate(enemy);
-      game.physics.arcade.collide([phaserSprites.get('leftBoundry'), phaserSprites.get('rightBoundry')], enemy);
-      enemy.rotate += 2
-      if(!enemy.atTarget){
-        if(enemy.body !== null){
-          if(enemy.body.velocity.y + 2 < 100){
-            enemy.body.velocity.y += 2
+
+      // tracking box follows player
+      trackingbox.sync();
+
+      if(game.time.returnTrueTime() > enemy.fireDelay && !enemy.isDestroyed && (enemy.y > enemy.game.canvas.height * .3) ){
+          enemy.fireDelay = game.time.returnTrueTime() + enemy.fireTimer
+
+          // bullet pattern
+          if(enemy.bulletCycle.count < enemy.bulletCycle.total){
+            enemy.weaponSystems.map(weaponsSystem => {
+              weaponSystem.fire()
+            })
+            enemy.bulletCycle.count++
           }
-          if(enemy.body.velocity.x > 0){
-            enemy.body.velocity.x -= 0.2
-          }
-          if(enemy.body.velocity.x < 0){
-            enemy.body.velocity.x += 0.2
-          }
-        }
-        enemy.checkLocation();
-      }
-    }
-
-    enemy.removeIt = () => {
-      phaserSprites.destroy(enemy.name)
-    }
-
-
-    return enemy;
-  }
-  /******************/
-
-
-  /******************/
-  public createDebris(options:any, onDamage:any = (enemy:any) => {}, onDestroy:any = (enemy:any) => {}, onFail:any = (enemy:any) => {}, onUpdate:any = (enemy:any) => {}){
-    let game = this.game
-    let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
-
-    let enemy = phaserSprites.addFromAtlas({x: options.x, y: options.y, name: `enemy_${game.rnd.integer()}`, group:'enemies',  org: 'gameobjects', atlas: atlas, filename: `asteroid_mid_layer_${game.rnd.integerInRange(1, 3)}`, visible: true})
-        enemy.anchor.setTo(0.5, 0.5);
-        enemy.scale.setTo(1, 1);
-        game.physics.enable(enemy, Phaser.Physics.ARCADE);
-        enemy.body.velocity.y = options.iy
-        enemy.body.velocity.x = options.ix
-        enemy.angleMomentum = game.rnd.integerInRange(-5, 5)
-        enemy.body.bounce.setTo(1, 1);
-        enemy.atTarget = false;
-        enemy.maxHealth = 50;
-        enemy.health = enemy.maxHealth
-        enemy.pierceResistence = 1;
-
-        enemy.fallThrehold = game.rnd.integerInRange(0, 75)
-        phaserGroup.add(options.layer, enemy)
-
-        // damage it
-        enemy.damageIt = (val:number, wpnType:string = null) => {
-          enemy.health -= val;
-          enemy.tint = 1 * 0xff0000;
-          enemy.game.add.tween(enemy).to( {tint: 1 * 0xffffff}, 100, Phaser.Easing.Linear.Out, true, 0, 0, false);
-          if(enemy.health <= 0){
-            enemy.destroyIt(enemy)
-          }
-        }
-
-        enemy.removeIt = () => {
-          phaserSprites.destroy(enemy.name)
-        }
-
-        enemy.fallToPlanet = () => {
-          enemy.tint = 1 * 0x000000;
-          enemy.atTarget = true;
-          enemy.body = null;
-          enemy.game.add.tween(enemy).to( {y: enemy.y + 60}, Phaser.Timer.SECOND*2, Phaser.Easing.Linear.In, true, 0).autoDestroy = true;
-          game.time.events.add(350, () => {
-            this.game.add.tween(enemy.scale).to( {x: 0, y: 0}, Phaser.Timer.SECOND*1, Phaser.Easing.Linear.In, true, game.rnd.integerInRange(0, 500)).
-              onComplete.add(() => {
-                onFail(enemy);
-                enemy.removeIt();
-                this.effectsManager.createExplosion(enemy.x, enemy.y, 0.25, 6)
+          else{
+            if(!enemy.bulletCycle.lock){
+              enemy.bulletCycle.lock = true
+              game.time.events.add(Phaser.Timer.SECOND * 1.5, () => {
+                enemy.bulletCycle.count = 0;
+                enemy.bulletCycle.lock = false
               }).autoDestroy = true;
-          }).autoDestroy = true
+            }
+          }
+      }
+
+      if(!enemy.isDestroyed){
+        if(enemy.cosWave.count < enemy.cosWave.data.length/2){
+          enemy.y = -(enemy.cosWave.data[enemy.cosWave.count]) - enemy.height
+          enemy.cosWave.count++
         }
 
-        // destroy it
-        enemy.destroyIt = () => {
-            // add to score
-
-
-            // animate it
-            let tween = {
-              angle: game.rnd.integerInRange(-720, 720),
-              x: enemy.x - game.rnd.integerInRange(-25, 25),
-              y: enemy.y - game.rnd.integerInRange(5, 25),
-              alpha: .5
-            }
-            enemy.game.add.tween(enemy).to( tween, game.rnd.integerInRange(50, 200), Phaser.Easing.Linear.Out, true, 0, 0, false);
-            enemy.body = null;
-
-           // animate death and then explode
-           game.time.events.add(Phaser.Timer.SECOND/3, () => {
-              onDestroy(enemy)
-              this.effectsManager.createExplosion(enemy.x, enemy.y, 0.5, 6)
-              phaserSprites.destroy(enemy.name);
-           }, enemy).autoDestroy = true;
+        if(enemy.cosWave.count >= enemy.cosWave.data.length){
+          enemy.removeIt();
         }
 
-        enemy.checkLocation = () => {
-          enemy.angle += enemy.angleMomentum
-          if(enemy.angleMomentum > 0){
-            enemy.angleMomentum -= 0.002
-          }
-          if(enemy.angleMomentum < 0){
-            enemy.angleMomentum += 0.002
-          }
-          if(enemy.y > enemy.height){
-            if(enemy.body !== null){
-              enemy.body.collideWorldBounds = true;
-            }
-          }
-          if(enemy.y > this.game.canvas.height - (50 + enemy.fallThrehold)){
-            if(enemy.body !== null && !enemy.atTarget){
-              enemy.body.collideWorldBounds = false;
-              enemy.fallToPlanet();
-            }
-          }
-          if(enemy.y > this.game.canvas.height + enemy.height){
-            enemy.removeIt();
-          }
-        }
-
-        enemy.onUpdate = () => {
-          game.physics.arcade.collide([phaserSprites.get('leftBoundry'), phaserSprites.get('rightBoundry')], enemy);
-          enemy.rotate += 4
-          if(enemy.body !== null){
-            if(enemy.body.velocity.y + 1 < 50){
-              enemy.body.velocity.y += 1
-            }
-            if(enemy.body.velocity.x > 0){
-              enemy.body.velocity.x -= 0.2
-            }
-            if(enemy.body.velocity.x < 0){
-              enemy.body.velocity.x += 0.2
-            }
-          }
-          enemy.checkLocation();
-        }
-  }
-  /******************/
+        enemy.weaponSystems.map( obj => {
+          obj.sync(enemy)
+        })
+      }
 
 
-  /******************/
-  public createGiantAsteroid(options:any, onDamage:any = () => {}, onDestroy:any = () => {}, onFail:any = () => {}, onUpdate:any = () => {}){
-    let game = this.game
-    let {phaserMaster, phaserSprites, phaserGroup, atlas} = this;
-    //let enemy = enemyData.BULLET;
-    let enemy = phaserSprites.addFromAtlas({x: options.x, y: options.y, name: `enemy_${game.rnd.integer()}`, group:'boss', atlas: atlas, filename: `asteroid_large_layer_${game.rnd.integerInRange(1, 3)}`, visible: true})
-        enemy.anchor.setTo(0.5, 0.5);
-        game.physics.enable(enemy, Phaser.Physics.ARCADE);
-        enemy.body.velocity.y = options.iy
-        enemy.body.velocity.x = options.ix
-        enemy.angleMomentum = game.rnd.integerInRange(-5, 5)
-        enemy.body.bounce.setTo(1, 1);
-        enemy.atTarget = false;
-        enemy.maxHealth = 5000;
-        enemy.health = enemy.maxHealth
-        enemy.pierceResistence = 50;
-        //enemy.fallThreshold = game.rnd.integerInRange(0, 75)
-        phaserGroup.add(options.layer, enemy)
+      // collision detection
+      this.bulletCollisionWithPlayer(enemy)
 
-    enemy.damageIt = (val:number, wpnType:string = null) => {
+    }
+    //----------------------------
+
+    //----------------------------
+    enemy.damageIt = (val:number) => {
       onDamage(enemy);
-      if(!enemy.atTarget){
-        enemy.health -= val;
-        enemy.tint = 1 * 0xff0000;
-        enemy.game.add.tween(enemy).to( {tint: 1 * 0xffffff}, 100, Phaser.Easing.Linear.Out, true, 0, 0, false);
-        if(enemy.health <= 0){
-          enemy.destroyIt()
-        }
+      enemy.isDamaged = true
+      game.time.events.add(10, () => {
+        enemy.isDamaged = false
+      }, this).autoDestroy = true;
+      enemy.health -= val;
+      enemy.tint = 1 * 0xff0000;
+      enemy.game.add.tween(enemy).to( {tint: 1 * 0xffffff}, 100, Phaser.Easing.Linear.Out, true, 0, 0, false);
+      if(enemy.health <= 0){
+        enemy.destroyIt()
       }
     }
+    //----------------------------
 
-    // destroy it
-    enemy.destroyIt = (spawnMore = true) => {
-        // animate it
-        // animate it
-        let tween = {
-          angle: 720,
-          x: enemy.x - game.rnd.integerInRange(-10, 10),
-          y: enemy.y - game.rnd.integerInRange(10, 10),
-          alpha: .15
-        }
-        enemy.game.add.tween(enemy).to( tween, Phaser.Timer.SECOND*2, Phaser.Easing.Linear.Out, true, 0, 0, false);
-        enemy.game.add.tween(enemy.scale).to( {x: 0.5, y: 0.5}, Phaser.Timer.SECOND*2, Phaser.Easing.Linear.Out, true, 0, 0, false);
-        enemy.body = null;
-
-        // animate death and then explode
-        game.time.events.add(Phaser.Timer.SECOND/2, () => {
-          onDestroy(enemy);
-          //this.weaponManager.createImpactExplosion(enemy.x, enemy.y, 2.5, options.layer + 1)
-          phaserSprites.destroy(enemy.name);
-        }, enemy).autoDestroy = true;
-    }
-
-    enemy.fallToPlanet = () => {
-      enemy.tint = 1 * 0x000000;
-      enemy.atTarget = true;
-      enemy.body = null;
-      enemy.game.add.tween(enemy).to( {y: enemy.y + 60}, Phaser.Timer.SECOND*2, Phaser.Easing.Linear.In, true, 0).autoDestroy = true;
-      game.time.events.add(350, () => {
-        this.game.add.tween(enemy.scale).to( {x: 0, y: 0}, Phaser.Timer.SECOND*1, Phaser.Easing.Linear.In, true, game.rnd.integerInRange(0, 500)).
-          onComplete.add(() => {
-            onFail(enemy);
-            enemy.removeIt();
-            this.effectsManager.createExplosion(enemy.x, enemy.y, 0.25, 6)
-          }).autoDestroy = true;
-      }).autoDestroy = true
-    }
-
-    enemy.checkLocation = () => {
-      enemy.angle += enemy.angleMomentum
-      if(enemy.angleMomentum > 0){
-        enemy.angleMomentum -= 0.002
-      }
-      if(enemy.angleMomentum < 0){
-        enemy.angleMomentum += 0.002
-      }
-      if(enemy.y > enemy.height){
-        if(enemy.body !== null){
-          enemy.body.collideWorldBounds = true;
-        }
-      }
-      if(enemy.y > enemy.game.canvas.height - enemy.height){
-        if(enemy.body !== null && !enemy.atTarget){
-          enemy.body.collideWorldBounds = false;
-          enemy.fallToPlanet();
-        }
-      }
-    }
-
-    enemy.onUpdate = () => {
-      onUpdate(enemy);
-      game.physics.arcade.collide([phaserSprites.get('leftBoundry'), phaserSprites.get('rightBoundry')], enemy);
-      enemy.rotate += 2
-      if(!enemy.atTarget){
-        if(enemy.body !== null){
-          if(enemy.body.velocity.y + 1 < 25){
-            enemy.body.velocity.y += 1
-          }
-          if(enemy.body.velocity.x > 0){
-            enemy.body.velocity.x -= 0.2
-          }
-          if(enemy.body.velocity.x < 0){
-            enemy.body.velocity.x += 0.2
-          }
-        }
-        enemy.checkLocation();
-      }
-    }
-
+    //----------------------------
     enemy.removeIt = () => {
-      phaserSprites.destroy(enemy.name)
+      enemy.weaponSystems.map(weaponSystem => {
+        weaponSystem.destroyIt()
+      })
+
+      enemy.children.map(obj => {
+        this.phaserSprites.destroy(obj.name);
+      })
+      phaserSprites.destroy(enemy.name);
     }
+    //----------------------------
+
+    //----------------------------
+    enemy.destroyIt = () => {
+     //enemy.body = null;
+     enemy.isDestroyed = true;
+     enemy.tint = 1 * 0xff0000;
+
+     // destroy weaponSystems
+     enemy.weaponSystems.map(weaponSystem => {
+       weaponSystem.destroyIt()
+     })
+
+     // destroy trackingbox
+     phaserSprites.destroy(trackingbox.name);
+
+    // explosion interval
+     enemy.explodeInterval = game.time.events.loop( 500, () => {
+       this.effectsManager.createExplosion(enemy.x + game.rnd.integerInRange(-enemy.width/2, enemy.width/2), enemy.y + game.rnd.integerInRange(-enemy.height/2, enemy.height/2), 1, enemy.onLayer + 1)
+     })
+
+     // tween
+     enemy.game.add.tween(enemy.scale).to( {x: 0.85, y:0.85}, 500, Phaser.Easing.Linear.Out, true, 500, 0, false).
+       onComplete.add(() => {
+         this.weaponManager.createExplosionVacuum(enemy.x, enemy.y, 1.5, enemy.onLayer + 1, 10)
+         let debris = this.effectsManager.debris(50);
+         debris = debris;
+         debris.customFire(enemy)
+         game.time.events.remove(enemy.explodeInterval)
+         onDestroy(enemy);
+         enemy.children.map(obj => {
+           this.phaserSprites.destroy(obj.name);
+         })
+         phaserSprites.destroy(enemy.name);
+       })
+    }
+    //----------------------------
+
+
 
 
     return enemy;
   }
+
   /******************/
 
 }

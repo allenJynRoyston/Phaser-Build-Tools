@@ -2,6 +2,7 @@ declare var Phaser:any;
 
 export class UTILITY_MANAGER {
   game:any;
+  phaserMaster:any;
   phaserSprites:any;
   phaserBitmapdata:any;
   phaserGroup:any
@@ -11,9 +12,10 @@ export class UTILITY_MANAGER {
 
   }
 
-  public assign(game:any,phaserSprites:any, phaserBitmapdata:any, phaserGroup:any, atlas:string){
+  public assign(game:any, phaserMaster:any, phaserSprites:any, phaserBitmapdata:any, phaserGroup:any, atlas:string){
     this.game = game;
     this.phaserSprites = phaserSprites;
+    this.phaserMaster = phaserMaster;
     this.phaserBitmapdata = phaserBitmapdata;
     this.phaserGroup = phaserGroup;
     this.atlas = atlas
@@ -49,7 +51,7 @@ export class UTILITY_MANAGER {
             })
         }
 
-    this.phaserGroup.add(layer, overlay)
+    this.phaserGroup.add(this.phaserMaster.get('layers').OVERLAY, overlay)
   }
 
   public buildOverlayGrid(squareSizeH:number = 80, squareSizeV:number = 80, layer:number, image:string){
@@ -78,7 +80,7 @@ export class UTILITY_MANAGER {
             }
 
             count++;
-        this.phaserGroup.add(layer, gridSquare)
+        this.phaserGroup.add(this.phaserMaster.get('layers').OVERLAY, gridSquare)
       }
     }
   }

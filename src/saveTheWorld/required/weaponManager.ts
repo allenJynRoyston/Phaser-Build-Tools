@@ -21,6 +21,27 @@ export class WEAPON_MANAGER {
     this.atlas = atlas
   }
 
+  /******************/
+  public calculateSpread(spreadAmount:number, trackingbox: any){
+    let angle = trackingbox.angle;
+
+    let anglePercentage = Math.abs(trackingbox.angle)
+    if (anglePercentage > 90){ anglePercentage = Math.abs(anglePercentage - 180)}
+    let quadrant;
+    if(angle >= 0 && angle < 90){ quadrant = 0 }
+    if(angle >= 90 && angle < 180){ quadrant = 1 }
+    if(angle >= -180 && angle < -90){ quadrant = 2 }
+    if(angle >= -90 && angle < 0){ quadrant = 3 }
+    let spreadX = Math.round(spreadAmount - (spreadAmount * (anglePercentage/90)))
+    let spreadY = Math.round((spreadAmount * (anglePercentage/90)))
+        spreadX = quadrant === 1 ? -spreadX : spreadX
+        spreadY = quadrant === 3 ? -spreadY : spreadY
+
+    return {x1: trackingbox.x + spreadX, y1: trackingbox.y + spreadY, x2: trackingbox.x - spreadX, y2: trackingbox.y - spreadY}
+  }
+  /******************
+
+
   /******************
   //
     COLLIDABLE BULLETS
@@ -43,7 +64,7 @@ export class WEAPON_MANAGER {
           weapon.bulletAngleOffset = -Math.abs(weapon.bulletAngleOffset)
         }
 
-        this.phaserGroup.add(7, weapon.bullets )
+        this.phaserGroup.add(this.phaserMaster.get('layers').ENEMY_BULLETS, weapon.bullets )
 
 
         // map destroy function into bullet
@@ -109,7 +130,7 @@ export class WEAPON_MANAGER {
         }
 
 
-        this.phaserGroup.add(8, weapon.bullets)
+        this.phaserGroup.add(this.phaserMaster.get('layers').PLAYER_BULLETS, weapon.bullets)
 
         // map bullet characteristics
         weapon.bullets.children.map( bullet => {
@@ -165,7 +186,7 @@ export class WEAPON_MANAGER {
           }
         })
 
-        this.phaserGroup.add(7, weapon.bullets )
+        this.phaserGroup.add(this.phaserMaster.get('layers').SPECIAL_WEAPON, weapon.bullets )
 
 
 
@@ -203,7 +224,7 @@ export class WEAPON_MANAGER {
           }
 
           bomblet.onKill.add((bullet:any) => {
-            this.createExplosionBasic(bullet.x, bullet.y, 1.25, 8, data.damage)
+            this.createExplosionBasic(bullet.x, bullet.y, 1.25, this.phaserMaster.get('layers').SPECIAL_WEAPON, data.damage)
           })
 
           // map bullet characteristics
@@ -215,7 +236,7 @@ export class WEAPON_MANAGER {
             }
           })
 
-          this.phaserGroup.add(7, bomblet.bullets )
+          this.phaserGroup.add(this.phaserMaster.get('layers').SPECIAL_WEAPON, bomblet.bullets )
       bomblets.push(bomblet)
     }
 
@@ -257,9 +278,9 @@ export class WEAPON_MANAGER {
 
         game.camera.shake(0.004, 500);
 
-    if(layer !== undefined){
-      phaserGroup.add(layer, explosion)
-    }
+
+      phaserGroup.add(layer === undefined ? this.phaserMaster.get('layers').VISUALS : layer, explosion)
+
 
     game.physics.enable(explosion, Phaser.Physics.ARCADE);
     return explosion;
@@ -294,9 +315,8 @@ export class WEAPON_MANAGER {
 
         game.camera.shake(0.004, 500);
 
-    if(layer !== undefined){
-      phaserGroup.add(layer, explosion)
-    }
+        phaserGroup.add(layer === undefined ? this.phaserMaster.get('layers').VISUALS : layer, explosion)
+
 
     game.physics.enable(explosion, Phaser.Physics.ARCADE);
     return explosion;
@@ -332,9 +352,7 @@ export class WEAPON_MANAGER {
 
         game.camera.shake(0.002, 500);
 
-    if(layer !== undefined){
-      phaserGroup.add(layer, explosion)
-    }
+        phaserGroup.add(layer === undefined ? this.phaserMaster.get('layers').VISUALS : layer, explosion)
 
     game.physics.enable(explosion, Phaser.Physics.ARCADE);
     return explosion;
