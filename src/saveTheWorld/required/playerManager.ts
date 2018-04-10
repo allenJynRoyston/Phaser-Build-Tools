@@ -910,8 +910,6 @@ export class PLAYER_MANAGER {
 
             if(!!player.focusOn){
 
-              console.log( Phaser.Math.distance(player.x, player.y, player.focusOn.trackingbox.x, player.focusOn.trackingbox.y) )
-
               ammo.fire(weaponSystem, player.focusOn.trackingbox.x, player.focusOn.trackingbox.y - 1)
               coords = this.weaponManager.calculateSpread(75, player.focusOn.trackingbox)
               ammo.fire(weaponSystem, coords.x1, coords.y1);
@@ -1301,7 +1299,7 @@ export class PLAYER_MANAGER {
             this.effectsManager.electricDischarge(collidable.x, collidable.y - collidable.height, 1, e.onLayer + 1)
           }
           if(weaponData.reference === 'SPREAD'){
-            this.effectsManager.blueImpact(collidable.x, collidable.y - collidable.height, 1, e.onLayer + 1)
+            this.effectsManager.blueImpact(collidable.x, collidable.y, 1, e.onLayer + 1)
           }
           if(weaponData.reference === 'SHOTGUN'){
             this.effectsManager.pelletImpact(collidable.x, collidable.y - collidable.height, 1, e.onLayer + 1)

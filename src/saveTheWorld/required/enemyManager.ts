@@ -481,7 +481,7 @@ export class ENEMY_MANAGER {
     phaserGroup.add(options.layer, enemy)
 
     //----------------------------  HITBOX
-    let hitboxes = [`big_1_hitbox_1`, `big_1_hitbox_2`]
+    let hitboxes = [`big_1_hitbox_1`, `big_1_hitbox_2`]    
     hitboxes.map(obj => {
       let e_hitbox = phaserSprites.addFromAtlas({name: `enemy_hitbox_${game.rnd.integer()}`, group:'enemy_hitboxes', atlas: atlas, filename: obj, alpha: this.showHitbox ? 0.75 : 0})
           e_hitbox.anchor.setTo(0.5, 0.5)
@@ -491,7 +491,7 @@ export class ENEMY_MANAGER {
     //----------------------------
 
     //----------------------------  create tracking box
-    let trackingbox = phaserSprites.addFromAtlas({name: `enemy_hitbox_${game.rnd.integer()}`, group:'enemy_hitboxes', width: enemy.width, height: enemy.height, atlas: atlas, filename: hitboxes[0], alpha: 0.5})
+    let trackingbox = phaserSprites.addFromAtlas({name: `enemy_hitbox_${game.rnd.integer()}`, group:'enemy_hitboxes', width: enemy.width, height: enemy.height, atlas: atlas, filename: hitboxes[0], alpha: 0})
         trackingbox.anchor.setTo(0.5, 0.5)
         trackingbox.sync = () => {
           let player = phaserSprites.get('player')

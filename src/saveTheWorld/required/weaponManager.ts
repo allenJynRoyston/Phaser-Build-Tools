@@ -37,7 +37,12 @@ export class WEAPON_MANAGER {
         spreadX = quadrant === 1 ? -spreadX : spreadX
         spreadY = quadrant === 3 ? -spreadY : spreadY
 
-    return {x1: trackingbox.x + spreadX, y1: trackingbox.y + spreadY, x2: trackingbox.x - spreadX, y2: trackingbox.y - spreadY}
+    return {
+      x1: trackingbox.x + spreadX,
+      y1: trackingbox.y + spreadY,
+      x2: trackingbox.x - spreadX,
+      y2: trackingbox.y - spreadY
+    }
   }
   /******************
 
@@ -91,7 +96,7 @@ export class WEAPON_MANAGER {
         weapon.bulletSpeed = data.bulletSpeed;
         weapon.bulletAngleOffset = 90
         weapon.multiFire = true;
-
+        
         if(data.spriteAnimation.length > 0){
           weapon.bullets.callAll('animations.add', 'animations', 'fire', data.spriteAnimation, 20, true);
           weapon.bullets.callAll('play', null, 'fire');
