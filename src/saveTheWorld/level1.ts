@@ -1113,11 +1113,15 @@ class PhaserGameObject {
         let game = phaserMaster.game();
         let player = phaserSprites.get('player')
         let onDestroy = (enemy:any) => {
+            player.removeTarget();
             let {gameData} = phaserMaster.getOnly(['gameData'])
                  gameData.score += 10000
             saveData('score', gameData.score)
             let {scoreText} = phaserTexts.getOnly(['scoreText'])
                 scoreText.updateScore();
+            game.time.events.add(Phaser.Timer.SECOND * 2, () => {
+              endLevel()
+            })
         }
         let onDamage = (enemy:any) => {
           let health = Math.round((enemy.health/enemy.maxHealth)*100)
@@ -1125,7 +1129,7 @@ class PhaserGameObject {
         }
         let onUpdate = () => {}
         let enemy = enemyManager.createBoss1(options, onDamage, onDestroy, onUpdate)
-        player.assignFocus(enemy)
+        player.assignTarget(enemy.targetingBox)
       }
       /******************/
 
@@ -1403,28 +1407,6 @@ class PhaserGameObject {
           if(phaserControls.checkWithDelay( {isActive: true, key: 'B', delay:  500} ) && gameData.player.special > 0){
             loseSpecial()
             player.fireSubweapon()
-            // if(specialWeapon !== undefined){
-            //   // reset speciaal timer and start charge animation
-            //   // updateShipSpecial(0, true)
-            //   // game.time.events.add(50, () => {
-            //   //   updateShipSpecial(100, false, secondaryWeapon.cooldown-50)
-            //   // }).autoDestroy = true;
-            // }
-            //
-            // switch(secondaryWeapon.reference){
-            //   case 'CLUSTERBOMB':
-            //     createClusterbomb()
-            //     break
-            //   case 'TRIPLEBOMB':
-            //     createTriplebomb()
-            //     break
-            //   case 'TURRET':
-            //     createTurret()
-            //     break
-            //   case 'BLASTRADIUS':
-            //
-            //     break
-            // }
           }
         }
 

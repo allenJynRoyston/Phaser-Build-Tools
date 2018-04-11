@@ -41,7 +41,7 @@ export class ENEMY_MANAGER {
     let targets = [...this.phaserSprites.getGroup('player_hitboxes')]
     let collidables = [...enemy.collidables.primaryWeapon]
     this.game.physics.arcade.overlap(targets, collidables, (target, collidable) => {
-      if(!target.isInvincible && !target.isDead && !target.isDamaged){
+      if(!target.isInvincible && !target.isDead && !target.isDamaged && !target.isForceMoved){
         target.parent.takeDamage(collidable.damgeOnImpact);
         collidable.destroyIt()
       }
@@ -455,7 +455,7 @@ export class ENEMY_MANAGER {
     let enemy = phaserSprites.addFromAtlas({name: `enemy_${game.rnd.integer()}`, group:'enemies', org: 'gameobjects', atlas: atlas, filename: `big_1`, visible: true, x: options.x})
         enemy.anchor.setTo(0.5, 0.5);
         enemy.scale.setTo(1,1);
-        enemy.maxHealth = 15000;
+        enemy.maxHealth = 1500;
         enemy.health = enemy.maxHealth
         enemy.pierceResistence = 1;
         enemy.fallThreshold = game.rnd.integerInRange(0, 75)
@@ -481,7 +481,7 @@ export class ENEMY_MANAGER {
     phaserGroup.add(options.layer, enemy)
 
     //----------------------------  HITBOX
-    let hitboxes = [`big_1_hitbox_1`, `big_1_hitbox_2`]    
+    let hitboxes = [`big_1_hitbox_1`, `big_1_hitbox_2`]
     hitboxes.map(obj => {
       let e_hitbox = phaserSprites.addFromAtlas({name: `enemy_hitbox_${game.rnd.integer()}`, group:'enemy_hitboxes', atlas: atlas, filename: obj, alpha: this.showHitbox ? 0.75 : 0})
           e_hitbox.anchor.setTo(0.5, 0.5)
@@ -491,15 +491,16 @@ export class ENEMY_MANAGER {
     //----------------------------
 
     //----------------------------  create tracking box
-    let trackingbox = phaserSprites.addFromAtlas({name: `enemy_hitbox_${game.rnd.integer()}`, group:'enemy_hitboxes', width: enemy.width, height: enemy.height, atlas: atlas, filename: hitboxes[0], alpha: 0})
-        trackingbox.anchor.setTo(0.5, 0.5)
-        trackingbox.sync = () => {
+    let targetingBox = phaserSprites.addFromAtlas({name: `targetingBox_${game.rnd.integer()}`, group:'enemy_hitboxes', width: enemy.width, height: enemy.height, atlas: atlas, filename: hitboxes[0], alpha: this.showHitbox ? 0.75 : 0})
+        targetingBox.anchor.setTo(0.5, 0.5)
+        targetingBox.sync = () => {
           let player = phaserSprites.get('player')
-          trackingbox.x = enemy.x
-          trackingbox.y = enemy.y
-          trackingbox.angle = Math.ceil( (360 / (2 * Math.PI)) * game.math.angleBetween(trackingbox.x, trackingbox.y, player.x, player.y) - 90 )
+          targetingBox.x = enemy.x
+          targetingBox.y = enemy.y
+          targetingBox.angle = Math.ceil( (360 / (2 * Math.PI)) * game.math.angleBetween(targetingBox.x, targetingBox.y, player.x, player.y) - 90 )
         }
-        enemy.trackingbox = trackingbox;
+        enemy.targetingBox = targetingBox;
+    //----------------------------
 
     //---------------------------- AMMO
     let ammo = this.weaponManager.enemyBullet(9);
@@ -552,7 +553,7 @@ export class ENEMY_MANAGER {
       onUpdate(enemy);
 
       // tracking box follows player
-      trackingbox.sync();
+      targetingBox.sync();
 
       if(game.time.returnTrueTime() > enemy.fireDelay && !enemy.isDestroyed && (enemy.y > enemy.game.canvas.height * .3) ){
           enemy.fireDelay = game.time.returnTrueTime() + enemy.fireTimer
@@ -637,28 +638,38 @@ export class ENEMY_MANAGER {
        weaponSystem.destroyIt()
      })
 
-     // destroy trackingbox
-     phaserSprites.destroy(trackingbox.name);
+     // destroy targetingBox
+     phaserSprites.destroy(targetingBox.name);
 
-    // explosion interval
-     enemy.explodeInterval = game.time.events.loop( 500, () => {
-       this.effectsManager.createExplosion(enemy.x + game.rnd.integerInRange(-enemy.width/2, enemy.width/2), enemy.y + game.rnd.integerInRange(-enemy.height/2, enemy.height/2), 1, enemy.onLayer + 1)
-     })
+    this.weaponManager.createExplosionVacuum(enemy.x, enemy.y, 2, enemy.onLayer + 1, 10)
+    enemy.game.add.tween(enemy).to( {y: enemy.y - 100}, 6000, Phaser.Easing.Linear.Out, true, 0, 0, false)
 
-     // tween
-     enemy.game.add.tween(enemy.scale).to( {x: 0.85, y:0.85}, 500, Phaser.Easing.Linear.Out, true, 500, 0, false).
-       onComplete.add(() => {
-         this.weaponManager.createExplosionVacuum(enemy.x, enemy.y, 1.5, enemy.onLayer + 1, 10)
-         let debris = this.effectsManager.debris(50);
-         debris = debris;
-         debris.customFire(enemy)
-         game.time.events.remove(enemy.explodeInterval)
-         onDestroy(enemy);
-         enemy.children.map(obj => {
-           this.phaserSprites.destroy(obj.name);
-         })
-         phaserSprites.destroy(enemy.name);
+    game.time.events.add(Phaser.Timer.SECOND * 2, () => {
+
+       // explosion interval
+       enemy.explodeInterval = game.time.events.loop( 150, () => {
+         enemy.tint = 1 * 0xff0000;
+         enemy.game.add.tween(enemy).to( {tint: 1 * 0xffffff}, 50, Phaser.Easing.Linear.Out, true, 0, 0, false)
+         this.effectsManager.createExplosion(enemy.x + game.rnd.integerInRange(-enemy.width/2, enemy.width/2), enemy.y + game.rnd.integerInRange(-enemy.height/2, enemy.height/2), 1, enemy.onLayer + 1)
        })
+
+       onDestroy(enemy);
+       // tween
+
+       enemy.game.add.tween(enemy.scale).to( {x: 0.75, y:0.75}, 4500, Phaser.Easing.Linear.Out, true, 0, 0, false).
+         onComplete.add(() => {
+           this.weaponManager.createExplosionVacuum(enemy.x, enemy.y, 1.5, enemy.onLayer + 1, 10)
+           let debris = this.effectsManager.debris(100);
+           debris = debris;
+           debris.customFire(enemy)
+           game.time.events.remove(enemy.explodeInterval)
+           enemy.children.map(obj => {
+             this.phaserSprites.destroy(obj.name);
+           })
+           phaserSprites.destroy(enemy.name);
+         })
+
+       }).autoDestroy = true;
     }
     //----------------------------
 
