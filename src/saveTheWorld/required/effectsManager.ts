@@ -6,6 +6,10 @@ export class EFFECTS_MANAGER {
   phaserMaster:any;
   phaserGroup:any
   atlas:any;
+  maxExplosions:number;
+  currentExplosionCount:number;
+  currentAmmoCount:number;
+  maxAmmo:number;
 
   constructor(){
 
@@ -17,6 +21,11 @@ export class EFFECTS_MANAGER {
     this.phaserMaster = phaserMaster;
     this.phaserGroup = phaserGroup;
     this.atlas = atlas
+
+    this.currentExplosionCount = 0
+    this.maxExplosions = 5
+    this.currentAmmoCount = 0
+    this.maxAmmo = 3
   }
 
 
@@ -84,124 +93,112 @@ export class EFFECTS_MANAGER {
   /******************
   /*******************/
   public createExplosion(x:number, y:number, scale:number, layer:number, onDestroy:any = () => {}, onUpdate:any = () => {}){
-    let game = this.game
-    let {phaserSprites, phaserGroup, atlas} = this;
-    let data  = {
-      spriteAnimation: Phaser.Animation.generateFrameNames('explosion2_layer_', 1, 12)
-    }
 
-    let explosion = phaserSprites.addFromAtlas({name: `explosion_${game.rnd.integer()}`, group: 'noimpactExplosions',  x: x, y: y, atlas: atlas, filename: data.spriteAnimation[0]})
-        explosion.scale.setTo(scale, scale)
-        explosion.anchor.setTo(0.5, 0.5)
-
-        explosion.animations.add('explosion', data.spriteAnimation, 1, true)
-        explosion.animations.play('explosion', 30, false).onComplete.add(() => {
-            explosion.destroyIt()
-        }, explosion);
-
-
-        explosion.destroyIt = () => {
-          phaserSprites.destroy(explosion.name)
+    if(this.currentExplosionCount < this.maxExplosions){
+        this.currentExplosionCount++
+        let game = this.game
+        let {phaserSprites, phaserGroup, atlas} = this;
+        let data  = {
+          spriteAnimation: Phaser.Animation.generateFrameNames('explosion2_layer_', 1, 12)
         }
 
-    phaserGroup.add(layer ===  undefined ? this.phaserMaster.get('layers').VISUALS : layer, explosion)
+        let explosion = phaserSprites.addFromAtlas({name: `explosion_${game.rnd.integer()}`, group: 'noimpactExplosions',  x: x, y: y, atlas: atlas, filename: data.spriteAnimation[0]})
+            explosion.scale.setTo(scale, scale)
+            explosion.anchor.setTo(0.5, 0.5)
 
-    return explosion;
+            explosion.animations.add('explosion', data.spriteAnimation, 1, true)
+            explosion.animations.play('explosion', 30, false).onComplete.add(() => {
+                explosion.destroyIt()
+            }, explosion);
+
+
+            explosion.destroyIt = () => {
+              this.currentExplosionCount--
+              phaserSprites.destroy(explosion.name)
+            }
+
+        phaserGroup.add(layer ===  undefined ? this.phaserMaster.get('layers').VISUALS : layer, explosion)
+
+        return explosion;
+      }
   }
   /******************/
 
   /******************/
   public pelletImpact(x:number, y:number, scale:number, layer:number){
-    let game = this.game
-    let {phaserSprites, phaserGroup, atlas} = this;
-    let data  = {
-      spriteAnimation: Phaser.Animation.generateFrameNames('sparks_', 1, 5)
-    }
+    if(this.currentAmmoCount < this.maxAmmo){
+        this.currentAmmoCount++
+        let game = this.game
+        let {phaserSprites, phaserGroup, atlas} = this;
+        let data  = {
+          spriteAnimation: Phaser.Animation.generateFrameNames('sparks_', 1, 5)
+        }
 
-    let explosion = phaserSprites.addFromAtlas({name: `impact_${game.rnd.integer()}`, group: 'noimpactExplosions',  x: x, y: y, atlas: atlas, filename: data.spriteAnimation[0]})
-        explosion.scale.setTo(scale, scale)
-        explosion.anchor.setTo(0.5, 0.5)
-        explosion.animations.add('explosion', data.spriteAnimation, 1, true)
-        explosion.animations.play('explosion', 30, false).onComplete.add(() => {
-            explosion.destroyIt()
-        }, explosion);
+        let explosion = phaserSprites.addFromAtlas({name: `impact_${game.rnd.integer()}`, group: 'noimpactExplosions',  x: x, y: y, atlas: atlas, filename: data.spriteAnimation[0]})
+            explosion.scale.setTo(scale, scale)
+            explosion.anchor.setTo(0.5, 0.5)
+            explosion.animations.add('explosion', data.spriteAnimation, 1, true)
+            explosion.animations.play('explosion', 30, false).onComplete.add(() => {
+                explosion.destroyIt()
+            }, explosion);
 
-    explosion.destroyIt = () => {
-      phaserSprites.destroy(explosion.name)
-    }
+        explosion.destroyIt = () => {
+          this.currentAmmoCount --
+          phaserSprites.destroy(explosion.name)
+        }
 
-    phaserGroup.add(layer ===  undefined ? this.phaserMaster.get('layers').BULLET_IMPACT : layer, explosion)
+        phaserGroup.add(layer ===  undefined ? this.phaserMaster.get('layers').BULLET_IMPACT : layer, explosion)
 
-    game.physics.enable(explosion, Phaser.Physics.ARCADE);
-    return explosion;
+        game.physics.enable(explosion, Phaser.Physics.ARCADE);
+        return explosion;
+      }
   }
   /******************/
 
   /******************/
   public blueImpact(x:number, y:number, scale:number, layer:number){
-    let game = this.game
-    let {phaserSprites, phaserGroup, atlas} = this;
-    let data  = {
-      spriteAnimation: Phaser.Animation.generateFrameNames('blue_explosion_small_layer_', 1, 7)
+    if(this.currentAmmoCount < this.maxAmmo){
+        this.currentAmmoCount++
+        let game = this.game
+        let {phaserSprites, phaserGroup, atlas} = this;
+        let data  = {
+          spriteAnimation: Phaser.Animation.generateFrameNames('blue_explosion_small_layer_', 1, 7)
+        }
+
+        let frames = Phaser.Animation.generateFrameNames('blue_explosion_small_layer_', 1, 7);
+        let explosion = phaserSprites.addFromAtlas({name: `impact_${game.rnd.integer()}`, group: 'noimpactExplosions',  x: x, y: y, atlas: atlas, filename: data.spriteAnimation[0]})
+            explosion.scale.setTo(scale, scale)
+            explosion.anchor.setTo(0.5, 0.5)
+            game.physics.enable(explosion, Phaser.Physics.ARCADE);
+            explosion.animations.add('explosion', data.spriteAnimation, 1, true)
+            explosion.animations.play('explosion', 30, false).onComplete.add(() => {
+                explosion.destroyIt()
+            }, explosion);
+
+        explosion.destroyIt = () => {
+          this.currentAmmoCount --
+          phaserSprites.destroy(explosion.name)
+        }
+
+        phaserGroup.add(layer ===  undefined ? this.phaserMaster.get('layers').BULLET_IMPACT : layer, explosion)
+
+        return explosion;
     }
-
-    let frames = Phaser.Animation.generateFrameNames('blue_explosion_small_layer_', 1, 7);
-    let explosion = phaserSprites.addFromAtlas({name: `impact_${game.rnd.integer()}`, group: 'noimpactExplosions',  x: x, y: y, atlas: atlas, filename: data.spriteAnimation[0]})
-        explosion.scale.setTo(scale, scale)
-        explosion.anchor.setTo(0.5, 0.5)
-        game.physics.enable(explosion, Phaser.Physics.ARCADE);
-        explosion.animations.add('explosion', data.spriteAnimation, 1, true)
-        explosion.animations.play('explosion', 30, false).onComplete.add(() => {
-            explosion.destroyIt()
-        }, explosion);
-
-    explosion.destroyIt = () => {
-      phaserSprites.destroy(explosion.name)
-    }
-
-    phaserGroup.add(layer ===  undefined ? this.phaserMaster.get('layers').BULLET_IMPACT : layer, explosion)
-
-    return explosion;
   }
   /******************/
 
   /******************/
   public orangeImpact(x:number, y:number, scale:number, layer:number){
-    let game = this.game
-    let {phaserSprites, phaserGroup, atlas} = this;
-    let data  = {
-      spriteAnimation: Phaser.Animation.generateFrameNames('orange_ring_explosion_layer_', 1, 7)
-    }
+    if(this.currentAmmoCount < this.maxAmmo){
+        this.currentAmmoCount++
+        let game = this.game
+        let {phaserSprites, phaserGroup, atlas} = this;
+        let data  = {
+          spriteAnimation: Phaser.Animation.generateFrameNames('orange_ring_explosion_layer_', 1, 7)
+        }
 
-    let frames = Phaser.Animation.generateFrameNames('orange_ring_explosion_layer_', 1, 7);
-    let explosion = phaserSprites.addFromAtlas({name: `impact_${game.rnd.integer()}`, group: 'noimpactExplosions',  x: x, y: y, atlas: atlas, filename: data.spriteAnimation[0]})
-    explosion.scale.setTo(scale, scale)
-    explosion.anchor.setTo(0.5, 0.5)
-    game.physics.enable(explosion, Phaser.Physics.ARCADE);
-    explosion.animations.add('explosion', data.spriteAnimation, 1, true)
-    explosion.animations.play('explosion', 30, false).onComplete.add(() => {
-        explosion.destroyIt()
-    }, explosion);
-
-    explosion.destroyIt = () => {
-      phaserSprites.destroy(explosion.name)
-    }
-
-    phaserGroup.add(layer ===  undefined ? this.phaserMaster.get('layers').BULLET_IMPACT : layer, explosion)
-
-    return explosion;
-  }
-  /******************/
-
-  /******************/
-  public electricDischarge(x:number, y:number, scale:number, layer:number){
-    let game = this.game
-    let {phaserSprites, phaserGroup, atlas} = this;
-    let data  = {
-      spriteAnimation: Phaser.Animation.generateFrameNames('disintegrate', 1, 10)
-    }
-
-    let explosion = phaserSprites.addFromAtlas({name: `impact_${game.rnd.integer()}`, group: 'noimpactExplosions',  x: x, y: y, atlas: atlas, filename: data.spriteAnimation[0]})
+        let frames = Phaser.Animation.generateFrameNames('orange_ring_explosion_layer_', 1, 7);
+        let explosion = phaserSprites.addFromAtlas({name: `impact_${game.rnd.integer()}`, group: 'noimpactExplosions',  x: x, y: y, atlas: atlas, filename: data.spriteAnimation[0]})
         explosion.scale.setTo(scale, scale)
         explosion.anchor.setTo(0.5, 0.5)
         game.physics.enable(explosion, Phaser.Physics.ARCADE);
@@ -210,13 +207,46 @@ export class EFFECTS_MANAGER {
             explosion.destroyIt()
         }, explosion);
 
-    explosion.destroyIt = () => {
-      phaserSprites.destroy(explosion.name)
+        explosion.destroyIt = () => {
+          this.currentAmmoCount --
+          phaserSprites.destroy(explosion.name)
+        }
+
+        phaserGroup.add(layer ===  undefined ? this.phaserMaster.get('layers').BULLET_IMPACT : layer, explosion)
+
+        return explosion;
+      }
+  }
+  /******************/
+
+  /******************/
+  public electricDischarge(x:number, y:number, scale:number, layer:number){
+    if(this.currentAmmoCount < this.maxAmmo){
+        this.currentAmmoCount++
+        let game = this.game
+        let {phaserSprites, phaserGroup, atlas} = this;
+        let data  = {
+          spriteAnimation: Phaser.Animation.generateFrameNames('disintegrate', 1, 10)
+        }
+
+        let explosion = phaserSprites.addFromAtlas({name: `impact_${game.rnd.integer()}`, group: 'noimpactExplosions',  x: x, y: y, atlas: atlas, filename: data.spriteAnimation[0]})
+            explosion.scale.setTo(scale, scale)
+            explosion.anchor.setTo(0.5, 0.5)
+            game.physics.enable(explosion, Phaser.Physics.ARCADE);
+            explosion.animations.add('explosion', data.spriteAnimation, 1, true)
+            explosion.animations.play('explosion', game.rnd.integerInRange(20, 30), false).onComplete.add(() => {
+                explosion.destroyIt()
+            }, explosion);
+
+        explosion.destroyIt = () => {
+          this.currentAmmoCount --
+          phaserSprites.destroy(explosion.name)
+        }
+
+        phaserGroup.add(layer ===  undefined ? this.phaserMaster.get('layers').BULLET_IMPACT : layer, explosion)
+
+        return explosion;
     }
-
-    phaserGroup.add(layer ===  undefined ? this.phaserMaster.get('layers').BULLET_IMPACT : layer, explosion)
-
-    return explosion;
   }
   /******************/
 

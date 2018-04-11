@@ -200,6 +200,9 @@ class PhaserGameObject {
           ENEMIES: 3,
           ENEMIES_OVER: 4,
 
+          ENEMY_BULLETS: 5,
+          PLAYER_BULLETS: 5,
+
           PLAYER_UNDER: 5,
           PLAYER: 6,
           PLAYER_OVER: 7,
@@ -213,11 +216,8 @@ class PhaserGameObject {
           FOREGROUND_0: 11,
           FOREGROUND_1: 12,
 
-          ENEMY_BULLETS: 13,
-          PLAYER_BULLETS: 13,
 
           UI: 14,
-          UI_MENU_BUTTONS: 15,
           OVERLAY: 20
         }
 
@@ -252,13 +252,10 @@ class PhaserGameObject {
           unpauseGame();
         }, this);
 
+        //  FIXED CAMERA
         let UI = phaserGroup.layer(layerDefinitions.UI)
         UI.fixedToCamera = true;
         UI.cameraOffset.setTo(0, 0);
-
-        let UI_MENU_BUTTONS = phaserGroup.layer(layerDefinitions.UI_MENU_BUTTONS)
-        UI_MENU_BUTTONS.fixedToCamera = true;
-        UI_MENU_BUTTONS.cameraOffset.setTo(0, 0);
 
 
         buildTransitionScreen()
@@ -385,8 +382,10 @@ class PhaserGameObject {
 
       /******************/
       function buildMenuAndButtons(){
+          let {w, h} = phaserMaster.getResolution()
+
           // BUILD MENU BUTTONS
-          let menuButton1 = phaserSprites.addFromAtlas({ name: `menuButton1`, group: 'menuButtons', x: game.world.centerX, y: game.world.centerY + 125, atlas: 'atlas_main', filename: 'ui_button', visible: true });
+          let menuButton1 = phaserSprites.addFromAtlas({ name: `menuButton1`, group: 'menuButtons', x: w/2, y:h/2 + 125, atlas: 'atlas_main', filename: 'ui_button', visible: false });
               menuButton1.anchor.setTo(0.5, 0.5)
               menuButton1.init = () => {
                 menuButton1.visible = false
@@ -394,10 +393,11 @@ class PhaserGameObject {
               menuButton1.reveal = function(){
                 this.visible = true;
               }
-          let menuButton1Text = phaserTexts.add({name: 'menuButton1Text', group: 'ui',  font: 'gem', x: menuButton1.x, y: menuButton1.y,  size: 14, default: ``})
-              menuButton1Text.anchor.setTo(0.5, 0.5)
+              menuButton1.text = phaserTexts.add({name: 'menuButton1Text', group: 'ui',  font: 'gem', size: 14, default: ``})
+              menuButton1.text.anchor.setTo(0.5, 0.5)
+              menuButton1.addChild(menuButton1.text)
 
-          let menuButton2 = phaserSprites.addFromAtlas({ name: `menuButton2`, group: 'menuButtons',  x: game.world.centerX, y: game.world.centerY + 175,  atlas: 'atlas_main', filename: 'ui_button', visible: true });
+          let menuButton2 = phaserSprites.addFromAtlas({ name: `menuButton2`, group: 'menuButtons',  x: w/2, y: h/2 + 175,  atlas: 'atlas_main', filename: 'ui_button', visible: true });
               menuButton2.anchor.setTo(0.5, 0.5)
               menuButton2.init = () => {
                 menuButton2.visible = false
@@ -405,10 +405,11 @@ class PhaserGameObject {
               menuButton2.reveal = function(){
                 this.visible = true;
               }
-          let menuButton2Text = phaserTexts.add({name: 'menuButton2Text', group: 'ui',  font: 'gem', x: menuButton2.x, y: menuButton2.y,  size: 14, default: ``})
-              menuButton2Text.anchor.setTo(0.5, 0.5)
+              menuButton2.text = phaserTexts.add({name: 'menuButton2Text', group: 'ui',  font: 'gem', x: menuButton2.x, y: menuButton2.y,  size: 14, default: ``})
+              menuButton2.text.anchor.setTo(0.5, 0.5)
+              menuButton2.addChild(menuButton2.text)
 
-          let menuButtonCursor = phaserSprites.addFromAtlas({ name: `menuButtonCursor`, group: 'menuButtons', x: game.world.centerX - 125, atlas: 'atlas_main', filename: 'ui_cursor', visible: true });
+          let menuButtonCursor = phaserSprites.addFromAtlas({ name: `menuButtonCursor`, group: 'menuButtons', x: w/2 - 125, atlas: 'atlas_main', filename: 'ui_cursor', visible: true });
               menuButtonCursor.anchor.setTo(0.5, 0.5)
               menuButtonCursor.init = () => {
                 menuButtonCursor.visible = false
@@ -424,7 +425,7 @@ class PhaserGameObject {
               menuButtonCursor.updateLocation(1);
 
           // add to layers
-          phaserGroup.addMany(phaserMaster.get('layers').UI_MENU_BUTTONS, [menuButton1, menuButton2, menuButtonCursor])
+          phaserGroup.addMany(phaserMaster.get('layers').UI, [menuButton1, menuButton2, menuButtonCursor])
       }
       /******************/
 
@@ -799,7 +800,7 @@ class PhaserGameObject {
             })
         }
 
-        let bossbar_portrait = phaserSprites.addFromAtlas({x: 0, y: -2, name: `bossbar_portrait`, filename: 'bossbar_picture', atlas: 'atlas_main', visible: true})
+        let bossbar_portrait = phaserSprites.addFromAtlas({x: -18, y: -2, name: `bossbar_portrait`, filename: 'bossbar_picture', atlas: 'atlas_main', visible: true})
         healthbar_boss.addChild(bossbar_portrait)
 
         // states
@@ -1252,11 +1253,19 @@ class PhaserGameObject {
 
       /******************/
       function director(){
-        let {bossMode} = phaserMaster.getOnly(['bossMode'])
+        let {gameData, bossMode, powerupTimer} = phaserMaster.getOnly(['gameData', 'bossMode', 'powerupTimer'])
         let inGameSeconds = incrementTime(0.5)
         let enemyLayer = phaserMaster.get('layers').ENEMIES
 
-        if(inGameSeconds === 0.5){
+
+        // add to powerupbar every 2 seconds
+        if(game.time.returnTrueTime() > powerupTimer){
+          phaserMaster.forceLet('powerupTimer', gameData.player.powerup < 30 ? game.time.returnTrueTime() + (Phaser.Timer.SECOND*1) : game.time.returnTrueTime() + (Phaser.Timer.SECOND/2) )
+          addPowerup();
+        }
+
+
+        if(inGameSeconds === 60){
           startBossBattle(() => {
             createBoss({
               x: game.world.width/2,
@@ -1267,28 +1276,28 @@ class PhaserGameObject {
         }
 
         if(!bossMode){
-          // if(inGameSeconds % 5 === 0){
-          //   spawnSpecial(game.rnd.integerInRange(0 + 100, game.world.width - 100), 0)
-          // }
-          //
-          // // create a steady steam of aliens to shoot
-          // if(inGameSeconds === 0.5 || inGameSeconds % 2 === 0){
-          //     createSmallEnemy2({
-          //       x: game.rnd.integerInRange(0 + 100, game.world.width - 100),
-          //       y: game.rnd.integerInRange(100, 400),
-          //       iy: game.rnd.integerInRange(0, 80),
-          //       layer: enemyLayer
-          //     });
-          // }
-          //
-          // if(inGameSeconds % 3 === 0){
-          //     createSmallEnemy1({
-          //       x: game.rnd.integerInRange(0 + 100, game.world.width - 100),
-          //       y: game.rnd.integerInRange(100, 400),
-          //       iy: game.rnd.integerInRange(0, 80),
-          //       layer: enemyLayer
-          //     });
-          // }
+          if(inGameSeconds % 5 === 0){
+            spawnSpecial(game.rnd.integerInRange(0 + 100, game.world.width - 100), 0)
+          }
+
+          // create a steady steam of aliens to shoot
+          if(inGameSeconds === 0.5 || inGameSeconds % 2 === 0){
+              createSmallEnemy2({
+                x: game.rnd.integerInRange(0 + 100, game.world.width - 100),
+                y: game.rnd.integerInRange(100, 400),
+                iy: game.rnd.integerInRange(0, 80),
+                layer: enemyLayer
+              });
+          }
+
+          if(inGameSeconds % 3 === 0){
+              createSmallEnemy1({
+                x: game.rnd.integerInRange(0 + 100, game.world.width - 100),
+                y: game.rnd.integerInRange(100, 400),
+                iy: game.rnd.integerInRange(0, 80),
+                layer: enemyLayer
+              });
+          }
         }
 
 
@@ -1349,12 +1358,6 @@ class PhaserGameObject {
             //     game.paused = false
             //   }, 10)
             // }, 10)
-          }
-
-          // add to powerupbar every 2 seconds
-          if(game.time.returnTrueTime() > powerupTimer){
-            phaserMaster.forceLet('powerupTimer', gameData.player.powerup < 30 ? game.time.returnTrueTime() + (Phaser.Timer.SECOND*0.5) : game.time.returnTrueTime() + (Phaser.Timer.SECOND/2) )
-            addPowerup();
           }
 
           // update director EVERY 1/2 second
@@ -1509,14 +1512,13 @@ class PhaserGameObject {
                 tweenTint(bmdImage, 0x000000, 0xffffff, 3000, () => {
                   phaserControls.enableAllInput();
 
-                  let {menuButton1Text, menuButton2Text} = phaserTexts.getOnly(['menuButton1Text', 'menuButton2Text'])
+                  let {menuButton1, menuButton2} = phaserSprites.getOnly(['menuButton1', 'menuButton2'])
                   phaserMaster.changeState('VICTORYSTATE');
                   phaserSprites.getGroup('menuButtons').map(obj => {
                     obj.reveal()
                   })
-
-                  menuButton1Text.setText('NEXT STAGE')
-                  menuButton2Text.setText('SAVE AND QUIT')
+                  menuButton1.text.setText('NEXT STAGE')
+                  menuButton2.text.setText('SAVE AND QUIT')
 
                 });
                 game.add.tween(newsPaper.scale).to( { x: 1, y: 1 }, Phaser.Timer.SECOND*1.5, Phaser.Easing.Bounce.Out, true, 0, 0, false)
@@ -1670,13 +1672,13 @@ class PhaserGameObject {
             tweenTint(bmdImage, 0x000000, 0xffffff, 3000, () => {
               phaserControls.enableAllInput();
 
-              let {menuButton1Text, menuButton2Text} = phaserTexts.getOnly(['menuButton1Text', 'menuButton2Text'])
+              let {menuButton1, menuButton2} = phaserTexts.getOnly(['menuButton1', 'menuButton2'])
               phaserSprites.getGroup('menuButtons').map(obj => {
                 obj.reveal()
               })
 
-              phaserTexts.get('menuButton1Text').setText('RETRY')
-              phaserTexts.get('menuButton2Text').setText('SAVE AND QUIT')
+              menuButton1.text.setText('RETRY')
+              menuButton2.text.setText('SAVE AND QUIT')
 
             });
             game.add.tween(newsPaper.scale).to( { x: 1, y: 1 }, Phaser.Timer.SECOND*1.5, Phaser.Easing.Bounce.Out, true, 0, 0, false)

@@ -22,6 +22,29 @@ export class WEAPON_MANAGER {
   }
 
   /******************/
+  public calculateRotateCoords(spreadAmount:number, trackingbox: any){
+    let angle = trackingbox.angle;
+
+    let anglePercentage = Math.abs(trackingbox.angle)
+    if (anglePercentage > 90){ anglePercentage = Math.abs(anglePercentage - 180)}
+    let quadrant;
+    if(angle >= 0 && angle < 90){ quadrant = 0 }
+    if(angle >= 90 && angle < 180){ quadrant = 1 }
+    if(angle >= -180 && angle < -90){ quadrant = 2 }
+    if(angle >= -90 && angle < 0){ quadrant = 3 }
+    let spreadX = Math.round(spreadAmount - (spreadAmount * (anglePercentage/90)))
+    let spreadY = Math.round((spreadAmount * (anglePercentage/90)))
+        spreadX = quadrant === 1 ? -spreadX : spreadX
+        spreadY = quadrant === 3 ? -spreadY : spreadY
+
+    return {
+      x: spreadX,
+      y: spreadY
+    }
+  }
+  /******************
+
+  /******************/
   public calculateSpread(spreadAmount:number, trackingbox: any){
     let angle = trackingbox.angle;
 
@@ -96,7 +119,7 @@ export class WEAPON_MANAGER {
         weapon.bulletSpeed = data.bulletSpeed;
         weapon.bulletAngleOffset = 90
         weapon.multiFire = true;
-        
+
         if(data.spriteAnimation.length > 0){
           weapon.bullets.callAll('animations.add', 'animations', 'fire', data.spriteAnimation, 20, true);
           weapon.bullets.callAll('play', null, 'fire');

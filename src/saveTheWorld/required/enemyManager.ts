@@ -455,7 +455,7 @@ export class ENEMY_MANAGER {
     let enemy = phaserSprites.addFromAtlas({name: `enemy_${game.rnd.integer()}`, group:'enemies', org: 'gameobjects', atlas: atlas, filename: `big_1`, visible: true, x: options.x})
         enemy.anchor.setTo(0.5, 0.5);
         enemy.scale.setTo(1,1);
-        enemy.maxHealth = 1500;
+        enemy.maxHealth = 15000;
         enemy.health = enemy.maxHealth
         enemy.pierceResistence = 1;
         enemy.fallThreshold = game.rnd.integerInRange(0, 75)
@@ -483,6 +483,7 @@ export class ENEMY_MANAGER {
     //----------------------------  HITBOX
     let hitboxes = [`big_1_hitbox_1`, `big_1_hitbox_2`]
     hitboxes.map(obj => {
+      //this.showHitbox = true
       let e_hitbox = phaserSprites.addFromAtlas({name: `enemy_hitbox_${game.rnd.integer()}`, group:'enemy_hitboxes', atlas: atlas, filename: obj, alpha: this.showHitbox ? 0.75 : 0})
           e_hitbox.anchor.setTo(0.5, 0.5)
           game.physics.enable(e_hitbox, Phaser.Physics.ARCADE);
