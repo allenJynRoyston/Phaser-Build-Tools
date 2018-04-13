@@ -5,7 +5,7 @@
       "declaration": false,
       "noImplicitAny": false,
       "removeComments": true,
-      "noLib": false
+      "lib": ["esnext"]
   },
   "filesGlob": [
       "./**/*.ts",

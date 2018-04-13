@@ -1,4 +1,5 @@
 declare var Phaser:any;
+declare var IterableIterator:any;
 
 // imports must be added in gulpFile as well
 //removeIf(gameBuild)
@@ -113,18 +114,16 @@ class PhaserGameObject {
         game.load.enableParallel = true;
 
         // set canvas color
-        game.stage.backgroundColor = '#2f2f2f';
+        game.stage.backgroundColor = '#000000';
 
         // images
         let folder = 'src/phaser/saveTheWorld/resources'
-        game.load.image('example', `${folder}/images/earth.png`);
-        //game.load.atlas('atlas', `${folder}/spritesheets/heroSelect/heroSelectAtlas.png`, `${folder}/spritesheets/heroSelect/heroSelectAtlas.json`, Phaser.Loader.TEXTURE_ATLAS_JSON_HASH);
-
         game.load.atlas('atlas_main', `${folder}/textureAtlas/main/main.png`, `${folder}/textureAtlas/main/main.json`, Phaser.Loader.TEXTURE_ATLAS_JSON_HASH);
         game.load.atlas('atlas_weapons', `${folder}/textureAtlas/weapons/weaponsAtlas.png`, `${folder}/textureAtlas/weapons/weaponsAtlas.json`, Phaser.Loader.TEXTURE_ATLAS_JSON_HASH);
         game.load.atlas('atlas_large', `${folder}/textureAtlas/large/large.png`, `${folder}/textureAtlas/large/large.json`, Phaser.Loader.TEXTURE_ATLAS_JSON_HASH);
         game.load.atlas('atlas_enemies', `${folder}/textureAtlas/enemies/enemies.png`, `${folder}/textureAtlas/enemies/enemies.json`, Phaser.Loader.TEXTURE_ATLAS_JSON_HASH);
         game.load.atlas('atlas_ships', `${folder}/textureAtlas/ships/ships.png`, `${folder}/textureAtlas/ships/ships.json`, Phaser.Loader.TEXTURE_ATLAS_JSON_HASH);
+        game.load.atlas('atlas_letters', `${folder}/textureAtlas/letters/letters.png`, `${folder}/textureAtlas/letters/letters.json`, Phaser.Loader.TEXTURE_ATLAS_JSON_HASH);
 
         // load music into buffer
         // game.load.audio('music-main', ['src/assets/game/demo1/music/zombies-in-space.ogg']);
@@ -216,6 +215,7 @@ class PhaserGameObject {
           FOREGROUND_0: 11,
           FOREGROUND_1: 12,
 
+          DIALOGBOX: 13,
           UI: 14,
           OVERLAY: 20
         }
@@ -236,6 +236,7 @@ class PhaserGameObject {
         phaserMaster.let('layers', layerDefinitions)
         phaserMaster.let('sharedDebris', effectsManager.debris(200))
         phaserMaster.let('velocityFactor', {x: 0, y: 1})
+        phaserMaster.let('dialogGenerator', null)
 
         // weapon data
         let weaponData = phaserMaster.let('weaponData', game.cache.getJSON('weaponData'));
@@ -257,6 +258,9 @@ class PhaserGameObject {
         UI.fixedToCamera = true;
         UI.cameraOffset.setTo(0, 0);
 
+        let DB = phaserGroup.layer(layerDefinitions.DIALOGBOX)
+        DB.fixedToCamera = true;
+        DB.cameraOffset.setTo(0, 0);
 
         buildTransitionScreen()
         buildBackground()
@@ -268,6 +272,7 @@ class PhaserGameObject {
         buildHealthbar_player()
         buildPow_player()
         buildPortrait_player()
+        buildDialogbox()
         buildHealthbar_boss()
       }
       /******************/
@@ -285,7 +290,7 @@ class PhaserGameObject {
         cosWave = cosWave.filter( (num, index) => {
           num = Math.abs(num)
           if(index < waveSize/2){
-              return num >= to
+            return num >= to
           }
         })
         if(reverse){cosWave = cosWave.reverse()}
@@ -298,11 +303,10 @@ class PhaserGameObject {
             phaserMaster.forceLet('velocityFactor', {x: velocityFactor.x, y:speed})
             window.clearInterval(vInterval)
           }
-        }, duration/(cosWave.length/2))
+        }, duration/cosWave.length)
 
       }
       /******************/
-
 
       /******************/
       function buildTransitionScreen(){
@@ -323,6 +327,62 @@ class PhaserGameObject {
       /******************/
 
       /******************/
+      function buildIntroLettering(callback:any){
+        let skipAnimation = false
+
+        if(skipAnimation){
+          callback()
+        }
+        else{
+          let lettering = buildLetteringSprites('mission 1', 10, 1.1);
+          lettering.y = lettering.y - 100
+          lettering.children.map(obj => {
+            obj.reveal()
+          })
+
+          let divider
+          game.time.events.add(1000, () => {
+            divider = phaserSprites.addFromAtlas({x: game.world.centerX, y: lettering.y + lettering._height + 30, name: `divider`, filename: 'divider', atlas: 'atlas_main', alpha: 0})
+            divider.anchor.setTo(0.5, 0.5)
+            game.add.tween(divider).to( { alpha: 1, y: divider.y-5 }, Phaser.Timer.SECOND, Phaser.Easing.Linear.In, true, 1, 0, false).autoDestroy = true;
+          }).autoDestroy = true
+
+          let sublettering
+          game.time.events.add(2000, () => {
+            sublettering = buildLetteringSprites('into the breach', 10, 0.35);
+            sublettering.y = sublettering.y - 20
+            game.time.events.add(1, () => {
+              sublettering.children.map(obj => {
+                obj.reveal()
+              })
+            })
+          }).autoDestroy = true
+
+          game.time.events.add(4500, () => {
+            changeVelocityFactor(2, 2500);
+            lettering.children.map(obj => {
+              obj.hide()
+            })
+          })
+
+          game.time.events.add(5000, () => {
+            game.add.tween(divider).to( { alpha: 0 }, Phaser.Timer.SECOND, Phaser.Easing.Linear.In, true, 1, 0, false).autoDestroy = true;
+          })
+
+          game.time.events.add(5500, () => {
+            sublettering.children.map(obj => {
+              obj.hide()
+            })
+          })
+
+          game.time.events.add(7000, () => {
+            callback();
+          })
+        }
+      }
+      /******************/
+
+      /******************/
       function buildBackground(){
         let {w, h} = phaserMaster.getResolution()
         let {starMomentum} = phaserMaster.getOnly(['starMomentum'])
@@ -333,7 +393,7 @@ class PhaserGameObject {
             background1.tileScale.y = 0.5
             background1.onUpdate = () =>  {
                 let {velocityFactor} = phaserMaster.getOnly(['velocityFactor'])
-                background1.tilePosition.y += 1*velocityFactor.y
+                background1.tilePosition.y += 0.5*((velocityFactor.y-1)*5) <= 0 ? 0.5 : 0.5*((velocityFactor.y-1)*5)
                 background1.tilePosition.x += (starMomentum.x/4)*velocityFactor.y
             };
         phaserGroup.addMany(phaserMaster.get('layers').BACKGROUND_0, [background1])
@@ -344,8 +404,9 @@ class PhaserGameObject {
             background1.tileScale.y = 0.75
             background2.onUpdate = () => {
                 let {velocityFactor} = phaserMaster.getOnly(['velocityFactor'])
-                background2.tilePosition.y += 5*velocityFactor.y
+                background2.tilePosition.y += 2*((velocityFactor.y-1)*5) <= 0 ? 1 : 2*((velocityFactor.y-1)*5)
                 background2.tilePosition.x += (starMomentum.x/2)*velocityFactor.x
+
             };
         phaserGroup.addMany(phaserMaster.get('layers').BACKGROUND_1, [background2])
 
@@ -353,7 +414,7 @@ class PhaserGameObject {
             foreground1.tilePosition.x = 300
             foreground1.onUpdate = () => {
                 let {velocityFactor} = phaserMaster.getOnly(['velocityFactor'])
-                foreground1.tilePosition.y += 10*velocityFactor.y
+                foreground1.tilePosition.y += 5*((velocityFactor.y-1)*5) <= 0 ? 1.5 : 5*((velocityFactor.y-1)*5)
                 foreground1.tilePosition.x += starMomentum.x*velocityFactor.x
             };
         phaserGroup.addMany(phaserMaster.get('layers').FOREGROUND_0, [foreground1])
@@ -484,38 +545,6 @@ class PhaserGameObject {
                   }
                 }
             };
-
-      }
-      /******************/
-
-      /******************/
-      function buildMission(){
-        let game = phaserMaster.game();
-        let {w, h} = phaserMaster.getResolution()
-        let spacingX = 60
-        let letters = ['M', 'I', 'S', 'S', 'I', 'O', 'N']
-        letters.map( (letter, index) => {
-            let l = phaserSprites.addFromAtlas({x: spacingX, y: 300, name: `M${index}`, group: 'uiLettering', filename: `${letter}`, atlas: 'atlas_main', visible: false})
-            spacingX += l.width + 10
-            phaserGroup.addMany(phaserMaster.get('layers').UI, [l])
-            l.setDefaultPositions();
-
-            l.init = () => {
-              l.x = -200
-              l.scale.setTo(0.1, 0.1)
-            }
-            l.reveal = () => {
-              l.visible = true;
-              game.add.tween(l.scale).to( { x: 1, y: 1 }, Phaser.Timer.SECOND, Phaser.Easing.Elastic.Out, true, index*100, 0, false).
-              game.add.tween(l).to( { x: l.getDefaultPositions().x }, Phaser.Timer.SECOND, Phaser.Easing.Elastic.Out, true, index*50, 0, false).
-                onComplete.add(() => {})
-            }
-            l.hide = () => {
-              game.add.tween(l).to( { alpha: 0, y: l.y - 25 }, Phaser.Timer.SECOND, Phaser.Easing.Exponential.Out, true, index*50, 0, false).
-                onComplete.add(() => {  })
-            }
-            l.init();
-        })
 
       }
       /******************/
@@ -694,20 +723,70 @@ class PhaserGameObject {
         //states
         container.init = () => {
           container.y  = container.y + 200
+          container.isHidden = true
         }
         container.reveal = () => {
-          let y = container.getDefaultPositions().y
-          container.setDefaultPositions();
-          game.add.tween(container).to( { y: y }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, game.rnd.integerInRange(0, 500), 0, false).
-            onComplete.add(() => {})
+          if(container.isHidden){
+            container.isHidden = false;
+            let y = container.getDefaultPositions().y
+            container.setDefaultPositions();
+            game.add.tween(container).to( { y: y }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, game.rnd.integerInRange(0, 500), 0, false).
+              onComplete.add(() => {  })
+          }
         }
         container.hide = () => {
-          game.add.tween(container).to( { y: container.getDefaultPositions().y }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, game.rnd.integerInRange(0, 500), 0, false).
-            onComplete.add(() => {})
+          if(!container.isHidden){
+            container.isHidden = true
+            game.add.tween(container).to( { y: container.getDefaultPositions().y }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, game.rnd.integerInRange(0, 500), 0, false).
+              onComplete.add(() => {})
+          }
         }
 
 
 
+      }
+      /******************/
+
+      /******************/
+      function buildDialogbox(){
+        let {w, h} = phaserMaster.getResolution()
+
+
+        let dialogbox = phaserSprites.addFromAtlas({width: w , height: 110,  name: `dialogbox`, filename: 'dialogbox', atlas: 'atlas_main'})
+            dialogbox.y = h - dialogbox.height;
+        dialogbox.init = () => {
+          dialogbox.x = -dialogbox.width;
+          dialogbox.visible = false
+        }
+
+        dialogbox.reveal = () => {
+          let x = dialogbox.getDefaultPositions().x
+          dialogbox.visible = true;
+          dialogbox.setDefaultPositions();
+          game.add.tween(dialogbox).to( { x: 0 }, Phaser.Timer.SECOND/2, Phaser.Easing.Circular.InOut, true, 1, 0, false).
+            onComplete.add(() => {})
+        }
+
+        dialogbox.hide = () => {
+          dialogbox.text.replaceText('')
+          game.add.tween(dialogbox).to( { x: dialogbox.getDefaultPositions().x }, Phaser.Timer.SECOND/2, Phaser.Easing.Circular.InOut, true, 1, 0, false).
+            onComplete.add(() => {
+              dialogbox.visible = false;
+            })
+        }
+
+        let dialogText = phaserTexts.add({x: dialogbox.x + 100, y: dialogbox.y + 10, name: `dialogtext`, group: 'dialogbox', font: 'gem', default: '', size: 16})
+        dialogText.replaceText = (newText:string, callback:any = () => {}) => {
+          dialogText.alpha = 0;
+          dialogText.setText(newText)
+          game.add.tween(dialogText).to( { alpha: 1 }, Phaser.Timer.SECOND/2, Phaser.Easing.Linear.InOut, true, 1, 0, false).
+            onComplete.add(() => {
+              callback()
+          })
+        }
+
+        dialogbox.text = dialogText
+        phaserGroup.addMany(phaserMaster.get('layers').DIALOGBOX, [dialogbox, dialogText])
       }
       /******************/
 
@@ -753,20 +832,34 @@ class PhaserGameObject {
         // states
         healthbar_player.init = () => {
           healthbar_player.y  = healthbar_player.y + 200
+          healthbar_player.isHidden = true
         }
         healthbar_player.reveal = () => {
-          let y = healthbar_player.getDefaultPositions().y
-          healthbar_player.setDefaultPositions();
-          game.add.tween(healthbar_player).to( { y: y }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, game.rnd.integerInRange(0, 500), 0, false).
-            onComplete.add(() => {
-              healthbar_player.buildLives()
-            })
+          if(healthbar_player.isHidden){
+            healthbar_player.isHidden = false;
+            let y = healthbar_player.getDefaultPositions().y
+            healthbar_player.setDefaultPositions();
+            game.add.tween(healthbar_player).to( { y: y }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, game.rnd.integerInRange(0, 500), 0, false).
+              onComplete.add(() => {
+                healthbar_player.buildLives()
+              })
+          }
         }
         healthbar_player.hide = () => {
-          game.add.tween(healthbar_player).to( { y: healthbar_player.getDefaultPositions().y }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, game.rnd.integerInRange(0, 500), 0, false).
-            onComplete.add(() => {})
+          if(!healthbar_player.isHidden){
+            healthbar_player.isHidden = true
+            game.add.tween(healthbar_player).to( { y: healthbar_player.getDefaultPositions().y }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, game.rnd.integerInRange(0, 500), 0, false).
+              onComplete.add(() => {})
+          }
         }
-
+        healthbar_player.fadeIn = () => {
+            game.add.tween(healthbar_player).to( { alpha: 1 }, Phaser.Timer.SECOND/2, Phaser.Easing.Linear.In, true, 1, 0, false).
+              onComplete.add(() => {})
+        }
+        healthbar_player.fadeOut = () => {
+            game.add.tween(healthbar_player).to( { alpha: 0 }, Phaser.Timer.SECOND/2, Phaser.Easing.Linear.Out, true, 1, 0, false).
+              onComplete.add(() => {})
+        }
 
         // life icons
         healthbar_player.buildLives = () => {
@@ -862,16 +955,31 @@ class PhaserGameObject {
           powerbar.y  = powerbar.y + 200
           powerbar.setup()
           powerbar.updatePowerbar()
+          powerbar.isHidden = true
         }
         powerbar.reveal = () => {
-          let y = powerbar.getDefaultPositions().y
-          powerbar.setDefaultPositions();
-          game.add.tween(powerbar).to( { y: y }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, game.rnd.integerInRange(0, 500), 0, false).
-            onComplete.add(() => {})
+          if(powerbar.isHidden){
+            powerbar.isHidden = false
+            let y = powerbar.getDefaultPositions().y
+            powerbar.setDefaultPositions();
+            game.add.tween(powerbar).to( { y: y }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, game.rnd.integerInRange(0, 500), 0, false).
+              onComplete.add(() => {})
+          }
         }
         powerbar.hide = () => {
-          game.add.tween(powerbar).to( { y: powerbar.getDefaultPositions().y }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, game.rnd.integerInRange(0, 500), 0, false).
-            onComplete.add(() => {})
+          if(!powerbar.isHidden){
+            powerbar.isHidden = true
+            game.add.tween(powerbar).to( { y: powerbar.getDefaultPositions().y }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, game.rnd.integerInRange(0, 500), 0, false).
+              onComplete.add(() => {})
+          }
+        }
+        powerbar.fadeIn = () => {
+            game.add.tween(powerbar).to( { alpha: 1 }, Phaser.Timer.SECOND/2, Phaser.Easing.Linear.In, true, 1, 0, false).
+              onComplete.add(() => {})
+        }
+        powerbar.fadeOut = () => {
+            game.add.tween(powerbar).to( { alpha: 0 }, Phaser.Timer.SECOND/2, Phaser.Easing.Linear.Out, true, 1, 0, false).
+              onComplete.add(() => {})
         }
 
         // SPECIAL ATTACKS
@@ -979,12 +1087,117 @@ class PhaserGameObject {
       /******************/
 
       /******************/
+      function buildLetteringSprites(letters:any, padding:number = 10, scale:number = 1){
+        let game = phaserMaster.game();
+        let {w, h} = phaserMaster.getResolution()
+        let container = game.add.sprite(0, 0);
+            container._width = 0
+            container._height = 0
+
+        letters = letters.split('')
+
+        letters.map( (letter, index) => {
+            if(letter === ' '){
+              container._width += (padding*3)
+            }
+            else{
+              let l = phaserSprites.addFromAtlas({x: container._width, name: `l_${game.rnd.integer()}`, filename: `${letter}`, atlas: 'atlas_letters', visible: false})
+              container._width += l.width + padding
+              container._height = l.height
+              l.setDefaultPositions();
+
+              l.init = () => {
+                l.x = -200
+                l.scale.setTo(0.1, 0.1)
+              }
+              l.reveal = () => {
+                l.visible = true;
+                game.add.tween(l.scale).to( { x: 1, y: 1 }, Phaser.Timer.SECOND, Phaser.Easing.Elastic.Out, true, index*100, 0, false).
+                game.add.tween(l).to( { x: l.getDefaultPositions().x }, Phaser.Timer.SECOND, Phaser.Easing.Elastic.Out, true, index*50, 0, false).
+                  onComplete.add(() => {})
+              }
+              l.hide = () => {
+                game.add.tween(l).to( { alpha: 0, y: l.y - 25 }, Phaser.Timer.SECOND, Phaser.Easing.Exponential.Out, true, index*50, 0, false).
+                  onComplete.add(() => {
+                    phaserSprites.destroy(l.name)
+                  })
+              }
+              l.init();
+              container.addChild(l)
+            }
+        })
+        container.scale.setTo(scale, scale)
+        container.x = w/2 - (container._width/2 - padding)*scale
+        container.y = h/2 - (container.height/2)*scale
+
+        phaserGroup.addMany(phaserMaster.get('layers').UI, [container])
+        return container
+      }
+      /******************/
+
+      /******************/
+      function *dialog(data:any){
+        for(let i = 0; i < data.length; i++){
+          yield data[i]
+        }
+        yield null
+      }
+      /******************/
+
+      /******************/
+      function dialogSequence(script:any, callback:any){
+        let {currentState} = phaserMaster.getState();
+        let gen:any = dialog(script);
+        gen.complete = callback;
+        gen.revertToState = currentState;
+        gen.isReady = false;
+        phaserControls.enableAllActionButtons()
+
+        createDialogBox(gen)
+        gen.finished = () => {
+          [...phaserSprites.getGroup('player_healthbar'), ...phaserSprites.getGroup('player_pow')].map(obj => {
+            obj.fadeIn()
+          })
+          let {portraitContainer} = phaserSprites.getOnly(['portraitContainer']);
+          phaserMaster.changeState(gen.revertToState)
+          gen.dialogbox.hide();
+          callback();
+        }
+
+        phaserMaster.changeState('DIALOG');
+        phaserMaster.forceLet('dialogGenerator', gen)
+      }
+      /******************/
+
+      /******************/
+      function createDialogBox(gen){
+        let {portraitContainer, dialogbox} = phaserSprites.getOnly(['portraitContainer', 'dialogbox']);
+        // hide healthbar/powerbar
+        [...phaserSprites.getGroup('player_healthbar'), ...phaserSprites.getGroup('player_pow')].map(obj => {
+          obj.fadeOut()
+        })
+
+        // reveal portrait and dialogbox
+        gen.portraitState = portraitContainer.isHidden;  // get current portrait state
+        portraitContainer.reveal();
+        dialogbox.reveal();
+
+        game.time.events.add(Phaser.Timer.SECOND*1.5, () => {
+          gen.dialogbox = dialogbox;
+          let txtMsg = gen.next().value.text;
+          gen.dialogbox.text.replaceText(txtMsg, () => {
+            gen.isReady = true
+          })
+        })
+      }
+      /******************/
+
+      /******************/
       function preloadComplete(){
         let game = phaserMaster.game();
         let isDevMode = phaserMaster.get('devMode')
         let {overlay} = phaserSprites.getOnly(['overlay']);
-        let {clock, roundTime} = phaserMaster.getOnly(['clock', 'roundTime']);
-        let skipAnimation = true
+        let skipAnimation = false
 
         // run init on all ui elements to put them in their initial place
         phaserSprites.getAll('ARRAY').map(obj => {
@@ -995,39 +1208,60 @@ class PhaserGameObject {
           obj.init()
         })
 
-        // update specials
+        // get correct special weapon count
         updateSpecials()
 
+        // create player
+        let player = createPlayer();
+            game.camera.follow(player);
+
+        // wipein
         overlayControls('WIPEOUT', () => {
-          utilityManager.overlayBGControls({transition: 'FADEOUT', delay: 0, speed: skipAnimation ? 1 : 250}, () => {
-
-            phaserSprites.getGroup('ui').map(obj => {
-              obj.reveal()
-            })
-
-            let player = createPlayer();
-                player.moveToStart();
-                game.camera.follow(player);
-
-
-            // LEAVE FOR TESTING
-            game.time.events.add(Phaser.Timer.SECOND * 1*5, () => {
-                //endLevel();
-                addSpecial()
-            }).autoDestroy = true;
-
-
-            clock.start()
-            phaserMaster.changeState('READY');
-
+          utilityManager.overlayBGControls({transition: 'FADEOUT', delay: 500, speed: skipAnimation ? 1 : 1000}, () => {
+            playIntroSequence()
           })
         })
       }
       /******************/
 
       /******************/
+      function playIntroSequence(){
+        let {clock} = phaserMaster.getOnly(['clock']);
+        let player = phaserSprites.get('player')
+
+        // intro lettering
+        buildIntroLettering(() => {
+          game.time.events.add(Phaser.Timer.SECOND, () => {
+            // create player
+            player.moveToStart();
+
+            let script = [
+              {text: 'Red 6 checking in.'},
+              {text: 'Area is clear.'},
+              {text: 'Proceeding with mining operations.'}
+            ]
+            dialogSequence(script, () => {
+              game.time.events.add(Phaser.Timer.SECOND, () => {
+                phaserSprites.getGroup('ui').map(obj => {
+                  obj.reveal()
+                })
+                // start game
+                clock.start()
+                phaserMaster.changeState('READY');
+              }).autoDestroy = true;
+            })
+
+          }).autoDestroy = true
+
+
+
+        })
+      }
+      /******************/
+
+      /******************/
       function overlayControls(transition:string, callback:any = ()=>{}){
-        let skipAnimation = true
+        let skipAnimation = false
         utilityManager.overlayControls(
           { transition: transition,
             delay: skipAnimation ? 0 : 1000,
@@ -1421,7 +1655,6 @@ class PhaserGameObject {
         let inGameSeconds = incrementTime(0.5)
         let enemyLayer = phaserMaster.get('layers').ENEMIES
 
-
         // add to powerupbar every 2 seconds
         if(game.time.returnTrueTime() > powerupTimer){
           phaserMaster.forceLet('powerupTimer', gameData.player.powerup < 30 ? game.time.returnTrueTime() + (Phaser.Timer.SECOND*1) : game.time.returnTrueTime() + (Phaser.Timer.SECOND/2) )
@@ -1429,7 +1662,7 @@ class PhaserGameObject {
         }
 
 
-        if(inGameSeconds === 5){
+        if(inGameSeconds === 15){
           startBossBattle(() => {
             createBoss({
               x: game.world.width/2,
@@ -1440,19 +1673,19 @@ class PhaserGameObject {
         }
 
         if(!bossMode){
-          // if(inGameSeconds % 5 === 0){
-          //   spawnSpecial(game.rnd.integerInRange(0 + 100, game.world.width - 100), 0)
-          // }
+          if(inGameSeconds % 5 === 0){
+            spawnSpecial(game.rnd.integerInRange(0 + 100, game.world.width - 100), 0)
+          }
 
-          // create a steady steam of aliens to shoot
-          // if(inGameSeconds === 0.5 || inGameSeconds % 2 === 0){
-          //     createSmallEnemy2({
-          //       x: game.rnd.integerInRange(0 + 100, game.world.width - 100),
-          //       y: game.rnd.integerInRange(100, 400),
-          //       iy: game.rnd.integerInRange(0, 80),
-          //       layer: enemyLayer
-          //     });
-          // }
+          //create a steady steam of aliens to shoot
+          if(inGameSeconds === 0.5 || inGameSeconds % 2 === 0){
+              createSmallEnemy2({
+                x: game.rnd.integerInRange(0 + 100, game.world.width - 100),
+                y: game.rnd.integerInRange(100, 400),
+                iy: game.rnd.integerInRange(0, 80),
+                layer: enemyLayer
+              });
+          }
 
           if(inGameSeconds % 2 === 0){
               createSmallEnemy1({
@@ -1482,13 +1715,23 @@ class PhaserGameObject {
           health: 100
         }
          phaserMaster.forceLet('bossHealth', boss.health)
-         changeVelocityFactor(5, 5000);
+         changeVelocityFactor(3, 5000);
          player.moveTo(game.world.centerX, game.world.centerY + game.world.centerY/2, 6000, () => {
            phaserMaster.forceLet('showWarningBand', false)
            game.time.events.add(Phaser.Timer.SECOND * 1, () => {
-             scoreContainer.hide();
-             healthbar_boss.reveal()
-             callback()
+
+             let script = [
+               {text: 'Do you guys see that?'},
+               {text: 'Yes, take it out.'},
+               {text: 'Easier said then done...'}
+             ]
+             dialogSequence(script, () => {
+               scoreContainer.hide();
+               healthbar_boss.reveal()
+               callback()
+             })
+
+
            }, this).autoDestroy = true;
          })
       }
@@ -1498,21 +1741,33 @@ class PhaserGameObject {
       function update() {
         let game = phaserMaster.game();
         let {currentState} = phaserMaster.getState();
-        let {starMomentum, primaryWeapon, secondaryWeapon, menuButtonSelection, elapsedTime, powerupTimer, gameData} = phaserMaster.getOnly(['starMomentum', 'primaryWeapon', 'secondaryWeapon', 'menuButtonSelection', 'elapsedTime', 'powerupTimer', 'gameData'])
+        let {starMomentum, primaryWeapon, secondaryWeapon, menuButtonSelection, elapsedTime, powerupTimer, gameData, dialogGenerator} = phaserMaster.getOnly(['starMomentum', 'primaryWeapon', 'secondaryWeapon', 'menuButtonSelection', 'elapsedTime', 'powerupTimer', 'gameData', 'dialogGenerator'])
         let {player, menuButtonCursor} = phaserSprites.getOnly(['player', 'menuButtonCursor']);
         let {DOWN, UP, LEFT, RIGHT, A, START} = phaserControls.getOnly(['DOWN', 'UP', 'LEFT', 'RIGHT', 'A', 'START'])
 
         //console.log(game.time.suggestedFps)
-
         if(currentState !== 'PAUSE' && currentState !== 'VICTORYSTATE' && currentState !== 'GAMEOVERSTATE' && currentState !== 'ENDLEVEL'){
           phaserSprites.getManyGroups(['ui', 'backgrounds', 'starfield', 'playership', 'special_icons', 'itemspawns', 'boss_ui']).map(obj => {
             obj.onUpdate()
           })
         }
 
+        // DIALOG STATE
+        if(currentState === 'DIALOG'){
+          if(phaserControls.checkWithDelay({isActive: true, key: 'A', delay: 500 })){
+            if(dialogGenerator.isReady){
+              let d = dialogGenerator.next().value;
+              if (d !== null){
+                dialogGenerator.dialogbox.text.replaceText(d.text)
+              }
+              if (d === null){
+                dialogGenerator.finished()
+              }
+            }
+          }
+        }
 
-
-
+        // READY STATE
         if(currentState === 'READY'){
 
           if(phaserControls.checkWithDelay({isActive: true, key: 'START', delay: 500 })){
@@ -1633,61 +1888,83 @@ class PhaserGameObject {
         let game = phaserMaster.game();
         let gameData = phaserMaster.get('gameData');
         let {player} = phaserSprites.getOnly(['player'])
-        phaserControls.disableAllInput();
+        phaserControls.disableAllActionButtons();
+        phaserControls.disableAllDirectionalButtons();
 
-        phaserSprites.getGroup('ui').map(obj => {
-          obj.hide()
-        })
-
-        buildMission();
         game.time.events.add(5000, () => {
-          phaserSprites.getGroup('uiLettering').map(obj => {
+          let lettering = buildLetteringSprites('mission', 10, 1.1);
+          lettering.y = lettering.y - 100
+          lettering.children.map(obj => {
+            obj.reveal()
+          })
+
+          let sublettering = buildLetteringSprites('clear', 10, 1.1);
+          sublettering.y = lettering.y + 80
+          sublettering.children.map(obj => {
             obj.reveal()
           })
 
           game.time.events.add(3000, () => {
-            phaserSprites.getGroup('uiLettering').map(obj => {
+            [...lettering.children, ...sublettering.children].map(obj => {
               obj.hide()
             })
 
-            let mothership = phaserSprites.get('mothership')
-            mothership.docksequence(player, () => {
 
-               game.time.events.add(150, () => {
-                     phaserMaster.changeState('ENDLEVEL');
-                     shakeWorld(0.0, 1)
-                     let bmd = game.add.bitmapData(game.width, game.height);
-                         bmd.drawFull(game.world);
-                     var bmdImage = bmd.addToWorld(game.world.centerX + 100, game.world.centerY + 100, 0.5, 0.5, 2, 2);
-                     phaserGroup.add(5, bmdImage)
+            let script = [
+              {text: 'Great job!  Prepare for docking sequence.'},
+              {text: 'Hehe oh yeah.'},
+              {text: "Don't make this weird."},
+              {text: "... sorry"}
+            ]
+            dialogSequence(script, () => {
 
-                     phaserSprites.getManyGroups(['backgrounds', 'starfield', 'gameobjects']).map(obj => {
-                       obj.destroy()
-                     })
+              phaserSprites.getGroup('ui').map(obj => {
+                obj.hide()
+              })
 
-                     utilityManager.overlayBGControls({transition: 'FLASHWHITE', delay: 0, speed: 600}, () => {
+              let mothership = phaserSprites.get('mothership')
+              mothership.docksequence(player, () => {
 
-                       bmdImage.scale.setTo(0.5, 0.5)
-                       bmdImage.x = game.world.centerX
-                       bmdImage.y = game.world.centerY
+                 game.time.events.add(150, () => {
+                       phaserMaster.changeState('ENDLEVEL');
+                       shakeWorld(0.0, 1)
+                       let bmd = game.add.bitmapData(game.width, game.height);
+                           bmd.drawFull(game.world);
+                       var bmdImage = bmd.addToWorld(game.world.centerX + 100, game.world.centerY + 100, 0.5, 0.5, 2, 2);
+                       phaserGroup.add(5, bmdImage)
 
-                       tweenTint(bmdImage, 0x000000, 0xffffff, 3000, () => {
-                         phaserControls.enableAllInput();
+                       phaserSprites.getManyGroups(['backgrounds', 'starfield', 'gameobjects']).map(obj => {
+                         obj.destroy()
+                       })
 
-                         let {menuButton1, menuButton2} = phaserSprites.getOnly(['menuButton1', 'menuButton2'])
-                         phaserMaster.changeState('VICTORYSTATE');
-                         phaserSprites.getGroup('menuButtons').map(obj => {
-                           obj.reveal()
-                         })
-                         menuButton1.text.setText('NEXT STAGE')
-                         menuButton2.text.setText('SAVE AND QUIT')
+                       utilityManager.overlayBGControls({transition: 'FLASHWHITE', delay: 0, speed: 600}, () => {
 
-                       });
+                         bmdImage.scale.setTo(0.5, 0.5)
+                         bmdImage.x = game.world.centerX
+                         bmdImage.y = game.world.centerY
+                         game.stage.backgroundColor = '#f2f2f2';
 
-                     })
-                   }).autoDestroy = true;
+                         tweenTint(bmdImage, 0x000000, 0xffffff, 3000, () => {
+                           phaserControls.enableAllActionButtons();
+                           phaserControls.enableAllDirectionalButtons();
+
+                           let {menuButton1, menuButton2} = phaserSprites.getOnly(['menuButton1', 'menuButton2'])
+                           phaserMaster.changeState('VICTORYSTATE');
+                           phaserSprites.getGroup('menuButtons').map(obj => {
+                             obj.reveal()
+                           })
+                           menuButton1.text.setText('NEXT STAGE')
+                           menuButton2.text.setText('SAVE AND QUIT')
+
+                         });
+
+                       })
+                     }).autoDestroy = true;
+
+              })
 
             })
+
           })
         })
 
@@ -1838,57 +2115,57 @@ class PhaserGameObject {
 
       /******************/
       function gameOver(){
-        phaserMaster.changeState('GAMEOVER');
-        let player = phaserSprites.get('player')
-        let earth = phaserSprites.get('earth')
-        phaserControls.disableAllInput();
-        phaserMaster.changeState('GAMEOVERSTATE');
-
-        phaserSprites.getGroup('ui').map(obj => {
-          obj.hide();
-        })
-
-        // minor delay to capture them
-        game.time.events.add(Phaser.Timer.SECOND * 3, () => {
-
-          let bmd = game.add.bitmapData(game.width, game.height);
-              bmd.drawFull(game.world);
-          var bmdImage = bmd.addToWorld(game.world.centerX + 100, game.world.centerY + 100, 0.5, 0.5, 2, 2);
-          phaserGroup.add(5, bmdImage)
-
-
-          phaserSprites.getManyGroups(['backgrounds', 'starfield', 'gameobjects']).map(obj => {
-            obj.destroy()
-          })
-
-          utilityManager.overlayBGControls({transition: 'FLASHWHITE', delay: 0, speed: 600}, () => {
-
-            bmdImage.scale.setTo(0.5, 0.5)
-            bmdImage.x = 0
-            bmdImage.y = 0
-
-            let newsPaper = phaserSprites.addFromAtlas({x: game.world.centerX, y: game.world.centerY, width: game.world.width, height: game.world.height, name: `newspaper`, group: 'gameobjects', filename: 'newspaper', atlas: 'atlas_main', visible: true})
-                newsPaper.anchor.setTo(0.5, 0.5)
-                newsPaper.scale.setTo(3, 3)
-                newsPaper.addChild(bmdImage)
-                phaserGroup.add(6, newsPaper)
-
-            tweenTint(bmdImage, 0x000000, 0xffffff, 3000, () => {
-              phaserControls.enableAllInput();
-
-              let {menuButton1, menuButton2} = phaserTexts.getOnly(['menuButton1', 'menuButton2'])
-              phaserSprites.getGroup('menuButtons').map(obj => {
-                obj.reveal()
-              })
-
-              menuButton1.text.setText('RETRY')
-              menuButton2.text.setText('SAVE AND QUIT')
-
-            });
-            game.add.tween(newsPaper.scale).to( { x: 1, y: 1 }, Phaser.Timer.SECOND*1.5, Phaser.Easing.Bounce.Out, true, 0, 0, false)
-            game.add.tween(newsPaper).to( { angle: 35, y: newsPaper.y - 50 }, Phaser.Timer.SECOND*1.5, Phaser.Easing.Linear.InOut, true, 0, 0, false)
-          })
-        }).autoDestroy = true;
+        // phaserMaster.changeState('GAMEOVER');
+        // let player = phaserSprites.get('player')
+        // let earth = phaserSprites.get('earth')
+        // phaserControls.disableAllInput();
+        // phaserMaster.changeState('GAMEOVERSTATE');
+        //
+        // phaserSprites.getGroup('ui').map(obj => {
+        //   obj.hide();
+        // })
+        //
+        // // minor delay to capture them
+        // game.time.events.add(Phaser.Timer.SECOND * 3, () => {
+        //
+        //   let bmd = game.add.bitmapData(game.width, game.height);
+        //       bmd.drawFull(game.world);
+        //   var bmdImage = bmd.addToWorld(game.world.centerX + 100, game.world.centerY + 100, 0.5, 0.5, 2, 2);
+        //   phaserGroup.add(5, bmdImage)
+        //
+        //
+        //   phaserSprites.getManyGroups(['backgrounds', 'starfield', 'gameobjects']).map(obj => {
+        //     obj.destroy()
+        //   })
+        //
+        //   utilityManager.overlayBGControls({transition: 'FLASHWHITE', delay: 0, speed: 600}, () => {
+        //
+        //     bmdImage.scale.setTo(0.5, 0.5)
+        //     bmdImage.x = 0
+        //     bmdImage.y = 0
+        //
+        //     let newsPaper = phaserSprites.addFromAtlas({x: game.world.centerX, y: game.world.centerY, width: game.world.width, height: game.world.height, name: `newspaper`, group: 'gameobjects', filename: 'newspaper', atlas: 'atlas_main', visible: true})
+        //         newsPaper.anchor.setTo(0.5, 0.5)
+        //         newsPaper.scale.setTo(3, 3)
+        //         newsPaper.addChild(bmdImage)
+        //         phaserGroup.add(6, newsPaper)
+        //
+        //     tweenTint(bmdImage, 0x000000, 0xffffff, 3000, () => {
+        //       phaserControls.enableAllInput();
+        //
+        //       let {menuButton1, menuButton2} = phaserTexts.getOnly(['menuButton1', 'menuButton2'])
+        //       phaserSprites.getGroup('menuButtons').map(obj => {
+        //         obj.reveal()
+        //       })
+        //
+        //       menuButton1.text.setText('RETRY')
+        //       menuButton2.text.setText('SAVE AND QUIT')
+        //
+        //     });
+        //     game.add.tween(newsPaper.scale).to( { x: 1, y: 1 }, Phaser.Timer.SECOND*1.5, Phaser.Easing.Bounce.Out, true, 0, 0, false)
+        //     game.add.tween(newsPaper).to( { angle: 35, y: newsPaper.y - 50 }, Phaser.Timer.SECOND*1.5, Phaser.Easing.Linear.InOut, true, 0, 0, false)
+        //   })
+        // }).autoDestroy = true;
       }
       /******************/
 

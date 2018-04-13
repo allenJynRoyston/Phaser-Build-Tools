@@ -38,7 +38,7 @@ export class PLAYER_MANAGER {
     let {starMomentum} = this.phaserMaster.getOnly(['starMomentum'])
 
     //  The hero!
-    let player = this.phaserSprites.addFromAtlas({name: params.name, group: params.group, org: params.org, atlas: this.atlas,  filename: `ship_base_form`, visible: false})
+    let player = this.phaserSprites.addFromAtlas({x: this.game.world.centerX, y: 2000, name: params.name, group: params.group, org: params.org, atlas: this.atlas,  filename: `ship_base_form`})
         player.anchor.setTo(0.5, 0.5);
         player.scale.setTo(1, 1)
         player.isInvincible = false;
@@ -445,6 +445,7 @@ export class PLAYER_MANAGER {
           player.ignoreBoundaries = true
           player.x = this.game.world.centerX
           player.y = this.game.world.height*2
+
 
           game.time.events.add(150, () => {
               player.alpha = 1
