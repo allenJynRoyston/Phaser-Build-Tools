@@ -566,7 +566,7 @@ export class PLAYER_MANAGER {
   //------------------ PRIMARY WEAPONS
   /******************/
   public attachLaser(player:any, params:any, weaponType:string){
-    let animationSprites = [...Phaser.Animation.generateFrameNames('laser_fire_', 1, 6)]
+    let animationSprites = [...Phaser.Animation.generateFrameNames('laser_fire_', 1, 1)]
     let gap = 15;
     let turrets = 7
     //-----------------  attach particle emitter
@@ -635,7 +635,7 @@ export class PLAYER_MANAGER {
       //-----------------
 
       //-----------------
-      let maxBulletsOnscreen = 4
+      let maxBulletsOnscreen = 3
       let ammo = this.weaponManager.playerBullets(maxBulletsOnscreen, weaponType);
       ammo.checkOrientation(weaponSystem.angle)
       ammo.onUpdate = () => {}
@@ -1178,16 +1178,17 @@ export class PLAYER_MANAGER {
   /******************/
   public damgePopup(target:any, amount:number){
     let {x, y, width, height} = target;
-    let damageAmount = this.phaserTexts.add({name: `enemy_${this.game.rnd.integer()}`, group: 'ui',  font: 'gem', x: x + this.game.rnd.integerInRange(-20, 20), y: y + this.game.rnd.integerInRange(-20, 20),  size: 12, default: amount})
-    this.game.add.tween(damageAmount.scale).to( {x: 1.5, y:1.5}, 250, Phaser.Easing.Back.In, true, 0, 0, false)
-    this.game.add.tween(damageAmount).to( {y: damageAmount.y + 10}, 250, Phaser.Easing.Back.In, true, 0, 0, false).
-      onComplete.add(() => {
-        this.game.add.tween(damageAmount).to( {y: damageAmount.y - 10, alpha: 0}, 300, Phaser.Easing.Bounce.Out, true, 0, 0, false).
-          onComplete.add(() => {
-            this.phaserTexts.destroy(damageAmount.name)
-          })
-      })
-
+    this.game.time.events.add(this.game.rnd.integerInRange(0, 150), () => {
+      let damageAmount = this.phaserTexts.add({name: `enemy_${this.game.rnd.integer()}`, group: 'ui',  font: 'gem', x: x + this.game.rnd.integerInRange(-20, 20), y: y + this.game.rnd.integerInRange(-20, 20),  size: 12, default: amount})
+      this.game.add.tween(damageAmount.scale).to( {x: 1.5, y:1.5}, 250, Phaser.Easing.Back.In, true, 0, 0, false)
+      this.game.add.tween(damageAmount).to( {y: damageAmount.y + 10}, 250, Phaser.Easing.Back.In, true, 0, 0, false).
+        onComplete.add(() => {
+          this.game.add.tween(damageAmount).to( {y: damageAmount.y - 10, alpha: 0}, 250, Phaser.Easing.Bounce.Out, true, 0, 0, false).
+            onComplete.add(() => {
+              this.phaserTexts.destroy(damageAmount.name)
+            })
+        })
+    }, this).autoDestroy = true;
 
   }
   /******************/

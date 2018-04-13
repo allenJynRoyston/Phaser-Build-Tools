@@ -188,6 +188,7 @@ export class WEAPON_MANAGER {
     let weapon = game.add.weapon(1, this.atlas, data.spriteAnimation[0])
         weapon.bulletKillType = Phaser.Weapon.KILL_LIFESPAN ;
         weapon.bulletSpeed = data.bulletSpeed;
+        weapon.bulletAngleOffset = 90
         weapon.multiFire = true;
         weapon.bulletLifespan = 750
         weapon.bomblets = bomblets;
@@ -230,7 +231,7 @@ export class WEAPON_MANAGER {
     let {weaponData} = phaserMaster.getAll();
     let data = {
           reference: 'BOMBLET',
-          spriteAnimation: ["icon_sw_1"],
+          spriteAnimation: ["bomblet"],
           damage: 25,
           pierce: false,
           ignoreDamageState: false,

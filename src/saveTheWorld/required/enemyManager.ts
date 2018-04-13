@@ -426,9 +426,8 @@ export class ENEMY_MANAGER {
      enemy.game.add.tween(enemy.scale).to( {x: 0.85, y:0.85}, 500, Phaser.Easing.Linear.Out, true, 500, 0, false).
        onComplete.add(() => {
          this.weaponManager.createExplosionVacuum(enemy.x, enemy.y, 1.5, enemy.onLayer + 1, 10)
-         let debris = this.effectsManager.debris(50);
-         debris = debris;
-         debris.customFire(enemy)
+         let debris = this.phaserMaster.get('sharedDebris');
+         debris.customFire(enemy, 50)
          game.time.events.remove(enemy.explodeInterval)
          onDestroy(enemy);
          enemy.children.map(obj => {
@@ -660,8 +659,7 @@ export class ENEMY_MANAGER {
        enemy.game.add.tween(enemy.scale).to( {x: 0.75, y:0.75}, 4500, Phaser.Easing.Linear.Out, true, 0, 0, false).
          onComplete.add(() => {
            this.weaponManager.createExplosionVacuum(enemy.x, enemy.y, 1.5, enemy.onLayer + 1, 10)
-           let debris = this.effectsManager.debris(100);
-           debris = debris;
+           let debris = this.phaserMaster.get('sharedDebris');
            debris.customFire(enemy)
            game.time.events.remove(enemy.explodeInterval)
            enemy.children.map(obj => {

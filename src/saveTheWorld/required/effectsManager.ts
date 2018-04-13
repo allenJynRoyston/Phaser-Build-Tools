@@ -30,54 +30,48 @@ export class EFFECTS_MANAGER {
 
 
   /******************/
-  public debris(bulletPoolTotal:any = 5){
+  public debris(onscreenCap:number){
     let game = this.game
     let {phaserMaster} = this;
     let {onscreenDebrisCount} = phaserMaster.getOnly(['onscreenDebrisCount'])
     let animationSprites = Phaser.Animation.generateFrameNames('debrs__', 1, 9)
-    let onscreenCap = 200;
 
-    // debri will limit itself if too many on screen at one time
-    if(onscreenDebrisCount > onscreenCap){
-      bulletPoolTotal = 5
-    }
-
-    let weapon = game.add.weapon(bulletPoolTotal, this.atlas, animationSprites[0])
+    let weapon = game.add.weapon(onscreenCap, this.atlas, animationSprites[0])
         weapon.bulletKillType = Phaser.Weapon.KILL_CAMERA_BOUNDS ;
         weapon.bulletSpeed = 200
         weapon.bulletSpeedVariance = 500;
         weapon.multiFire = true;
+        weapon.bulletPoolTotal = onscreenCap
         this.phaserGroup.add(this.phaserMaster.get('layers').DEBRIS, weapon.bullets )
 
         // map animation on each individual bullet
         weapon.bullets.children.map( bullet => {
-          bullet.animations.add('explosion', animationSprites, 30, true)
+          let anim = bullet.animations.add('explosion', animationSprites, 30, true)
         })
 
         // when called, will execute animation and then destroy each bullet before finally destroying the weapon object itself
-        weapon.customFire = (target) => {
-          for(let i = 0; i < bulletPoolTotal; i++){
+        weapon.customFire = (target:any, amountOfDebri:number) => {
+
+          for(let i = 0; i < amountOfDebri; i++){
             weapon.fire(target, target.x + game.rnd.integerInRange(-360, 360), target.y + game.rnd.integerInRange(-360, 360))
           }
           // add to debris count
-          onscreenDebrisCount += bulletPoolTotal
-          phaserMaster.forceLet('onscreenDebrisCount', onscreenDebrisCount)
           weapon.bullets.children.map( (bullet, index) => {
             game.time.events.add(index*15, () => {
               bullet.animations.play('explosion', 30, true)
               game.add.tween(bullet).to( { alpha: 0}, 500, Phaser.Easing.Linear.In, true, 500).
                 onComplete.add(() => {
                   // remove from debri count
-                  onscreenDebrisCount--
-                  phaserMaster.forceLet('onscreenDebrisCount', onscreenDebrisCount)
-                  bullet.destroy()
+                  bullet.alpha = 1;
+                  bullet.kill()
                 })
             }).autoDestroy = true;
           })
 
-          game.time.events.add(Phaser.Timer.SECOND * 4, () => {
-            weapon.destroy()
-          })
+          // game.time.events.add(Phaser.Timer.SECOND * 8, () => {
+          //   weapon.destroy()
+          // })
+
         }
     return weapon
   }
