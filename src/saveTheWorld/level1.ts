@@ -192,6 +192,13 @@ class PhaserGameObject {
         playerManager.assign(game, phaserMaster, phaserSprites, phaserTexts, phaserGroup, phaserControls, weaponManager, effectsManager, 'atlas_ships', 'atlas_weapons')
         utilityManager.assign(game, phaserMaster, phaserSprites, phaserBitmapdata, phaserGroup, 'atlas_main')
 
+        const dialogPortraits = {
+          PLAYER: 'ui_portrait_1',
+          MOTHERSHIP: 'ui_portrait_2',
+          STATIC: 'ui_portrait_4',
+          BOSS: 'ui_portrait_3'
+        }
+
         const layerDefinitions = {
           BACKGROUND_0: 0,
           BACKGROUND_1: 1,
@@ -234,6 +241,7 @@ class PhaserGameObject {
         phaserMaster.let('bossMode', false)           // turn on for when the boss is available
         phaserMaster.let('showWarningBand', false)    // turn on to show warning band
         phaserMaster.let('layers', layerDefinitions)
+        phaserMaster.let('dialogPortraits', dialogPortraits)
         phaserMaster.let('sharedDebris', effectsManager.debris(200))
         phaserMaster.let('velocityFactor', {x: 0, y: 1})
         phaserMaster.let('dialogGenerator', null)
@@ -271,7 +279,6 @@ class PhaserGameObject {
 
         buildHealthbar_player()
         buildPow_player()
-        buildPortrait_player()
         buildDialogbox()
         buildHealthbar_boss()
       }
@@ -387,13 +394,13 @@ class PhaserGameObject {
         let {w, h} = phaserMaster.getResolution()
         let {starMomentum} = phaserMaster.getOnly(['starMomentum'])
 
-        let background1 = phaserSprites.addTilespriteFromAtlas({ name: 'bg1', group: 'backgrounds', x: 0, y: 0, width: game.world.width, height: game.world.height, atlas: 'atlas_large', filename: 'Nebula3' });
+        let background1 = phaserSprites.addTilespriteFromAtlas({ name: 'bg1', group: 'backgrounds', x: 0, y: 0, width: game.world.width, height: game.world.height, atlas: 'atlas_large', filename: 'planetBG' });
             //background1.count = 0;
             background1.tileScale.x = 0.5
             background1.tileScale.y = 0.5
             background1.onUpdate = () =>  {
                 let {velocityFactor} = phaserMaster.getOnly(['velocityFactor'])
-                background1.tilePosition.y += 0.5*((velocityFactor.y-1)*5) <= 0 ? 0.5 : 0.5*((velocityFactor.y-1)*5)
+                background1.tilePosition.y += 0.1*((velocityFactor.y-1)*5) <= 0 ? 0.5 : 0.5*((velocityFactor.y-1)*5)
                 background1.tilePosition.x += (starMomentum.x/4)*velocityFactor.y
             };
         phaserGroup.addMany(phaserMaster.get('layers').BACKGROUND_0, [background1])
@@ -679,114 +686,97 @@ class PhaserGameObject {
       /******************/
 
       /******************/
-      function buildPortrait_player(){
-        let game = phaserMaster.game();
-        let {w, h} = phaserMaster.getResolution()
-
-        let container = phaserSprites.addEmptySprite({name: `portraitContainer`, group: 'player_portrait', org: 'ui'})
-        phaserSprites.centerOnPoint('portraitContainer', container.width/2 + 10, h - container.height/2 - 70)
-        phaserGroup.addMany(phaserMaster.get('layers').UI, [container])
-        container.setDefaultPositions()
-
-        // children
-        let mockPortrait = phaserSprites.addFromAtlas({x: 3, y: 3, name: `mockPortrait`, filename: 'ui_portrait_1', atlas: 'atlas_main', visible: true})
-        container.addChild(mockPortrait)
-
-        let staticContainer = phaserSprites.addFromAtlas({name: `staticContainer`,  filename: 'portrait_static_1', atlas: 'atlas_main', visible: true, alpha: 0.4})
-        let staticAnimation = [...Phaser.Animation.generateFrameNames('portrait_static_', 1, 4), ...Phaser.Animation.generateFrameNames('portrait_static_', 3, 1)]
-        staticContainer.animations.add('static', staticAnimation, 1, true)
-        staticContainer.setStaticLevel = (type:string) => {
-          staticContainer.animations.stop('static')
-          let {framerate, alpha} = {framerate: 12, alpha: 0.5}
-          switch(type){
-              case 'HEAVY':
-                framerate = 18
-                alpha = 0.3
-              break
-              case 'MED':
-                framerate = 12
-                alpha = 0.2
-              break
-              case 'LIGHT':
-                framerate = 6
-                alpha = 0.1
-              break
-          }
-          staticContainer.alpha = alpha;
-          staticContainer.animations.play('static', framerate, true)
-        }
-        container.addChild(staticContainer)
-
-        let portraitFrame = phaserSprites.addFromAtlas({name: `portraitFrame`, filename: 'ui_portraitContainer', atlas: 'atlas_main', visible: true})
-        container.addChild(portraitFrame)
-
-        //states
-        container.init = () => {
-          container.y  = container.y + 200
-          container.isHidden = true
-        }
-        container.reveal = () => {
-          if(container.isHidden){
-            container.isHidden = false;
-            let y = container.getDefaultPositions().y
-            container.setDefaultPositions();
-            game.add.tween(container).to( { y: y }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, game.rnd.integerInRange(0, 500), 0, false).
-              onComplete.add(() => {  })
-          }
-        }
-        container.hide = () => {
-          if(!container.isHidden){
-            container.isHidden = true
-            game.add.tween(container).to( { y: container.getDefaultPositions().y }, Phaser.Timer.SECOND, Phaser.Easing.Back.InOut, true, game.rnd.integerInRange(0, 500), 0, false).
-              onComplete.add(() => {})
-          }
-        }
-
-
-
-      }
-      /******************/
-
-      /******************/
       function buildDialogbox(){
         let {w, h} = phaserMaster.getResolution()
 
+        // create blank container for dialogbox and text
+        let dialogbox = phaserSprites.addEmptySprite({x: 0, y: h + 300, name: 'dialogbox', visible: false})
 
-        let dialogbox = phaserSprites.addFromAtlas({width: w , height: 110,  name: `dialogbox`, filename: 'dialogbox', atlas: 'atlas_main'})
-            dialogbox.y = h - dialogbox.height;
-        dialogbox.init = () => {
-          dialogbox.x = -dialogbox.width;
-          dialogbox.visible = false
-        }
-
-        dialogbox.reveal = () => {
-          let x = dialogbox.getDefaultPositions().x
+        dialogbox.reveal = (callback) => {
+          let y = dialogbox.getDefaultPositions().y
           dialogbox.visible = true;
           dialogbox.setDefaultPositions();
-          game.add.tween(dialogbox).to( { x: 0 }, Phaser.Timer.SECOND/2, Phaser.Easing.Circular.InOut, true, 1, 0, false).
-            onComplete.add(() => {})
+
+          dialogbox.children.map(child => {
+            if(child.onStart !== undefined){child.onStart()}
+          })
+
+          game.add.tween(dialogbox).to( { y: h - 110 }, Phaser.Timer.SECOND/2, Phaser.Easing.Circular.InOut, true, 1, 0, false).
+            onComplete.add(() => {
+              callback()
+            })
         }
 
         dialogbox.hide = () => {
           dialogbox.text.replaceText('')
-          game.add.tween(dialogbox).to( { x: dialogbox.getDefaultPositions().x }, Phaser.Timer.SECOND/2, Phaser.Easing.Circular.InOut, true, 1, 0, false).
+          game.add.tween(dialogbox).to( { y: dialogbox.getDefaultPositions().y }, Phaser.Timer.SECOND/2, Phaser.Easing.Circular.InOut, true, 1, 0, false).
             onComplete.add(() => {
-              dialogbox.visible = false;
+              //dialogbox.visible = false;
+              dialogbox.children.map(child => {
+                if(child.onStop !== undefined){child.onStop()}
+              })
             })
         }
 
-        let dialogText = phaserTexts.add({x: dialogbox.x + 100, y: dialogbox.y + 10, name: `dialogtext`, group: 'dialogbox', font: 'gem', default: '', size: 16})
+        let dialogboxGraphic = phaserSprites.addFromAtlas({x: 0, y: 0, width: w, height: 110,  name: `dialogboxGraphic`, filename: 'dialogbox', atlas: 'atlas_main', alpha: 0.8})
+        dialogbox.addChild(dialogboxGraphic)
+
+        let dialogPortraitFrame = phaserSprites.addFromAtlas({x: 10, y: 8, name: `dialogPortraitFrame`, filename: 'ui_portraitContainer', atlas: 'atlas_main', visible: true})
+        dialogbox.addChild(dialogPortraitFrame)
+        let dialogPortraitMask = phaserSprites.createBasicMask(13, 11, dialogPortraitFrame.width - 3, dialogPortraitFrame.height -3)
+        dialogbox.addChild(dialogPortraitMask)
+
+        dialogPortraitFrame.replaceImage = (image:string) => {
+          // remove image if already exists
+          if(phaserSprites.get('dialogPortraitImage') !== undefined){
+            phaserSprites.destroy('dialogPortraitImage')
+          }
+          // create new one and mask it
+          let dialogPortraitImage = phaserSprites.addFromAtlas({name: `dialogPortraitImage`, filename: image, atlas: 'atlas_main'})
+              dialogPortraitImage.mask = dialogPortraitMask;
+          dialogPortraitFrame.addChild(dialogPortraitImage)
+        }
+        dialogPortraitFrame.onStart = () => {
+          let staticAnimation = [...Phaser.Animation.generateFrameNames('portrait_static_', 1, 4), ...Phaser.Animation.generateFrameNames('portrait_static_', 3, 1)]
+          let dialogboxStatic = phaserSprites.addFromAtlas({x: 10, y: 8, name: `dialogboxStatic`,  filename: staticAnimation[0], atlas: 'atlas_main', visible: true, alpha: 0.35})
+          dialogboxStatic.animations.add('static', staticAnimation, 1, true)
+          dialogboxStatic.mask = dialogPortraitMask
+          dialogbox.addChild(dialogboxStatic)
+          dialogboxStatic.animations.play('static', 30, true)
+        }
+        dialogPortraitFrame.onStop = () => {
+          phaserSprites.destroy('dialogboxStatic')
+          if(phaserSprites.get('dialogPortraitImage') !== undefined){
+            phaserSprites.destroy('dialogPortraitImage')
+          }
+        }
+
+        let dialogboxButton = phaserSprites.addFromAtlas({x: dialogboxGraphic.width - 40, y: dialogboxGraphic.height - 40, name: `dialogboxButton`, filename: 'a_button', atlas: 'atlas_main', visible: false})
+        dialogbox.addChild(dialogboxButton)
+
+        let dialogText = phaserTexts.add({x: 100, y:10, name: `dialogtext`, font: 'gem', size: 16})
+            dialogText.maxWidth = w - 100 - 15;
+        dialogbox.addChild(dialogText)
+
         dialogText.replaceText = (newText:string, callback:any = () => {}) => {
           dialogText.alpha = 0;
+          dialogboxButton.visible = false;
           dialogText.setText(newText)
-          game.add.tween(dialogText).to( { alpha: 1 }, Phaser.Timer.SECOND/2, Phaser.Easing.Linear.InOut, true, 1, 0, false).
+          game.add.tween(dialogText).to( { alpha: 1 }, Phaser.Timer.SECOND/2, Phaser.Easing.Linear.In, true, 1, 0, false).
             onComplete.add(() => {
+              dialogboxButton.visible = true;
               callback()
           })
         }
+        dialogText.onStart = () => {}
+        dialogText.onStop = () => {
+          dialogText.replaceText('')
+        }
 
-        dialogbox.text = dialogText
-        phaserGroup.addMany(phaserMaster.get('layers').DIALOGBOX, [dialogbox, dialogText])
+        // add properties
+        dialogbox.portrait = dialogPortraitFrame
+        dialogbox.text = dialogText;
+        phaserGroup.addMany(phaserMaster.get('layers').DIALOGBOX, [dialogbox])
       }
       /******************/
 
@@ -796,7 +786,7 @@ class PhaserGameObject {
         let {w, h} = phaserMaster.getResolution()
 
         let healthbar_player = phaserSprites.addFromAtlas({y: 100, name: `healthbar_player`, group: 'player_healthbar', org:'ui', filename: 'healthbar_player', atlas: 'atlas_main', visible: true})
-        phaserSprites.centerOnPoint('healthbar_player', 275, h - healthbar_player.height/2 - 8)
+        phaserSprites.centerOnPoint('healthbar_player', 200, h - healthbar_player.height/2 - 8)
         phaserGroup.addMany(phaserMaster.get('layers').UI, [healthbar_player])
         healthbar_player.setDefaultPositions()
 
@@ -865,7 +855,7 @@ class PhaserGameObject {
         healthbar_player.buildLives = () => {
           let {gameData} = phaserMaster.getOnly(['gameData']);
           for(let i = 0; i < gameData.player.lives; i++){
-              let lifeIcon = phaserSprites.addFromAtlas({x: 0 + (25 * i), y: -20, name: `life_icon_${game.rnd.integer()}`, group: 'playerLives', filename: 'ship_icon', atlas: 'atlas_main', alpha: 0})
+              let lifeIcon = phaserSprites.addFromAtlas({x: 0 + (25 * i), y: -25, name: `life_icon_${game.rnd.integer()}`, group: 'playerLives', filename: 'ship_icon', atlas: 'atlas_main', alpha: 0})
               healthbar_player.addChild(lifeIcon)
               game.add.tween(lifeIcon).to( { alpha: 1 }, 250, Phaser.Easing.Linear.In, true, (i*250), 0, false)
               lifeIcon.destroyIt = () => {
@@ -1154,11 +1144,18 @@ class PhaserGameObject {
         phaserControls.enableAllActionButtons()
 
         createDialogBox(gen)
+
+        gen.nextItem = (data:any) => {
+          let txtMsg = data.text;
+          let portrait = data.portrait;
+          gen.dialogbox.portrait.replaceImage(portrait)
+          gen.dialogbox.text.replaceText(txtMsg, () => {})
+        }
+
         gen.finished = () => {
           [...phaserSprites.getGroup('player_healthbar'), ...phaserSprites.getGroup('player_pow')].map(obj => {
             obj.fadeIn()
           })
-          let {portraitContainer} = phaserSprites.getOnly(['portraitContainer']);
           phaserMaster.changeState(gen.revertToState)
           gen.dialogbox.hide();
           callback();
@@ -1171,24 +1168,20 @@ class PhaserGameObject {
 
       /******************/
       function createDialogBox(gen){
-        let {portraitContainer, dialogbox} = phaserSprites.getOnly(['portraitContainer', 'dialogbox']);
+        let {dialogbox} = phaserSprites.getOnly(['dialogbox']);
         // hide healthbar/powerbar
         [...phaserSprites.getGroup('player_healthbar'), ...phaserSprites.getGroup('player_pow')].map(obj => {
           obj.fadeOut()
         })
 
-        // reveal portrait and dialogbox
-        gen.portraitState = portraitContainer.isHidden;  // get current portrait state
-        portraitContainer.reveal();
-        dialogbox.reveal();
-
-        game.time.events.add(Phaser.Timer.SECOND*1.5, () => {
-          gen.dialogbox = dialogbox;
-          let txtMsg = gen.next().value.text;
-          gen.dialogbox.text.replaceText(txtMsg, () => {
-            gen.isReady = true
-          })
-        })
+        // play first item automatically
+        dialogbox.reveal(() => {
+            gen.dialogbox = dialogbox;
+            gen.dialogbox.text.replaceText('', () => {
+              gen.isReady = true
+              gen.nextItem(gen.next().value);
+            })
+        });
       }
       /******************/
 
@@ -1197,7 +1190,7 @@ class PhaserGameObject {
         let game = phaserMaster.game();
         let isDevMode = phaserMaster.get('devMode')
         let {overlay} = phaserSprites.getOnly(['overlay']);
-        let skipAnimation = false
+        let skipAnimation = false;
 
         // run init on all ui elements to put them in their initial place
         phaserSprites.getAll('ARRAY').map(obj => {
@@ -1226,7 +1219,7 @@ class PhaserGameObject {
 
       /******************/
       function playIntroSequence(){
-        let {clock} = phaserMaster.getOnly(['clock']);
+        let {clock, dialogPortraits} = phaserMaster.getOnly(['clock', 'dialogPortraits']);
         let player = phaserSprites.get('player')
 
         // intro lettering
@@ -1236,9 +1229,17 @@ class PhaserGameObject {
             player.moveToStart();
 
             let script = [
-              {text: 'Red 6 checking in.'},
-              {text: 'Area is clear.'},
-              {text: 'Proceeding with mining operations.'}
+              {text: "Okay, so, I think you're going to love this one.", portrait: dialogPortraits.PLAYER},
+              {text: 'Uh huh.', portrait: dialogPortraits.MOTHERSHIP},
+              {text: "Two chemist walk into a bar.  The first one says \"I'll have some H20\".  The second one says \"I'll have some H20 too.\"", portrait: dialogPortraits.PLAYER},
+              {text: "The second chemist dies.", portrait: dialogPortraits.PLAYER},
+              {text: 'That joke... that joke is terrible, Hadrion, I\'m sorry.', portrait: dialogPortraits.MOTHERSHIP},
+              {text: "Really?  ...I liked it.", portrait: dialogPortraits.PLAYER},
+              {text: "Anyways, I'm approaching the asteroid field now.", portrait: dialogPortraits.PLAYER},
+              {text: "You know the drill, right?  Just destroy as many as rocks as possible.  We'll be right behind you to collect the pieces.", portrait: dialogPortraits.MOTHERSHIP},
+              {text: "Yep, and then we sell the rare minerals for money.  Same routine, different solar day.  I got it.", portrait: dialogPortraits.PLAYER},
+              {text: "Okay, be careful out there.", portrait: dialogPortraits.MOTHERSHIP},
+              {text: "Always.", portrait: dialogPortraits.PLAYER}
             ]
             dialogSequence(script, () => {
               game.time.events.add(Phaser.Timer.SECOND, () => {
@@ -1273,7 +1274,7 @@ class PhaserGameObject {
       /******************/
       function updateShipHealthbar(remaining:number){
         let {unit_damage_player, unit_health_player} = phaserSprites.getOnly(['unit_damage_player', 'unit_health_player'])
-        checkStaticLevels(remaining)
+        //checkStaticLevels(remaining)
         unit_damage_player.updateHealth(remaining)
         unit_health_player.updateHealth(remaining)
       }
@@ -1288,7 +1289,7 @@ class PhaserGameObject {
 
       function fillShipHealthbar(remaining:number){
         let {unit_damage_player, unit_health_player} = phaserSprites.getOnly(['unit_damage_player', 'unit_health_player'])
-        checkStaticLevels(remaining)
+        //checkStaticLevels(remaining)
         unit_damage_player.updateHealth(remaining)
         unit_health_player.updateHealth(remaining)
       }
@@ -1657,7 +1658,7 @@ class PhaserGameObject {
 
         // add to powerupbar every 2 seconds
         if(game.time.returnTrueTime() > powerupTimer){
-          phaserMaster.forceLet('powerupTimer', gameData.player.powerup < 30 ? game.time.returnTrueTime() + (Phaser.Timer.SECOND*1) : game.time.returnTrueTime() + (Phaser.Timer.SECOND/2) )
+          phaserMaster.forceLet('powerupTimer', gameData.player.powerup < 30 ? game.time.returnTrueTime() + (Phaser.Timer.SECOND*3) : game.time.returnTrueTime() + (Phaser.Timer.SECOND/2) )
           addPowerup();
         }
 
@@ -1704,6 +1705,7 @@ class PhaserGameObject {
       /******************/
       function startBossBattle(callback:any){
          let game = phaserMaster.game();
+         let {dialogPortraits} = phaserMaster.getOnly(['dialogPortraits']);
          let {scoreContainer, player, healthbar_boss} = phaserSprites.getOnly(['scoreContainer', 'player', 'healthbar_boss']);
          phaserMaster.forceLet('bossMode', true)
          phaserMaster.forceLet('showWarningBand', true)
@@ -1721,9 +1723,9 @@ class PhaserGameObject {
            game.time.events.add(Phaser.Timer.SECOND * 1, () => {
 
              let script = [
-               {text: 'Do you guys see that?'},
-               {text: 'Yes, take it out.'},
-               {text: 'Easier said then done...'}
+               {text: 'Red 6 checking in.', portrait: dialogPortraits.PLAYER},
+               {text: 'Area is clear.', portrait: dialogPortraits.MOTHERSHIP},
+               {text: 'Proceeding with mining operations.', portrait: dialogPortraits.PLAYER},
              ]
              dialogSequence(script, () => {
                scoreContainer.hide();
@@ -1758,7 +1760,7 @@ class PhaserGameObject {
             if(dialogGenerator.isReady){
               let d = dialogGenerator.next().value;
               if (d !== null){
-                dialogGenerator.dialogbox.text.replaceText(d.text)
+                dialogGenerator.nextItem(d)
               }
               if (d === null){
                 dialogGenerator.finished()
@@ -1886,7 +1888,7 @@ class PhaserGameObject {
       /******************/
       function endLevel(){
         let game = phaserMaster.game();
-        let gameData = phaserMaster.get('gameData');
+        let {gameData, dialogPortraits} = phaserMaster.getOnly(['gameData', 'dialogPortraits']);
         let {player} = phaserSprites.getOnly(['player'])
         phaserControls.disableAllActionButtons();
         phaserControls.disableAllDirectionalButtons();
@@ -1911,10 +1913,10 @@ class PhaserGameObject {
 
 
             let script = [
-              {text: 'Great job!  Prepare for docking sequence.'},
-              {text: 'Hehe oh yeah.'},
-              {text: "Don't make this weird."},
-              {text: "... sorry"}
+              {text: 'Great job Hadrion.  Another successful run.  Prepare for docking sequence.', portrait: dialogPortraits.MOTHERSHIP},
+              {text: 'Hehe aww yeah.', portrait: dialogPortraits.PLAYER},
+              {text: 'Don\'t make this weird.', portrait: dialogPortraits.MOTHERSHIP},
+              {text: '... sorry.', portrait: dialogPortraits.PLAYER}
             ]
             dialogSequence(script, () => {
 
@@ -2196,7 +2198,6 @@ class PhaserGameObject {
           parent.loadNextLevel()
         })
       }
-
 
       function retryLevel(){
         finalFadeOut(() => {

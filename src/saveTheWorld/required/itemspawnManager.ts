@@ -19,10 +19,19 @@ export class ITEMSPAWN_MANAGER {
     this.atlas = atlas
   }
 
+  /******************/
   public getDistanceFromPlayer(obj:any){
     let player = this.phaserSprites.get('player')
-    return Math.round(Phaser.Math.distance(player.x, player.y, obj.x, obj.y))
+    // if character is being forced to a location, all powerups gravitate towards user automatically
+    if(player.isForceMoved){
+      return 0
+    }
+    // else do calculation
+    else{
+      return Math.round(Phaser.Math.distance(player.x, player.y, obj.x, obj.y))
+    }
   }
+  /******************/
 
   /******************/
   public spawnHealthpack(x:number, y:number, layer:number, onPickup = () => {}){
@@ -54,7 +63,7 @@ export class ITEMSPAWN_MANAGER {
             let player = this.phaserSprites.get('player')
             this.game.physics.arcade.moveToObject(item, player, 400);
           }
-                    
+
           if(this.game.time.returnTrueTime() > item.blinkLifespan){
             item.destroyIt()
           }

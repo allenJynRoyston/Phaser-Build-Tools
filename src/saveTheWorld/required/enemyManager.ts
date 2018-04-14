@@ -41,8 +41,9 @@ export class ENEMY_MANAGER {
     let targets = [...this.phaserSprites.getGroup('player_hitboxes')]
     let collidables = [...enemy.collidables.primaryWeapon]
     this.game.physics.arcade.overlap(targets, collidables, (target, collidable) => {
-      if(!target.isInvincible && !target.isDead && !target.isDamaged && !target.isForceMoved){
-        target.parent.takeDamage(collidable.damgeOnImpact);
+      let player = target.parent;
+      if(!player.isInvincible && !player.isDead && !player.isDamaged && !player.isForceMoved){
+        player.takeDamage(collidable.damgeOnImpact);
         collidable.destroyIt()
       }
     });
