@@ -1229,7 +1229,6 @@ export class PLAYER_MANAGER {
     // check against enemies
     this.game.physics.arcade.overlap(enemies, collidables, (enemy, collidable) => {
       let e = enemy.parent;
-
       if(!e.isDestroyed){
         let weaponData = collidable.weaponData
 

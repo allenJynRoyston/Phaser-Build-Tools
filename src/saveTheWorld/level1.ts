@@ -20,6 +20,7 @@ import {EFFECTS_MANAGER} from './required/effectsManager'
 import {PLAYER_MANAGER} from './required/playerManager'
 import {ITEMSPAWN_MANAGER} from './required/itemspawnManager'
 import {UTILITY_MANAGER} from './required/utilityManager'
+import {DIALOG_MANAGER} from './required/dialogSequencer'
 //endRemoveIf(gameBuild)
 
 class PhaserGameObject {
@@ -50,8 +51,7 @@ class PhaserGameObject {
       // initiate control class
       let game = new Phaser.Game(options.width, options.height, Phaser.WEBGL, el, { preload: preload, create: create, update: update});
           game.preserveDrawingBuffer = true;
-
-
+ 
       const phaserMaster = new PHASER_MASTER({game: game, element: el, resolution: {w: options.width, h: options.height}}),
             phaserControls = new PHASER_CONTROLS(),
             phaserMouse = new PHASER_MOUSE({showDebugger: false}),
@@ -66,7 +66,8 @@ class PhaserGameObject {
             enemyManager = new ENEMY_MANAGER({showHitbox: false}),
             playerManager = new PLAYER_MANAGER(),
             itemManager = new ITEMSPAWN_MANAGER(),
-            utilityManager = new UTILITY_MANAGER();
+            utilityManager = new UTILITY_MANAGER(),
+            dialogManager = new DIALOG_MANAGER();
 
       const store = options.store;
       let gameDataCopy = JSON.stringify(store.getters._gameData());
@@ -126,14 +127,14 @@ class PhaserGameObject {
         game.load.atlas('atlas_letters', `${folder}/textureAtlas/letters/letters.png`, `${folder}/textureAtlas/letters/letters.json`, Phaser.Loader.TEXTURE_ATLAS_JSON_HASH);
 
         // load music into buffer
-        // game.load.audio('music-main', ['src/assets/game/demo1/music/zombies-in-space.ogg']);
+        game.load.audio('music-main', [`${folder}/music/level1.mp3`]);
         // game.load.audio('powerupfx', ['src/assets/game/demo1/sound/Powerup4.ogg']);
         // game.load.audio('select', ['src/assets/game/demo1/sound/Pickup_Coin.ogg']);
         // game.load.audio('smallExplosion', ['src/assets/game/demo1/sound/quietExplosion.ogg'])
         // game.load.audio('bigExplosion', ['src/assets/game/demo1/sound/Explosion3.ogg'])
         // game.load.audio('laser', ['src/assets/game/demo1/sound/Laser_Shoot78.ogg'])
         // game.load.audio('hit', ['src/assets/game/demo1/sound/Hit_Hurt11.ogg'])
-
+  
         // json
         game.load.json('weaponData', `${folder}/json/weaponData.json`);
 
@@ -145,28 +146,6 @@ class PhaserGameObject {
 
         // send to preloader class
         new PHASER_PRELOADER({game: game, delayInSeconds: 0, done: () => {preloadComplete()}})
-      }
-      /******************/
-
-      /******************/
-      function tweenTint(obj, startColor, endColor, time, callback) {    // create an object to tween with our step value at 0
-        let game = phaserMaster.game();
-        let colorBlend = {step: 0};    // create the tween on this object and tween its step property to 100
-        let colorTween = game.add.tween(colorBlend).to({step: 100}, time);
-         // run the interpolateColor function every time the tween updates, feeding it the
-         // updated value of our tween each time, and set the result as our tint
-         colorTween.onUpdateCallback(() => {
-           obj.tint = Phaser.Color.interpolateColor(startColor, endColor, 100, colorBlend.step);
-         });
-
-         // if you passed a callback, add it to the tween on complete
-         if (callback) {
-             colorTween.onComplete.add(callback, game);
-         }
-         // set the object to the start color straight away
-         obj.tint = startColor;
-          // start the tween
-         colorTween.start();
       }
       /******************/
 
@@ -191,6 +170,7 @@ class PhaserGameObject {
         enemyManager.assign(game, phaserMaster, phaserSprites, phaserTexts, phaserGroup, weaponManager, effectsManager, 'atlas_enemies', 'atlas_weapons')
         playerManager.assign(game, phaserMaster, phaserSprites, phaserTexts, phaserGroup, phaserControls, weaponManager, effectsManager, 'atlas_ships', 'atlas_weapons')
         utilityManager.assign(game, phaserMaster, phaserSprites, phaserBitmapdata, phaserGroup, 'atlas_main')
+        dialogManager.assign(game, phaserMaster, phaserSprites, phaserGroup, phaserTexts, phaserControls, 'atlas_main')
 
         const dialogPortraits = {
           PLAYER: 'ui_portrait_1',
@@ -227,7 +207,6 @@ class PhaserGameObject {
           OVERLAY: 20
         }
 
-
         // game variables
         phaserMaster.let('roundTime', 60)
         phaserMaster.let('clock', game.time.create(false))
@@ -244,13 +223,15 @@ class PhaserGameObject {
         phaserMaster.let('dialogPortraits', dialogPortraits)
         phaserMaster.let('sharedDebris', effectsManager.debris(200))
         phaserMaster.let('velocityFactor', {x: 0, y: 1})
-        phaserMaster.let('dialogGenerator', null)
 
         // weapon data
         let weaponData = phaserMaster.let('weaponData', game.cache.getJSON('weaponData'));
         let pw = phaserMaster.let('primaryWeapon', weaponData.primaryWeapons[gameData.primaryWeapon])
         let sw = phaserMaster.let('secondaryWeapon', weaponData.secondaryWeapons[gameData.secondaryWeapon])
         let perk = phaserMaster.let('perk', weaponData.perks[gameData.perk])
+
+        // create dialogbox
+        dialogManager.create();
 
         // pause behavior
         game.onPause.add(() => {
@@ -279,8 +260,29 @@ class PhaserGameObject {
 
         buildHealthbar_player()
         buildPow_player()
-        buildDialogbox()
         buildHealthbar_boss()
+      }
+      /******************/
+
+      /******************/
+      function tweenTint(obj, startColor, endColor, time, callback) {    // create an object to tween with our step value at 0
+        let game = phaserMaster.game();
+        let colorBlend = {step: 0};    // create the tween on this object and tween its step property to 100
+        let colorTween = game.add.tween(colorBlend).to({step: 100}, time);
+         // run the interpolateColor function every time the tween updates, feeding it the
+         // updated value of our tween each time, and set the result as our tint
+         colorTween.onUpdateCallback(() => {
+           obj.tint = Phaser.Color.interpolateColor(startColor, endColor, 100, colorBlend.step);
+         });
+
+         // if you passed a callback, add it to the tween on complete
+         if (callback) {
+             colorTween.onComplete.add(callback, game);
+         }
+         // set the object to the start color straight away
+         obj.tint = startColor;
+          // start the tween
+         colorTween.start();
       }
       /******************/
 
@@ -366,7 +368,7 @@ class PhaserGameObject {
           }).autoDestroy = true
 
           game.time.events.add(4500, () => {
-            changeVelocityFactor(2, 2500);
+            changeVelocityFactor(1.5, 2500);
             lettering.children.map(obj => {
               obj.hide()
             })
@@ -400,12 +402,12 @@ class PhaserGameObject {
             background1.tileScale.y = 0.5
             background1.onUpdate = () =>  {
                 let {velocityFactor} = phaserMaster.getOnly(['velocityFactor'])
-                background1.tilePosition.y += 0.1*((velocityFactor.y-1)*5) <= 0 ? 0.5 : 0.5*((velocityFactor.y-1)*5)
+                background1.tilePosition.y += 0.5*((velocityFactor.y-1)*5) <= 0 ? 0.5 : 0.5*((velocityFactor.y-1)*5)
                 background1.tilePosition.x += (starMomentum.x/4)*velocityFactor.y
             };
         phaserGroup.addMany(phaserMaster.get('layers').BACKGROUND_0, [background1])
 
-        let background2 = phaserSprites.addTilespriteFromAtlas({ name: 'bg2', group: 'backgrounds', x: 0, y: 0, width: game.world.width, height: game.world.height, atlas: 'atlas_large', filename: 'Nebula2' });
+        let background2 = phaserSprites.addTilespriteFromAtlas({ name: 'bg2', group: 'backgrounds', x: 0, y: 0, width: game.world.width, height: game.world.height, atlas: 'atlas_large', filename: 'Nebula1' });
             background2.tilePosition.x = 500
             background1.tileScale.x = 0.75
             background1.tileScale.y = 0.75
@@ -417,7 +419,7 @@ class PhaserGameObject {
             };
         phaserGroup.addMany(phaserMaster.get('layers').BACKGROUND_1, [background2])
 
-        let foreground1 = phaserSprites.addTilespriteFromAtlas({ name: 'fg1', group: 'backgrounds', x: 0, y: 0, width: game.world.width, height: game.world.height, atlas: 'atlas_large', filename: 'Nebula2', alpha: 1});
+        let foreground1 = phaserSprites.addTilespriteFromAtlas({ name: 'fg1', group: 'backgrounds', x: 0, y: 0, width: game.world.width, height: game.world.height, atlas: 'atlas_large', filename: 'Nebula2', alpha: 0.25});
             foreground1.tilePosition.x = 300
             foreground1.onUpdate = () => {
                 let {velocityFactor} = phaserMaster.getOnly(['velocityFactor'])
@@ -682,101 +684,6 @@ class PhaserGameObject {
             onComplete.add(() => {})
         }
 
-      }
-      /******************/
-
-      /******************/
-      function buildDialogbox(){
-        let {w, h} = phaserMaster.getResolution()
-
-        // create blank container for dialogbox and text
-        let dialogbox = phaserSprites.addEmptySprite({x: 0, y: h + 300, name: 'dialogbox', visible: false})
-
-        dialogbox.reveal = (callback) => {
-          let y = dialogbox.getDefaultPositions().y
-          dialogbox.visible = true;
-          dialogbox.setDefaultPositions();
-
-          dialogbox.children.map(child => {
-            if(child.onStart !== undefined){child.onStart()}
-          })
-
-          game.add.tween(dialogbox).to( { y: h - 110 }, Phaser.Timer.SECOND/2, Phaser.Easing.Circular.InOut, true, 1, 0, false).
-            onComplete.add(() => {
-              callback()
-            })
-        }
-
-        dialogbox.hide = () => {
-          dialogbox.text.replaceText('')
-          game.add.tween(dialogbox).to( { y: dialogbox.getDefaultPositions().y }, Phaser.Timer.SECOND/2, Phaser.Easing.Circular.InOut, true, 1, 0, false).
-            onComplete.add(() => {
-              //dialogbox.visible = false;
-              dialogbox.children.map(child => {
-                if(child.onStop !== undefined){child.onStop()}
-              })
-            })
-        }
-
-        let dialogboxGraphic = phaserSprites.addFromAtlas({x: 0, y: 0, width: w, height: 110,  name: `dialogboxGraphic`, filename: 'dialogbox', atlas: 'atlas_main', alpha: 0.8})
-        dialogbox.addChild(dialogboxGraphic)
-
-        let dialogPortraitFrame = phaserSprites.addFromAtlas({x: 10, y: 8, name: `dialogPortraitFrame`, filename: 'ui_portraitContainer', atlas: 'atlas_main', visible: true})
-        dialogbox.addChild(dialogPortraitFrame)
-        let dialogPortraitMask = phaserSprites.createBasicMask(13, 11, dialogPortraitFrame.width - 3, dialogPortraitFrame.height -3)
-        dialogbox.addChild(dialogPortraitMask)
-
-        dialogPortraitFrame.replaceImage = (image:string) => {
-          // remove image if already exists
-          if(phaserSprites.get('dialogPortraitImage') !== undefined){
-            phaserSprites.destroy('dialogPortraitImage')
-          }
-          // create new one and mask it
-          let dialogPortraitImage = phaserSprites.addFromAtlas({name: `dialogPortraitImage`, filename: image, atlas: 'atlas_main'})
-              dialogPortraitImage.mask = dialogPortraitMask;
-          dialogPortraitFrame.addChild(dialogPortraitImage)
-        }
-        dialogPortraitFrame.onStart = () => {
-          let staticAnimation = [...Phaser.Animation.generateFrameNames('portrait_static_', 1, 4), ...Phaser.Animation.generateFrameNames('portrait_static_', 3, 1)]
-          let dialogboxStatic = phaserSprites.addFromAtlas({x: 10, y: 8, name: `dialogboxStatic`,  filename: staticAnimation[0], atlas: 'atlas_main', visible: true, alpha: 0.35})
-          dialogboxStatic.animations.add('static', staticAnimation, 1, true)
-          dialogboxStatic.mask = dialogPortraitMask
-          dialogbox.addChild(dialogboxStatic)
-          dialogboxStatic.animations.play('static', 30, true)
-        }
-        dialogPortraitFrame.onStop = () => {
-          phaserSprites.destroy('dialogboxStatic')
-          if(phaserSprites.get('dialogPortraitImage') !== undefined){
-            phaserSprites.destroy('dialogPortraitImage')
-          }
-        }
-
-        let dialogboxButton = phaserSprites.addFromAtlas({x: dialogboxGraphic.width - 40, y: dialogboxGraphic.height - 40, name: `dialogboxButton`, filename: 'a_button', atlas: 'atlas_main', visible: false})
-        dialogbox.addChild(dialogboxButton)
-
-        let dialogText = phaserTexts.add({x: 100, y:10, name: `dialogtext`, font: 'gem', size: 16})
-            dialogText.maxWidth = w - 100 - 15;
-        dialogbox.addChild(dialogText)
-
-        dialogText.replaceText = (newText:string, callback:any = () => {}) => {
-          dialogText.alpha = 0;
-          dialogboxButton.visible = false;
-          dialogText.setText(newText)
-          game.add.tween(dialogText).to( { alpha: 1 }, Phaser.Timer.SECOND/2, Phaser.Easing.Linear.In, true, 1, 0, false).
-            onComplete.add(() => {
-              dialogboxButton.visible = true;
-              callback()
-          })
-        }
-        dialogText.onStart = () => {}
-        dialogText.onStop = () => {
-          dialogText.replaceText('')
-        }
-
-        // add properties
-        dialogbox.portrait = dialogPortraitFrame
-        dialogbox.text = dialogText;
-        phaserGroup.addMany(phaserMaster.get('layers').DIALOGBOX, [dialogbox])
       }
       /******************/
 
@@ -1126,66 +1033,6 @@ class PhaserGameObject {
       /******************/
 
       /******************/
-      function *dialog(data:any){
-        for(let i = 0; i < data.length; i++){
-          yield data[i]
-        }
-        yield null
-      }
-      /******************/
-
-      /******************/
-      function dialogSequence(script:any, callback:any){
-        let {currentState} = phaserMaster.getState();
-        let gen:any = dialog(script);
-        gen.complete = callback;
-        gen.revertToState = currentState;
-        gen.isReady = false;
-        phaserControls.enableAllActionButtons()
-
-        createDialogBox(gen)
-
-        gen.nextItem = (data:any) => {
-          let txtMsg = data.text;
-          let portrait = data.portrait;
-          gen.dialogbox.portrait.replaceImage(portrait)
-          gen.dialogbox.text.replaceText(txtMsg, () => {})
-        }
-
-        gen.finished = () => {
-          [...phaserSprites.getGroup('player_healthbar'), ...phaserSprites.getGroup('player_pow')].map(obj => {
-            obj.fadeIn()
-          })
-          phaserMaster.changeState(gen.revertToState)
-          gen.dialogbox.hide();
-          callback();
-        }
-
-        phaserMaster.changeState('DIALOG');
-        phaserMaster.forceLet('dialogGenerator', gen)
-      }
-      /******************/
-
-      /******************/
-      function createDialogBox(gen){
-        let {dialogbox} = phaserSprites.getOnly(['dialogbox']);
-        // hide healthbar/powerbar
-        [...phaserSprites.getGroup('player_healthbar'), ...phaserSprites.getGroup('player_pow')].map(obj => {
-          obj.fadeOut()
-        })
-
-        // play first item automatically
-        dialogbox.reveal(() => {
-            gen.dialogbox = dialogbox;
-            gen.dialogbox.text.replaceText('', () => {
-              gen.isReady = true
-              gen.nextItem(gen.next().value);
-            })
-        });
-      }
-      /******************/
-
-      /******************/
       function preloadComplete(){
         let game = phaserMaster.game();
         let isDevMode = phaserMaster.get('devMode')
@@ -1208,6 +1055,9 @@ class PhaserGameObject {
         let player = createPlayer();
             game.camera.follow(player);
 
+        let music = game.add.audio('music-main');
+            music.play();            
+
         // wipein
         overlayControls('WIPEOUT', () => {
           utilityManager.overlayBGControls({transition: 'FADEOUT', delay: 500, speed: skipAnimation ? 1 : 1000}, () => {
@@ -1221,42 +1071,46 @@ class PhaserGameObject {
       function playIntroSequence(){
         let {clock, dialogPortraits} = phaserMaster.getOnly(['clock', 'dialogPortraits']);
         let player = phaserSprites.get('player')
-
-        // intro lettering
-        buildIntroLettering(() => {
-          game.time.events.add(Phaser.Timer.SECOND, () => {
-            // create player
-            player.moveToStart();
-
-            let script = [
-              {text: "Okay, so, I think you're going to love this one.", portrait: dialogPortraits.PLAYER},
-              {text: 'Uh huh.', portrait: dialogPortraits.MOTHERSHIP},
-              {text: "Two chemist walk into a bar.  The first one says \"I'll have some H20\".  The second one says \"I'll have some H20 too.\"", portrait: dialogPortraits.PLAYER},
-              {text: "The second chemist dies.", portrait: dialogPortraits.PLAYER},
-              {text: 'That joke... that joke is terrible, Hadrion, I\'m sorry.', portrait: dialogPortraits.MOTHERSHIP},
-              {text: "Really?  ...I liked it.", portrait: dialogPortraits.PLAYER},
-              {text: "Anyways, I'm approaching the asteroid field now.", portrait: dialogPortraits.PLAYER},
-              {text: "You know the drill, right?  Just destroy as many as rocks as possible.  We'll be right behind you to collect the pieces.", portrait: dialogPortraits.MOTHERSHIP},
-              {text: "Yep, and then we sell the rare minerals for money.  Same routine, different solar day.  I got it.", portrait: dialogPortraits.PLAYER},
-              {text: "Okay, be careful out there.", portrait: dialogPortraits.MOTHERSHIP},
-              {text: "Always.", portrait: dialogPortraits.PLAYER}
-            ]
-            dialogSequence(script, () => {
-              game.time.events.add(Phaser.Timer.SECOND, () => {
-                phaserSprites.getGroup('ui').map(obj => {
-                  obj.reveal()
-                })
-                // start game
-                clock.start()
-                phaserMaster.changeState('READY');
-              }).autoDestroy = true;
-            })
-
-          }).autoDestroy = true
+        let skipAnimation = false;
 
 
+        if(skipAnimation){
+          phaserSprites.getGroup('ui').map(obj => {
+            obj.reveal()
+          })
+          player.moveToStart();
+          clock.start()
+          phaserMaster.changeState('READY');
+        }
+        else{
+          // intro lettering
+          buildIntroLettering(() => {
+            game.time.events.add(Phaser.Timer.SECOND, () => {
+              // create player
+              player.moveToStart();
 
-        })
+              let script = [
+                {text: "I'm approaching the asteroid field now.", portrait: dialogPortraits.PLAYER, autoplay: true},
+                {text: "You know the drill.  Just destroy as many as rocks as possible.  We'll be right behind you to collect the pieces.", portrait: dialogPortraits.MOTHERSHIP},
+                {text: "Yep, and then we sell the rare minerals for money.  ", portrait: dialogPortraits.PLAYER},
+                {text: "Okay, be careful out there.", portrait: dialogPortraits.MOTHERSHIP},
+                {text: "Always.", portrait: dialogPortraits.PLAYER}
+              ]
+
+              dialogManager.start(script, () => {
+                game.time.events.add(Phaser.Timer.SECOND, () => {
+                  phaserSprites.getGroup('ui').map(obj => {
+                    obj.reveal()
+                  })
+                  // start game
+                  clock.start()
+                  phaserMaster.changeState('READY');
+                }).autoDestroy = true;
+              })
+
+            }).autoDestroy = true
+          })
+        }
       }
       /******************/
 
@@ -1480,14 +1334,46 @@ class PhaserGameObject {
       /******************/
 
       /******************/
+      function addToScore(amount:number){
+        let {gameData} = phaserMaster.getOnly(['gameData'])
+        let {scoreText} = phaserTexts.getOnly(['scoreText'])
+            gameData.score += amount
+            scoreText.updateScore();
+            saveData('score', gameData.score)
+      }
+      /******************/
+
+      /******************/
+      function createAsteroid(options:any){
+        let game = phaserMaster.game();
+        let onDestroy = (enemy:any) => {
+            addToScore(50)
+            createAsteroid2({x: enemy.x, y: enemy.y})
+        }
+        let onDamage = () => {}
+        let onUpdate = () => {}
+        let enemy = enemyManager.createAsteroid1(options, onDamage, onDestroy, onUpdate)
+      }
+      /******************/
+
+      /******************/
+      function createAsteroid2(options:any){
+        let game = phaserMaster.game();
+        let onDestroy = (enemy:any) => {
+            addToScore(50)
+            spawnScrap(enemy.x, enemy.y)
+        }
+        let onDamage = () => {}
+        let onUpdate = () => {}
+        let enemy = enemyManager.createAsteroid2(options, onDamage, onDestroy, onUpdate)
+      }
+      /******************/
+
+      /******************/
       function createSmallEnemy1(options:any){
         let game = phaserMaster.game();
         let onDestroy = (enemy:any) => {
-            let {gameData} = phaserMaster.getOnly(['gameData'])
-                 gameData.score += 200
-            saveData('score', gameData.score)
-            let {scoreText} = phaserTexts.getOnly(['scoreText'])
-                scoreText.updateScore();
+            addToScore(100)
             spawnScrap(enemy.x, enemy.y)
         }
         let onDamage = () => {}
@@ -1521,15 +1407,8 @@ class PhaserGameObject {
       function createSmallEnemy2(options:any){
         let game = phaserMaster.game();
         let onDestroy = (enemy:any) => {
-            let {gameData} = phaserMaster.getOnly(['gameData'])
-                 gameData.score += 200
-            saveData('score', gameData.score)
-            let {scoreText} = phaserTexts.getOnly(['scoreText'])
-                scoreText.updateScore();
-                spawnScrap(enemy.x, enemy.y)
-            //spawnPowerup(enemy.x, enemy.y)
-            //spawnPowerup(enemy.x, enemy.y)
-            //spawnPowerup(enemy.x, enemy.y)
+            addToScore(200)
+            spawnScrap(enemy.x, enemy.y)
         }
         let onDamage = () => {}
         let onUpdate = () => {}
@@ -1654,7 +1533,6 @@ class PhaserGameObject {
       function director(){
         let {gameData, bossMode, powerupTimer} = phaserMaster.getOnly(['gameData', 'bossMode', 'powerupTimer'])
         let inGameSeconds = incrementTime(0.5)
-        let enemyLayer = phaserMaster.get('layers').ENEMIES
 
         // add to powerupbar every 2 seconds
         if(game.time.returnTrueTime() > powerupTimer){
@@ -1663,28 +1541,33 @@ class PhaserGameObject {
         }
 
 
-        if(inGameSeconds === 15){
+        if(inGameSeconds === 30){
           startBossBattle(() => {
             createBoss({
               x: game.world.width/2,
               y: -300,
-              layer: enemyLayer
             });
           })
         }
 
         if(!bossMode){
-          if(inGameSeconds % 5 === 0){
-            spawnSpecial(game.rnd.integerInRange(0 + 100, game.world.width - 100), 0)
-          }
+          // if(inGameSeconds % 5 === 0){
+          //   spawnSpecial(game.rnd.integerInRange(0 + 100, game.world.width - 100), 0)
+          // }
 
           //create a steady steam of aliens to shoot
-          if(inGameSeconds === 0.5 || inGameSeconds % 2 === 0){
-              createSmallEnemy2({
+          if(inGameSeconds % 4 === 0){
+              createAsteroid({
                 x: game.rnd.integerInRange(0 + 100, game.world.width - 100),
-                y: game.rnd.integerInRange(100, 400),
+                y: -game.rnd.integerInRange(100, 400),
                 iy: game.rnd.integerInRange(0, 80),
-                layer: enemyLayer
+              });
+          }
+
+          if(inGameSeconds > 2 && inGameSeconds % 4 === 0){
+              createSmallEnemy1({
+                x: game.rnd.integerInRange(0 + 100, game.world.width - 100),
+                y: -game.rnd.integerInRange(100, 400)
               });
           }
 
@@ -1693,7 +1576,6 @@ class PhaserGameObject {
                 x: game.rnd.integerInRange(0 + 100, game.world.width - 100),
                 y: game.rnd.integerInRange(100, 400),
                 iy: game.rnd.integerInRange(0, 80),
-                layer: enemyLayer
               });
           }
         }
@@ -1723,11 +1605,11 @@ class PhaserGameObject {
            game.time.events.add(Phaser.Timer.SECOND * 1, () => {
 
              let script = [
-               {text: 'Red 6 checking in.', portrait: dialogPortraits.PLAYER},
-               {text: 'Area is clear.', portrait: dialogPortraits.MOTHERSHIP},
-               {text: 'Proceeding with mining operations.', portrait: dialogPortraits.PLAYER},
+               {text: 'Something big is approaching.  Looks very... murder-y.', portrait: dialogPortraits.PLAYER},
+               {text: 'Well murder it first then.', portrait: dialogPortraits.MOTHERSHIP},
+               {text: 'You are a terrible life coach.', portrait: dialogPortraits.PLAYER},
              ]
-             dialogSequence(script, () => {
+             dialogManager.start(script, () => {
                scoreContainer.hide();
                healthbar_boss.reveal()
                callback()
@@ -1743,7 +1625,7 @@ class PhaserGameObject {
       function update() {
         let game = phaserMaster.game();
         let {currentState} = phaserMaster.getState();
-        let {starMomentum, primaryWeapon, secondaryWeapon, menuButtonSelection, elapsedTime, powerupTimer, gameData, dialogGenerator} = phaserMaster.getOnly(['starMomentum', 'primaryWeapon', 'secondaryWeapon', 'menuButtonSelection', 'elapsedTime', 'powerupTimer', 'gameData', 'dialogGenerator'])
+        let {starMomentum, primaryWeapon, secondaryWeapon, menuButtonSelection, elapsedTime, powerupTimer, gameData} = phaserMaster.getOnly(['starMomentum', 'primaryWeapon', 'secondaryWeapon', 'menuButtonSelection', 'elapsedTime', 'powerupTimer', 'gameData'])
         let {player, menuButtonCursor} = phaserSprites.getOnly(['player', 'menuButtonCursor']);
         let {DOWN, UP, LEFT, RIGHT, A, START} = phaserControls.getOnly(['DOWN', 'UP', 'LEFT', 'RIGHT', 'A', 'START'])
 
@@ -1757,15 +1639,10 @@ class PhaserGameObject {
         // DIALOG STATE
         if(currentState === 'DIALOG'){
           if(phaserControls.checkWithDelay({isActive: true, key: 'A', delay: 500 })){
-            if(dialogGenerator.isReady){
-              let d = dialogGenerator.next().value;
-              if (d !== null){
-                dialogGenerator.nextItem(d)
-              }
-              if (d === null){
-                dialogGenerator.finished()
-              }
-            }
+            dialogManager.next()
+          }
+          if(phaserControls.checkWithDelay({isActive: true, key: 'START', delay: 500 })){
+            dialogManager.skipAll()
           }
         }
 
@@ -1918,7 +1795,7 @@ class PhaserGameObject {
               {text: 'Don\'t make this weird.', portrait: dialogPortraits.MOTHERSHIP},
               {text: '... sorry.', portrait: dialogPortraits.PLAYER}
             ]
-            dialogSequence(script, () => {
+            dialogManager.start(script, () => {
 
               phaserSprites.getGroup('ui').map(obj => {
                 obj.hide()

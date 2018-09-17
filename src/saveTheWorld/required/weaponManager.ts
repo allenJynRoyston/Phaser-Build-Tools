@@ -355,11 +355,14 @@ export class WEAPON_MANAGER {
   /******************/
   public createExplosionBasic(x:number, y:number, scale:number, layer:number, damage:number, onDestroy:any = () => {}, onUpdate:any = () => {}){
     let game = this.game
+
+    console.log(damage)
+
     let {phaserSprites, phaserGroup, atlas} = this;
     let data = {
           reference: 'EXPLOSION_BASIC',
           spriteAnimation:  Phaser.Animation.generateFrameNames('explosions_Layer_', 1, 16),
-          damage: 25,
+          damage: damage !== undefined ? damage : 25,
           pierce: false,
           ignoreDamageState: false,
           completeAnimation: true
